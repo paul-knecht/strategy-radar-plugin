@@ -7,3 +7,6 @@ __pycache__/
 **/copies/
 /radar/
 evals/results/
+.DS_Store
+Thumbs.db
+desktop.ini

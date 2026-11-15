@@ -107,12 +107,25 @@ def test_the_session_command_names_no_web_tool_and_bypasses_nothing(monkeypatch)
         ["Read(./**)", f"Read(/{ROOT}/**)"]
     assert f"Read(/{ROOT}/**)".startswith("Read(//")                         # two slashes: a path from the root
     monkeypatch.setenv("RADAR_TEST_INSTALLED", "1")                         # Task 26: the installed plugin
-    assert "--plugin-dir" not in session_command("hello")
+    monkeypatch.setenv("RADAR_INSTALLED_DIR", "/somewhere/installed/strategy-radar/0.2.0")
+    command = session_command("hello")
+    assert "--plugin-dir" not in command
+    # the installed copy is read from its own place, so that rule is added, and only then
+    assert command[command.index("--allowedTools") + 1:] == [*ALLOWED, "Read(//somewhere/installed/strategy-radar/0.2.0/**)"]
+
+
+def test_an_installed_run_without_a_found_installed_copy_stops_with_a_plain_message(monkeypatch, tmp_path):
+    monkeypatch.setenv("RADAR_TEST_INSTALLED", "1")
+    monkeypatch.delenv("RADAR_INSTALLED_DIR", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))                               # no plugin cache there
+    with pytest.raises(RuntimeError, match="RADAR_INSTALLED_DIR"):
+        session_command("hello")
 
 
 def test_the_session_environment_is_small_and_explicit(tmp_path, monkeypatch):
     monkeypatch.setenv("CLAUDE_CODE_SOMETHING", "1")
     monkeypatch.setenv("ANTHROPIC_BASE_URL", "https://example.invalid")
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")        # whatever this computer's PATH holds, here or in a Claude Code session
     project = tmp_path / "project"
     env = session_environment(project)
     assert set(env) <= {"HOME", "USER", "LOGNAME", "PATH", "SHELL", "TMPDIR", "LANG", "RADAR_PYTHON", "RADAR_HOME"}

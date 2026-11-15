@@ -316,7 +316,7 @@ class World:
     def setup(self) -> tuple[int, dict]:
         original = setup_env.setup
 
-        def fake_run(command, **kwargs):   # no download: both commands of setup answer as if they had worked
+        def fake_run(command, **kwargs):   # nothing is fetched or installed: both commands of setup answer as if they had worked
             return subprocess.CompletedProcess(command, 0, "", "")
 
         self.monkeypatch.setattr(setup_env, "setup", lambda home, python: original(home, python, run=fake_run))

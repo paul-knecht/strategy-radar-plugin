@@ -167,7 +167,26 @@ def session_command(message: str, session: str | None = None) -> list[str]:
     command += ["--output-format", "stream-json", "--verbose"]
     if session:
         command += ["--resume", session]
-    return command + ["--allowedTools", *ALLOWED]
+    return command + ["--allowedTools", *ALLOWED, *installed_read_rule()]
+
+
+def installed_read_rule() -> list[str]:
+    """In installed mode only: the read rule for the installed copy, which lies outside this repository.
+
+    The folder is RADAR_INSTALLED_DIR, or the one version folder Claude Code keeps under its plugin cache. Without it the
+    session could not read or list its own plugin, and every test would fail on a denial that says nothing about the plugin.
+    """
+    if os.environ.get("RADAR_TEST_INSTALLED") != "1":
+        return []
+    folder = os.environ.get("RADAR_INSTALLED_DIR")
+    if not folder:
+        found = sorted(Path(os.path.expanduser("~/.claude/plugins/cache")).glob("*/strategy-radar/*"))
+        folders = [path for path in found if path.is_dir()]
+        if len(folders) != 1:
+            raise RuntimeError("RADAR_TEST_INSTALLED is 1, but the installed copy of the plugin was not found as one folder under "
+                               "~/.claude/plugins/cache. Install the plugin, or set RADAR_INSTALLED_DIR to its folder.")
+        folder = str(folders[0])
+    return [f"Read(/{Path(folder)}/**)"]
 
 
 def session_environment(project: Path) -> dict[str, str]:

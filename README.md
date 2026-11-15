@@ -17,7 +17,18 @@ The free text of the analysis (key messages, reasoning, options) is the lead mod
 
 ## Install
 
-You need Claude Code (signed in) on a Mac or Linux, and Python 3.10 or newer. The plugin was built and tried with **Claude Code 2.1.325**.
+### What you need first
+
+- **A Mac or Linux computer** with **Claude Code**, signed in, and `git` (Claude Code uses it to fetch a plugin from GitHub). The plugin was built and tried with **Claude Code 2.1.325**.
+- **Python 3.10 or newer.** This is the one thing people often lack: a Mac's built-in Python is often older. Check with `python3 --version`. If it is missing or too old, install it from [python.org](https://www.python.org/downloads/), or ask Claude Code in an ordinary chat, for example "Install a current Python for me". Claude Code then proposes a command and **asks for your approval before it runs anything**. On Linux that command usually needs administrator rights, so you may have to run it yourself. (Not tried with this plugin. The plugin itself never installs Python: its guided start checks, says what is missing and stops.)
+- **Optional, only for PDF files:** a small add-on. After you install the plugin, `/strategy-radar:start` offers to set it up with one command, `radar setup`, which puts it in a folder of its own (`~/.strategy-radar`) and does nothing until you say yes.
+- Nothing else: no Node, no extra tools. Only developers who run the tests need `uv`.
+
+### Windows
+
+Not supported. The program and the guard start through shell scripts and use Mac/Linux file paths and file locks, and nothing has been run on Windows. The route that should work is **WSL2** (Linux inside Windows): install it with `wsl --install` in an administrator PowerShell, start Claude Code inside the Linux side, and follow the steps above. That route has **not been tried**.
+
+### The two commands
 
 ```
 claude plugin marketplace add paul-knecht/strategy-radar-plugin
