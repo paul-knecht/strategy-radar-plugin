@@ -1,0 +1,37 @@
+{
+  "id": "demo",
+  "illustrative": true,
+  "company": "Example Pharma",
+  "industry": "Filling of injectable medicines (invented)",
+  "strategic_questions": [
+    {
+      "text": "Is new filling capacity for injectable medicines being built for the builder's own use or for outside customers, and what does that mean for Example Pharma's choice between building and buying?",
+      "framing": "user",
+      "framed_by": "The practice material (invented)"
+    }
+  ],
+  "competitors": [
+    {"name": "Competitor A", "status": "candidate", "suggested_by": "user"},
+    {"name": "Competitor B", "status": "candidate", "suggested_by": "user"},
+    {"name": "Competitor C", "status": "candidate", "suggested_by": "user"}
+  ],
+  "watch": [
+    {"name": "Competitor D", "status": "candidate", "suggested_by": "user"},
+    {"name": "Drug maker B", "status": "candidate", "suggested_by": "user"}
+  ],
+  "places": [
+    {"kind": "press_room", "name": "Competitor A news page (invented)", "url": "https://www.competitor-a.example/news/plant-north-expansion"},
+    {"kind": "press_room", "name": "Example Pharma news page (invented)", "url": "https://www.example-pharma.example/news/site-y-line"},
+    {"kind": "filings", "name": "Competitor B annual filing (invented)", "url": "https://www.competitor-b.example/filings/annual-2025"},
+    {"kind": "annual_reports", "name": "Drug maker B annual report (invented)", "url": "https://www.drug-maker-b.example/geschaeftsbericht-2025"},
+    {"kind": "trade_press", "name": "Aseptic Trade Journal (invented)", "url": "https://www.aseptic-trade-journal.example/competitor-c-plant"},
+    {"kind": "trade_press", "name": "Biologics Business Daily (invented)", "url": "https://www.biologics-business-daily.example/competitor-a-filling-lines"}
+  ],
+  "units": ["lines"],
+  "demand_drivers": [
+    "Example driver (invented): customers of Example Pharma ask for a second filling supplier",
+    "Example driver (invented): Example Pharma expects more of its products to be filled as prefilled syringes"
+  ],
+  "languages": ["en", "de"],
+  "time_window_months": 36
+}

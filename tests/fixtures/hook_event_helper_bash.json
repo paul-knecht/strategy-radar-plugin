@@ -1,0 +1,19 @@
+{
+ "session_id": "00000000-0000-0000-0000-000000000000",
+ "transcript_path": "/home/example/.claude/projects/-home-example-project/00000000-0000-0000-0000-000000000000.jsonl",
+ "cwd": "/home/example/project",
+ "scratchpad_dir": "/tmp/example/-home-example-project/00000000-0000-0000-0000-000000000000/scratchpad",
+ "prompt_id": "11111111-1111-1111-1111-111111111111",
+ "permission_mode": "bypassPermissions",
+ "agent_id": "a000000000000000",
+ "agent_type": "strategy-radar:support-checker",
+ "effort": {
+  "level": "medium"
+ },
+ "hook_event_name": "PreToolUse",
+ "tool_name": "Bash",
+ "tool_input": {
+  "command": "radar quote-context --run \"/p/r1\" --fact F3 ; echo hi"
+ },
+ "tool_use_id": "toolu_EXAMPLE"
+}

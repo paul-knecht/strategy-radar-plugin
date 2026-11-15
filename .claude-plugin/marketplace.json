@@ -1,0 +1,12 @@
+{
+  "name": "strategy-radar",
+  "owner": {"name": "Paul Knecht"},
+  "description": "Strategy Radar: evidence-checked competitor research for Claude Code.",
+  "plugins": [
+    {
+      "name": "strategy-radar",
+      "source": "./",
+      "description": "Researches a strategy question from public sources and builds a checked report."
+    }
+  ]
+}

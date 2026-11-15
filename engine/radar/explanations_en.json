@@ -1,0 +1,557 @@
+{
+  "rests on fact {id} with status rejected": {
+    "what": "The analysis uses fact {id}, but that fact was rejected.",
+    "why": "It was withdrawn, a quote was not found in its saved source, or the checker judged that the quote does not support it.",
+    "do": "Take {id} out of the analysis, or find a source that supports it and add it as a new fact."
+  },
+  "rests on fact {id} with status proposed": {
+    "what": "The analysis uses fact {id}, but that fact has not been checked to the end.",
+    "why": "Its quote check or its support check is still open.",
+    "do": "Run the checks for {id} and settle the facts, or take {id} out of the analysis."
+  },
+  "rests on fact {id} with status missing": {
+    "what": "The analysis uses fact {id}, but that fact does not exist.",
+    "why": "The number may be wrong, or the fact was never added.",
+    "do": "Correct the number, or add the fact and check it."
+  },
+  "a text names fact {id} with status rejected": {
+    "what": "A text of the analysis names fact {id}, but that fact was rejected.",
+    "why": "A reader would take the text as resting on a fact that did not hold up.",
+    "do": "Take {id} out of the text, or rest the point on a fact that counts."
+  },
+  "a text names fact {id} with status proposed": {
+    "what": "A text of the analysis names fact {id}, but that fact has not been checked to the end.",
+    "why": "Its quote check or its support check is still open.",
+    "do": "Check {id} and settle the facts, or take it out of the text."
+  },
+  "a text names fact {id} with status missing": {
+    "what": "A text of the analysis names fact {id}, but there is no such fact.",
+    "why": "The number may be wrong, or the fact was never added.",
+    "do": "Correct the number in the text, or take it out."
+  },
+  "a text names fact {id} with status withdrawn": {
+    "what": "A text of the analysis names fact {id}, but that fact was withdrawn.",
+    "why": "A withdrawn fact is kept so the reader sees it, and it is never relied on.",
+    "do": "Take {id} out of the text, or rest the point on a fact that counts."
+  },
+  "a text names fact {id} with status": {
+    "what": "A text of the analysis names fact {id}, but that fact cannot be relied on.",
+    "why": "Only confirmed or uncertain facts may be named in the analysis.",
+    "do": "Take {id} out of the text, or check it until it is settled."
+  },
+  "rests on fact {id}": {
+    "what": "The analysis uses fact {id}, but that fact cannot be used yet.",
+    "why": "Only confirmed or uncertain facts may be used in the analysis.",
+    "do": "Check {id} until it is settled, or take it out of the analysis."
+  },
+  "quote not found in saved copy": {
+    "what": "The quote for {id} is not in the saved copy of its source word for word.",
+    "why": "The quote was changed, shortened or written from memory, or the saved copy was changed afterwards.",
+    "do": "Take the exact wording from the saved copy and add it as a new fact."
+  },
+  "supporting quote not found in saved copy": {
+    "what": "A supporting quote for {id} is not in the saved copy of its source word for word.",
+    "why": "The quote was changed or written from memory, the source has no saved copy, or the copy was changed afterwards.",
+    "do": "Take the exact wording from the saved copy and add the fact again as a new fact."
+  },
+  "reason does not follow from the checks": {
+    "what": "The reason given for the status of fact {id} does not match its checks.",
+    "why": "The reason was written or changed by hand after the facts were settled.",
+    "do": "Settle the facts again so that every reason follows from its checks."
+  },
+  "saved copy has changed": {
+    "what": "The saved copy of source {id} is no longer the text that was saved.",
+    "why": "The file was edited or replaced after it was saved.",
+    "do": "Save the source again as a new source, add its facts again from the new copy, and take the old facts out of the analysis."
+  },
+  "result does not match its inputs": {
+    "what": "A total in the analysis does not match the figures it is built from.",
+    "why": "The program computed {value} from the facts listed for it.",
+    "do": "Use the program's figure, or correct the list of facts the total is built from."
+  },
+  "the earlier run has facts whose status no longer follows from their checks": {
+    "what": "The earlier run has facts whose status no longer matches their checks, so it cannot be compared yet.",
+    "why": "A fact there was withdrawn, given a new verdict or linked to another source, and its facts were not settled since.",
+    "do": "Settle the facts of the earlier run, then compare the two runs again."
+  },
+  "the ignore file of a private run must keep the whole run out of git": {
+    "what": "This private run is no longer kept out of the project's history.",
+    "why": "The line that keeps the whole run folder out of git is gone, so git could take in its non-public material.",
+    "do": "Put the single line * back into the run's .gitignore, with no line that starts with !, then check the run again."
+  },
+  "a publishable report may not be built from a private run": {
+    "what": "This run was started in private mode, so no version of its report may be published.",
+    "why": "A private run is for material that is not public, also when every source in it is public now.",
+    "do": "For a version to publish, start a public run with the same question, without the documents."
+  },
+  "a publishable report may use public sources only": {
+    "what": "This run contains a source that is not public, so its report cannot be published.",
+    "why": "Source {id} is licensed or internal.",
+    "do": "Build the report without the publishing option, or run the question again in public mode."
+  },
+  "the comparison is out of date": {
+    "what": "The comparison with the earlier run no longer matches the facts of this run.",
+    "why": "Facts were added, settled again or withdrawn after the comparison was made.",
+    "do": "Run the comparison with the earlier run again."
+  },
+  "the comparison was changed after it was made": {
+    "what": "The comparison with the earlier run was changed after the program wrote it.",
+    "why": "It was edited by hand, or damaged.",
+    "do": "Run the comparison with the earlier run again."
+  },
+  "a publishable report may not compare against a run with non-public sources": {
+    "what": "This report compares against an earlier run that used sources that are not public.",
+    "why": "The comparison shows values from that earlier run, which are confidential.",
+    "do": "Build the report without the publishing option, or compare against an earlier public run instead."
+  },
+  "analysis is missing": {
+    "what": "The analysis has not been written yet.",
+    "why": "A report needs the key messages and their reasoning.",
+    "do": "Write the analysis once the facts are checked and the lenses are chosen."
+  },
+  "is not recorded": {
+    "what": "A decision that is yours to make has not been recorded.",
+    "why": "The run stops twice for your decision: before the lenses are chosen and before the final report.",
+    "do": "Answer the open question for this run. The report is built after that."
+  },
+  "fact was never settled": {
+    "what": "Fact {id} was proposed but never checked to the end.",
+    "why": "Either its quote check or its support check is missing.",
+    "do": "Run the checks for {id}, then settle the facts again."
+  },
+  "support check not passed": {
+    "what": "The support check for fact {id} has not passed.",
+    "why": "Either nobody has judged yet whether the quote supports the fact, or the judgement went against it.",
+    "do": "Run the support check for {id}, then settle the facts again."
+  },
+  "status does not follow from the checks": {
+    "what": "The status of fact {id} does not match its checks.",
+    "why": "The fact or its checks were changed after the status was set, or the status was changed by hand.",
+    "do": "Settle the facts again so that every status follows from its checks."
+  },
+  "fact {id} is missing": {
+    "what": "Fact {id} was added to this run but can no longer be found.",
+    "why": "Its saved entry was deleted or moved. Facts are never removed; a fact that should not count is withdrawn.",
+    "do": "Restore fact {id} from a backup, or start the run again."
+  },
+  "source {id} is missing": {
+    "what": "Source {id} was saved in this run but can no longer be found.",
+    "why": "Its saved entry was deleted or moved after it was saved.",
+    "do": "Restore source {id} from a backup, or start the run again."
+  },
+  "run.json is missing": {
+    "what": "This run has lost its basic details.",
+    "why": "The details that name the question and the run are not there any more.",
+    "do": "Restore the run from a backup, or start the run again."
+  },
+  "may not be opened by this user": {
+    "what": "An item of this run is saved, but your user account on this computer may not open it.",
+    "why": "The setting for who may read the file was changed, often by hand or when the run was copied from another account or computer.",
+    "do": "Allow your user account to read it again, for example in the run folder's settings for who may read each item, then check the run again."
+  },
+  "run.json may not be opened": {
+    "what": "This run's basic details are saved, but your user account on this computer may not open them.",
+    "why": "The setting for who may read the file was changed, often by hand or when the run was copied from another account or computer.",
+    "do": "Allow your user account to read them again, for example in the run folder's settings for who may read each item, then check the run again."
+  },
+  "not valid JSON": {
+    "what": "A saved item of this run cannot be read.",
+    "why": "It is empty or damaged, often after a manual edit or an interrupted save.",
+    "do": "Restore it from a backup, or run the step that writes it again."
+  },
+  "must not be empty": {
+    "what": "Something the report needs has been left blank.",
+    "why": "Every source, fact and analysis part has to be filled in before it can be shown.",
+    "do": "Fill in the blank part, or run the step that writes it again."
+  },
+  "not an allowed value": {
+    "what": "An entry has a value the program does not recognise.",
+    "why": "Only the listed choices can be used there, such as a source type or a confidence level.",
+    "do": "Replace it with one of the allowed choices, or run the step that writes it again."
+  },
+  "file name does not match id": {
+    "what": "An item is stored under a name that does not match its own number.",
+    "why": "It may have been copied or renamed by hand.",
+    "do": "Give it back its own number, or add it again as a new item."
+  },
+  "non-public source in a public run": {
+    "what": "This run is public, but it contains a source that is not.",
+    "why": "Licensed and internal sources may only be used in a private run.",
+    "do": "Start the run again without that source: a public run uses only sources that anyone can read."
+  },
+  "provenance is required for non-public sources": {
+    "what": "A source that is not public does not say where it came from.",
+    "why": "For licensed and internal material, the report must show who supplied it and on what basis.",
+    "do": "Add who supplied the source and on what basis."
+  },
+  "source {id} does not exist": {
+    "what": "A fact or source points to source {id}, which is not saved in this run.",
+    "why": "The source was never saved, or it was removed or renamed.",
+    "do": "Save source {id}, or point to a source that exists."
+  },
+  "based_on must not form a loop": {
+    "what": "Some sources are each said to be based on the others.",
+    "why": "A source cannot be based on itself, not even through other sources.",
+    "do": "Correct which source is based on which, so that the chain ends at the original."
+  },
+  "saved copy is missing": {
+    "what": "The saved copy of a source cannot be found.",
+    "why": "It was deleted or moved after it was saved.",
+    "do": "Save the source again as a new source, add its facts again from the new copy, and take the old facts out of the analysis."
+  },
+  "quote must have 5 to 50 words": {
+    "what": "A quote is too short or too long.",
+    "why": "A quote is one or two sentences of 5 to 50 words, so that it can be checked and read in context.",
+    "do": "Choose one or two sentences from the saved copy and add them as a new fact."
+  },
+  "an early signal must be marked tentative": {
+    "what": "A fact is marked as an early signal, but it is not marked tentative.",
+    "why": "An early signal is a hint, such as a building permit, a job posting or a regulator notice. It is not an announcement, so it can never count as confirmed.",
+    "do": "This fact was changed outside the program. Mark it tentative by hand, with a line on what kind of hint it is, or start a new run."
+  },
+  "an early signal must be a general fact": {
+    "what": "A fact is marked as an early signal, but it describes a capacity move.",
+    "why": "A capacity move is something a company has announced. An early signal is only a hint, and it is shown apart from the announced moves.",
+    "do": "Add the hint again as a new general fact, and withdraw the old one."
+  },
+  "a fact from a permit, a job posting or a regulator record must be marked as an early signal": {
+    "what": "A fact comes from a building permit, a job posting or a regulator notice, but it is not marked as an early signal.",
+    "why": "These sources only hint at a move. A hint has to be marked, so that it is shown apart from announced moves and can never count as confirmed.",
+    "do": "Add the fact again as a new fact marked as an early signal, tentative and general, and withdraw the old one."
+  },
+  "a baseline takes its wording from its facts": {
+    "what": "A baseline has wording of its own.",
+    "why": "A baseline shows what its facts say. Wording written next to them could state a figure that none of them supports.",
+    "do": "Take the wording out and name only the facts. The report then shows what each fact says."
+  },
+  "chain must have at least one fact step": {
+    "what": "A key message does not name any fact it rests on.",
+    "why": "Each message needs at least one sourced fact in its line of reasoning.",
+    "do": "Add a step that names the supporting fact, or remove the message."
+  },
+  "chain must have exactly one conclusion step": {
+    "what": "A key message does not have exactly one conclusion.",
+    "why": "Its line of reasoning has to end in one single conclusion.",
+    "do": "Keep one conclusion step for the message and merge or remove the others."
+  },
+  "a fact step must name at least one fact": {
+    "what": "A step of a key message is shown as a fact, but it names no checked fact.",
+    "why": "The report would print it as a fact with nothing behind it.",
+    "do": "Name the fact the step rests on, or mark the step as reasoning."
+  },
+  "the last step of a chain must be its conclusion": {
+    "what": "A key message has a step after its conclusion.",
+    "why": "The line of reasoning leads to the conclusion, so a step after it would stand on nothing.",
+    "do": "Move the conclusion to the end, or put the later step before it."
+  },
+  "lens must have exactly 3 questions": {
+    "what": "A lens does not have exactly three questions.",
+    "why": "Every lens asks three questions so that the lenses can be compared.",
+    "do": "Change the lens to three questions, or choose a different lens."
+  },
+  "must have at least one entry": {
+    "what": "A list that needs at least one entry is empty.",
+    "why": "Assumptions, scenarios, signposts and calculations only make sense with something in them.",
+    "do": "Add the missing entry, or remove the empty item."
+  },
+  "use no scenarios or between two and four": {
+    "what": "The analysis has the wrong number of scenarios.",
+    "why": "Scenarios only help when there are two to four of them to compare.",
+    "do": "Write between two and four scenarios, or none at all."
+  },
+  "must be a list": {
+    "what": "A part of the analysis that should hold several entries holds a single value instead.",
+    "why": "The report lists each entry on its own, so the part must be written as a list.",
+    "do": "Write the part as a list of entries, or run the step that writes the analysis again."
+  },
+  "must be an object": {
+    "what": "An entry of the analysis is a bare value where the report expects its named parts.",
+    "why": "The report reads each entry by its parts, such as its text and the facts it names.",
+    "do": "Write the entry with its named parts, or run the step that writes the analysis again."
+  },
+  "must be text": {
+    "what": "A part that should be text holds something else, such as a number or a list.",
+    "why": "Only plain text can be shown and checked there.",
+    "do": "Write that part as plain text, or run the step that writes it again."
+  },
+  "write the number without thousands separators": {
+    "what": "A size is written with a thousands separator, such as 1.200 or 1,200.",
+    "why": "The program cannot tell whether 1.200 means one thousand two hundred or one point two, so it does not guess.",
+    "do": "Write the size as a plain number, such as 1200, and add the fact again."
+  },
+  "must be a date like 2027-12-31": {
+    "what": "A prediction has no usable date.",
+    "why": "The date says by when the prediction can be judged.",
+    "do": "Write the date as year, month and day, for example 2027-12-31."
+  },
+  "must be a whole number from 1 to 99": {
+    "what": "A prediction has no usable probability.",
+    "why": "A probability is a whole percentage; 0 and 100 would leave no room for doubt.",
+    "do": "Enter a whole number from 1 to 99."
+  },
+  "id {id} is used more than once": {
+    "what": "Two items in the analysis share the label {id}.",
+    "why": "Each assumption, scenario, prediction and calculation needs its own label so that others can refer to it.",
+    "do": "Give one of them a new label."
+  },
+  "assumption {id} does not exist": {
+    "what": "A scenario relies on assumption {id}, which does not exist.",
+    "why": "The assumption was removed, renamed or never written.",
+    "do": "Add assumption {id}, or take it out of the scenario."
+  },
+  "scenario {id} does not exist": {
+    "what": "A watch item points to scenario {id}, which does not exist.",
+    "why": "The scenario was removed, renamed or never written.",
+    "do": "Point the watch item to an existing scenario, or leave the link out."
+  },
+  "message {id} does not exist": {
+    "what": "A prediction belongs to key message {id}, which does not exist.",
+    "why": "The message was removed, renamed or never written.",
+    "do": "Point the prediction to an existing message, or remove it."
+  },
+  "fact {id} does not exist": {
+    "what": "The analysis uses fact {id}, but there is no such fact in this run.",
+    "why": "The fact was never added, or the number is wrong.",
+    "do": "Correct the number, or add the fact and check it."
+  },
+  "lens {id} does not exist": {
+    "what": "The analysis names the lens {id}, which is not available.",
+    "why": "No lens of that name is among the lenses on offer.",
+    "do": "Choose one of the available lenses for that note."
+  },
+  "input {id} is listed more than once": {
+    "what": "A calculation lists fact {id} more than once.",
+    "why": "It would be counted twice in the total.",
+    "do": "List {id} only once."
+  },
+  "input {id} is stated in": {
+    "what": "Fact {id} is stated in a different unit than the calculation uses.",
+    "why": "The program never converts units, so every figure must be in the unit of the total.",
+    "do": "Use facts stated in the same unit, or change the unit of the calculation."
+  },
+  "input {id} has no plain number": {
+    "what": "Fact {id} does not give its size as a plain number.",
+    "why": "The program can only add figures written as plain numbers, such as 2 or 2.5.",
+    "do": "Use a fact whose size is a plain number, or leave {id} out."
+  },
+  "input {id} is not a settled capacity move": {
+    "what": "A calculation uses {id}, which is not a settled capacity move.",
+    "why": "Only confirmed or uncertain capacity moves can be added up.",
+    "do": "Use settled capacity moves only, or finish checking {id} first."
+  },
+  "share inputs must be part of the whole": {
+    "what": "A share is worked out from facts that are not part of the whole.",
+    "why": "A share compares a part with the total it belongs to.",
+    "do": "Add the parts to the list of facts that make up the whole."
+  },
+  "whole is zero": {
+    "what": "A share cannot be worked out because the whole adds up to zero.",
+    "why": "A share of nothing has no meaning.",
+    "do": "Check the facts that make up the whole, or leave the share out."
+  },
+  "operation is not an allowed value": {
+    "what": "A calculation asks for something the program cannot do.",
+    "why": "The program can add up, count and work out a share.",
+    "do": "Choose one of these three: sum, count or share."
+  },
+  "of_fact_ids must be a list": {
+    "what": "A share does not list the facts that make up its whole.",
+    "why": "The facts that form the whole have to be given as a list.",
+    "do": "List the facts that make up the whole."
+  },
+  "fact_ids must be a list": {
+    "what": "A calculation does not list the facts it is built from.",
+    "why": "The facts have to be given as a list so that each one can be checked.",
+    "do": "List the facts that the calculation is built from."
+  },
+  "unit is required": {
+    "what": "A total or share has no unit.",
+    "why": "Figures can only be added when a unit says what they count, such as lines or tonnes.",
+    "do": "State the unit that all the figures use."
+  },
+  "numbers are too large to calculate exactly": {
+    "what": "The figures in a calculation are too large to add exactly.",
+    "why": "The program refuses to round a total.",
+    "do": "Check the figures for a typing error, or split the calculation."
+  },
+  "the pack cannot be read": {
+    "what": "The company pack cannot be read.",
+    "why": "The file is empty or damaged, often after a manual edit, so it no longer holds a set of named settings that can be read.",
+    "do": "Restore the pack from a backup, or start again from the demo pack."
+  },
+  "the pack is nested too deeply to read": {
+    "what": "The company pack has too many parts inside other parts to be read.",
+    "why": "A manual edit may have left brackets open, or repeated a block many times.",
+    "do": "Remove the extra brackets, or start again from the demo pack."
+  },
+  "the pack must be a set of named settings": {
+    "what": "The company pack is not written as a set of named settings.",
+    "why": "A pack holds settings such as company, industry and places, each with its own name.",
+    "do": "Write the pack the way the demo pack is written."
+  },
+  "must be a whole number from 1 to 120": {
+    "what": "The time window in the pack is not a whole number of months from 1 to 120.",
+    "why": "The window sets how far back the program looks for sources. Without one it uses 36 months.",
+    "do": "Write a whole number from 1 to 120, or remove the setting to use 36 months."
+  },
+  "a pack lists candidates only": {
+    "what": "A competitor or watched company in the pack is not marked as a candidate.",
+    "why": "A pack holds pointers, not facts. A company stays a candidate until a source confirms what it does.",
+    "do": "Set the status to candidate. Facts about the company come from sources, not from the pack."
+  },
+  "a question framed by the user must say who framed it": {
+    "what": "A question in the pack that is framed by the user does not say who framed it.",
+    "why": "Anyone who reads the results needs to know whose question it is.",
+    "do": "Say who framed the question, such as the name of a person or a team."
+  },
+  "a pack setting must not be left empty": {
+    "what": "In the pack, {field} is blank or missing.",
+    "why": "The program needs it to describe the company, its question or where to look.",
+    "do": "Fill in {field}, or add it to the pack."
+  },
+  "a pack list needs at least one entry": {
+    "what": "In the pack, {field} is an empty list, but it needs at least one entry.",
+    "why": "A pack needs at least one strategic question, one place to look and one language.",
+    "do": "Add an entry to {field}."
+  },
+  "a pack setting must be a list": {
+    "what": "In the pack, {field} should be a list, but it is missing or holds a single value.",
+    "why": "Each entry is read on its own, so a single value cannot stand in for a list.",
+    "do": "Write {field} as a list, even with one entry. Only competitors, watch, units, demand drivers and vocabulary may be empty."
+  },
+  "a pack list entry must be text": {
+    "what": "In the pack, {field} is not plain text.",
+    "why": "Units, demand drivers and languages are plain words, so numbers or nested parts cannot be used there.",
+    "do": "Replace {field} with plain text."
+  },
+  "a pack entry must be a set of named settings": {
+    "what": "In the pack, {field} is not written as a set of named settings.",
+    "why": "A question, competitor, place or term needs named parts, such as a name and a web address.",
+    "do": "Rewrite {field} the way the demo pack writes its entries."
+  },
+  "the pack has a setting that is not known": {
+    "what": "The program does not recognise {field} in the pack.",
+    "why": "The name may be misspelt, and a misspelt setting would otherwise be ignored without a warning.",
+    "do": "Correct the name of {field}, or remove it from the pack."
+  },
+  "the pack's id may use only lower-case letters, digits and hyphens, and must not start or end with a hyphen": {
+    "what": "The pack's id is missing or is not written in the allowed way.",
+    "why": "The id is also the name the pack is saved under, so it can use only lower-case letters, digits and hyphens.",
+    "do": "Change the id to lower-case letters, digits and hyphens, with no hyphen at the start or end, such as my-company."
+  },
+  "the pack's file name does not match its id": {
+    "what": "The name the pack is saved under does not match its id.",
+    "why": "The id was changed, or the pack file was copied or renamed by hand.",
+    "do": "The pack file must be named the id followed by .json. Rename it, or change the id to match its name."
+  },
+  "a question's framing must be company or user": {
+    "what": "The framing of a question in the pack is missing or not allowed.",
+    "why": "The framing says whether the question comes from the company's own statements or from the person who framed it.",
+    "do": "Write company for a question taken from the company, or user for a question framed by a person."
+  },
+  "who suggested a name must be user or search": {
+    "what": "A competitor or watched company in the pack does not say who suggested it, or says it wrongly.",
+    "why": "The pack must show whether a person or a search put the name on the list.",
+    "do": "Write user if a person suggested the name, or search if a search found it."
+  },
+  "the illustrative mark must be true or false": {
+    "what": "The pack does not say clearly whether it is illustrative.",
+    "why": "Readers must be able to tell invented practice material from a real pack.",
+    "do": "Write true for practice material with invented companies, or false for a real company pack."
+  },
+  "the kind of a place to look is not one the pack allows": {
+    "what": "A place to look in the pack has a kind that is missing or not allowed.",
+    "why": "The kind tells the search what sort of source to expect there.",
+    "do": "Use one of these kinds: investor_relations, press_room, filings, annual_reports, regulator, trade_press, permits or job_postings."
+  },
+  "a place to look needs a web address starting with http or https and holding no password": {
+    "what": "A place to look in the pack has no usable web address.",
+    "why": "The program needs an address it can open, and a password in the address would be stored in the pack for anyone to read.",
+    "do": "Write an address starting with http or https and holding no user name or password."
+  },
+  "a name found by search needs the address where it was found": {
+    "what": "A name in the pack that was found by search does not give a usable address where it was found.",
+    "why": "Without the address, nobody can check why the name is on the list.",
+    "do": "Add a web address starting with http or https, with no user name or password, or mark the name as suggested by the user."
+  },
+  "a question taken from the company needs a quote and its address": {
+    "what": "A question in the pack that is taken from the company's own statements has no usable quote and address.",
+    "why": "A pack never claims what a company says. It points to a quote that will be checked, at an address with no user name or password.",
+    "do": "Add a quote of 5 to 50 words and a web address starting with http or https, or mark the question as framed by the user."
+  },
+  "an evidence address needs a web address starting with http or https and holding no password": {
+    "what": "An address given as evidence for a question in the pack is not usable.",
+    "why": "The program needs an address it can open, and a password in the address would be stored in the pack for anyone to read.",
+    "do": "Use an address starting with http or https and holding no user name or password, or leave the evidence out."
+  },
+  "This is the invented practice run, so it takes no non-public material.": {
+    "what": "The document was not added, because this run is the invented practice run.",
+    "why": "The practice run was built by the demo command. Its private-mode notice was never shown to a person, so it cannot take real non-public material.",
+    "do": "Start a new run to work with your own material."
+  },
+  "the practice-run mark is only allowed on the invented private practice run": {
+    "what": "This run is marked as the invented practice run, but it is not one.",
+    "why": "Only the private practice run that the demo command builds may carry that mark. The mark was added by hand, or the run was changed afterwards.",
+    "do": "Build the practice run again with the demo command, or start a new run for your own material."
+  },
+  "a public run may not be compared with a run that holds non-public material": {
+    "what": "This public run is compared with an earlier run that holds material that is not public.",
+    "why": "The comparison would copy that material into the report of this run, which is meant to be shared.",
+    "do": "Compare it with an earlier public run instead, or build this report without the comparison."
+  },
+  "an illustrative run cannot be compared with a run that is not illustrative": {
+    "what": "One of the two runs is invented for illustration and the other is not.",
+    "why": "Invented figures would appear as real ones, or real figures in a report marked as invented.",
+    "do": "Compare two real runs with each other, or two illustrative runs."
+  },
+  "the comparison was made for another run": {
+    "what": "The comparison with an earlier run was made for another run and copied into this one.",
+    "why": "Its values belong to that other run, so they may not appear in the report of this run.",
+    "do": "Run the comparison again, with this run as the current run."
+  },
+  "the comparison was made by an earlier version of the program": {
+    "what": "The comparison with the earlier run was made by an earlier version of the program.",
+    "why": "It does not say whether the earlier run was invented for illustration, so the program cannot check that it fits this run.",
+    "do": "Run the comparison with the earlier run again."
+  },
+  "input {id} has changed since the facts were settled": {
+    "what": "Fact {id} has changed since the facts were last settled, so its status may be out of date.",
+    "why": "It was withdrawn, given a new verdict, or one of its sources was linked to another. A total may only use a status that still holds.",
+    "do": "Settle the facts, then calculate again."
+  },
+  "a baseline may not rest on {id}, an early signal": {
+    "what": "The baseline of a competitor rests on {id}, which is an early signal.",
+    "why": "A baseline describes what a company already has. An early signal only hints at a move and is never confirmed.",
+    "do": "Take {id} out of the baseline. Early signals are shown in a block of their own."
+  },
+  "the key {id} is set by the program, not by a proposal": {
+    "what": "A proposed fact sets {id}, which only the program sets.",
+    "why": "The program sets it itself, so the value in the proposal would have been dropped without a word.",
+    "do": "Leave {id} out and propose the fact again."
+  },
+  "the key {id} is not known": {
+    "what": "A fact holds a part called {id} that the program does not know.",
+    "why": "The name may be misspelt, or the part belongs somewhere else. The program would otherwise ignore it without a word.",
+    "do": "This fact was changed outside the program. Correct it by hand, or start a new run."
+  },
+  "the key {id} is not known in a flag": {
+    "what": "A flag of the look for bias holds a part called {id} that the program does not know.",
+    "why": "A flag is exactly a check and a text, and the report prints nothing else of it.",
+    "do": "Have the look for bias done again, and copy only the check and the text of each flag."
+  },
+  "a flag names fact {id}, which does not exist": {
+    "what": "A flag of the look for bias names fact {id}, but there is no such fact in this run.",
+    "why": "A reader would look for a fact that is not there, and a flag is never changed by hand.",
+    "do": "Have the look for bias done again, so that its flags name only facts of this run."
+  },
+  "write the size as text, such as \"2.5\"": {
+    "what": "The size of a capacity move is written as a bare number, not as text.",
+    "why": "Sizes are kept exactly as written, so that 2.50 stays 2.50, and only text keeps them that way.",
+    "do": "This fact was changed outside the program. Write its size by hand as text, such as \"2.5\", or start a new run."
+  },
+  "the practice run can only be compared with an earlier practice run": {
+    "what": "This is the invented practice run, and the earlier run is not a practice run.",
+    "why": "The practice run takes no material from outside the practice, so it takes no values from another run either.",
+    "do": "Compare it with another practice run built with the demo command, or compare runs of your own."
+  }
+}

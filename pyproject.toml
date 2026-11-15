@@ -1,0 +1,17 @@
+[project]
+name = "strategy-radar-engine"
+version = "0.2.0"
+requires-python = ">=3.10"
+dependencies = ["pypdf>=4"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+pythonpath = ["engine", "tests"]
+testpaths = ["tests"]
+addopts = "-m 'not model'"
+markers = [
+    "model: starts a real model session on the user's account",
+    "claude: needs the claude command",
+]

@@ -1,0 +1,6 @@
+{
+  "source-scout": "sonnet",
+  "fact-extractor": "sonnet",
+  "support-checker": "opus",
+  "bias-auditor": "opus"
+}

@@ -1,0 +1,25 @@
+#!/bin/sh
+# Starts the Strategy Radar engine with a Python 3.10 or newer.
+# Order: $RADAR_PYTHON, the private environment made by `radar setup`, then python3.
+# Only shell built-ins are used up to this point, so the script works with any PATH.
+case "$0" in */*) dir=${0%/*} ;; *) dir=. ;; esac
+here=$(CDPATH= cd -- "$dir/.." && pwd)
+# The question is asked with -I and nothing on standard input, so no PYTHON... setting of the person's (such as
+# PYTHONINSPECT or a broken PYTHONPATH) can make a working Python look missing. The engine itself keeps them.
+new_enough() { "$1" -I -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' </dev/null >/dev/null 2>&1; }
+# On a Mac, /usr/bin/python3 is only a stand-in until Apple's developer tools are installed, and starting it offers
+# to install them. So there it is passed over unless the tools are there. Any other Python may be tried.
+may_try() {
+  [ "$1" = /usr/bin/python3 ] || return 0
+  [ -e /System/Library/CoreServices/SystemVersion.plist ] || return 0
+  [ -e /Library/Developer/CommandLineTools/usr/bin/python3 ] || [ -e /Applications/Xcode.app ]
+}
+for candidate in "$RADAR_PYTHON" "${RADAR_HOME:-$HOME/.strategy-radar}/venv/bin/python" python3; do
+  if [ -n "$candidate" ] && may_try "$(command -v "$candidate")" && new_enough "$candidate"; then
+    # A script file is started, not `-m radar`: with -m, Python looks first in the folder
+    # the command is run from, and a file named radar there would run in the engine's place.
+    exec "$candidate" "$here/engine/start_radar.py" "$@"
+  fi
+done
+printf '%s\n' '{"error": "Strategy Radar needs Python 3.10 or newer and did not find one.", "hint": "Install Python 3.10 or newer from python.org, then run: radar setup"}'
+exit 2

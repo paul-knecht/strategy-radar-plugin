@@ -1,0 +1,8 @@
+{
+  "name": "strategy-radar",
+  "version": "0.2.0",
+  "description": "Researches a strategy question from public sources and builds a report in which every fact carries a quote that a program has checked.",
+  "author": {"name": "Paul Knecht"},
+  "license": "MIT",
+  "keywords": ["strategy", "competitors", "research", "evidence"]
+}

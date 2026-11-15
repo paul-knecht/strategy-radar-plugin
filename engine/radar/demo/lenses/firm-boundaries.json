@@ -1,0 +1,16 @@
+{
+  "id": "firm-boundaries",
+  "name": "Where firms draw their boundaries",
+  "idea": "A firm keeps an activity inside when running it through the market costs more than running it itself.",
+  "suggests": "Look at which steps a company builds itself and which it buys, and ask what makes buying costly or risky.",
+  "limits": "The idea says little about speed, and it can make every in-house choice look like a cost decision.",
+  "competing_idea": "Capabilities matter as much as costs: a firm may keep a step inside because only it knows how to do it well.",
+  "questions": [
+    "Which steps does the company run itself, and which does it buy?",
+    "What would make buying a step riskier than doing it in-house?",
+    "Has the company recently moved a step across that line?"
+  ],
+  "originals": [
+    {"reference": "Illustrative reference, not a real work", "level": "reference_confirmed", "link": null}
+  ]
+}

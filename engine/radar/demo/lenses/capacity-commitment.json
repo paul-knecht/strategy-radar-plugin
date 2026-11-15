@@ -1,0 +1,16 @@
+{
+  "id": "capacity-commitment",
+  "name": "Capacity as a commitment",
+  "idea": "Building capacity is hard to undo, so an announcement tells rivals how a firm means to compete.",
+  "suggests": "Read an expansion as a signal about future prices and output, and ask what the firm gives up if it turns out wrong.",
+  "limits": "Announcements are cheap and plants are slow to build, so the signal can be weaker than it looks.",
+  "competing_idea": "Firms may expand only to follow demand, with no wish to signal anything to rivals.",
+  "questions": [
+    "How costly would it be for the company to reverse this expansion?",
+    "How would rivals read this move?",
+    "What would the company do if demand fell short?"
+  ],
+  "originals": [
+    {"reference": "Illustrative reference, not a real work", "level": "reference_confirmed", "link": null}
+  ]
+}
