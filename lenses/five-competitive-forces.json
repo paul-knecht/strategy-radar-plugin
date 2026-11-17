@@ -1,0 +1,34 @@
+{
+  "id": "five-competitive-forces",
+  "name": "Five competitive forces in an industry",
+  "idea": "An article lists the five forces: new entrants, buyer power, supplier power, substitutes, and rivalry among competitors. A business school institute's page says they drive how an industry's economic value is divided. It says the threat of entry caps an industry's profit potential. It names industry structure and a firm's relative position in it as the two basic drivers of company profitability.",
+  "suggests": "Look at who holds bargaining power in a company's market, how easily new firms or substitutes could come in, and how a planned move would change those forces.",
+  "limits": "The article reports critics' view that the framework is too static and so leaves out changes in the competitive environment. It proposes further forces: rivals' innovativeness, exposure to globalization, the threat of digitalization and exposure to regulation or deregulation.",
+  "competing_idea": "Another view, described in a review of the resource-based view, looks inside the firm for the sources of lasting advantage and asks why rivals within one industry might perform differently.",
+  "questions": [
+    "Which of the five forces bears most on this market: new entrants, buyers, suppliers, substitutes or rivalry?",
+    "Does the company's move change the strength of a force, for example by raising a barrier to entry or shifting power over buyers or suppliers?",
+    "How much of the company's profitability comes from its industry's structure, and how much from its relative position within it?"
+  ],
+  "originals": [
+    {
+      "reference": "Diane Isabelle, Kevin Horak, Sarah McKinnon and Chiara Palumbo, \"Is Porter's Five Forces Framework Still Relevant? A study of the capital/labour intensity continuum via mining and IT industries\", Technology Innovation Management Review, Vol. 10 No. 6, June 2020",
+      "level": "secondary_source_read",
+      "about": "The five forces framework of Michael E. Porter: \"How Competitive Forces Shape Strategy\", Harvard Business Review, 1979, and \"The Five Competitive Forces That Shape Strategy\", Harvard Business Review, January 2008",
+      "link": "https://timreview.ca/node/1366"
+    },
+    {
+      "reference": "\"The Five Forces\", web page of the Institute for Strategy and Competitiveness, Harvard Business School, no date stated",
+      "level": "secondary_source_read",
+      "about": "The five forces framework of Michael E. Porter: \"How Competitive Forces Shape Strategy\", Harvard Business Review, 1979, and \"The Five Competitive Forces That Shape Strategy\", Harvard Business Review, January 2008",
+      "link": "https://www.isc.hbs.edu/strategy/business-strategy/Pages/the-five-forces.aspx"
+    },
+    {
+      "reference": "Jeroen Kraaijenbrink, JC Spender and Aard Groen, \"The resource-based view: A review and assessment of its critiques\", MPRA Paper No. 21442, 2009 (published in Journal of Management, Vol. 36 No. 1, 2010, pp. 349-372)",
+      "level": "secondary_source_read",
+      "about": "The resource-based view of the firm and its critiques, including Jay Barney, \"Firm Resources and Sustained Competitive Advantage\", Journal of Management, Vol. 17 No. 1, March 1991, pp. 99-120",
+      "link": "https://mpra.ub.uni-muenchen.de/21442/"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

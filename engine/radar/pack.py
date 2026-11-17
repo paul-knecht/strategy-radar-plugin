@@ -15,7 +15,7 @@ from pathlib import Path
 from . import store
 from .fetch import check_url
 from .schema import Problem, _filled, _Problems
-from .textnorm import quote_units
+from .textnorm import normalise, quote_units
 
 PLACE_KINDS = ("investor_relations", "press_room", "filings", "annual_reports", "regulator", "trade_press",
                "permits", "job_postings")
@@ -24,11 +24,11 @@ DEFAULT_MONTHS = 36
 MAX_MONTHS = 120
 
 # The settings a pack may hold, and the settings of each entry in a list.
-KEYS = ("id", "company", "industry", "illustrative", "strategic_questions", "competitors", "watch", "places",
-        "vocabulary", "units", "demand_drivers", "languages", "time_window_months")
+KEYS = ("id", "company", "other_names", "industry", "illustrative", "screening", "strategic_questions", "competitors", "watch",
+        "places", "vocabulary", "units", "demand_drivers", "languages", "time_window_months")
 QUESTION_KEYS = ("text", "framing", "evidence", "framed_by")
 EVIDENCE_KEYS = ("url", "quote")
-CANDIDATE_KEYS = ("name", "status", "suggested_by", "found_at")
+CANDIDATE_KEYS = ("name", "other_names", "status", "suggested_by", "found_at")
 PLACE_KEYS = ("kind", "name", "url")
 VOCABULARY_KEYS = ("term", "meaning")
 
@@ -51,6 +51,7 @@ EMPTY = "a pack setting must not be left empty"
 FRAMING_NOT_ALLOWED = "a question's framing must be company or user"
 SUGGESTED_BY_NOT_ALLOWED = "who suggested a name must be user or search"
 ILLUSTRATIVE_NOT_ALLOWED = "the illustrative mark must be true or false"
+SCREENING_NOT_ALLOWED = "the screening mark must be true or false"
 KIND_NOT_ALLOWED = "the kind of a place to look is not one the pack allows"
 EVIDENCE_ADDRESS = "an evidence address needs a web address starting with http or https and holding no password"
 PLACE_ADDRESS = "a place to look needs a web address starting with http or https and holding no password"
@@ -196,9 +197,25 @@ def _check_questions(out: _Problems, file: str, data: dict) -> None:
         _unknown(out, file, question, QUESTION_KEYS, where)
 
 
+def _check_other_names(out: _Problems, file: str, record: dict, prefix: str = "") -> None:
+    """The other names of a company are optional; when given they are a list of filled texts."""
+    if "other_names" not in record:
+        return
+    names = record["other_names"]
+    if not isinstance(names, list):
+        out.add(file, prefix + "other_names", NOT_LIST)
+        return
+    for index, name in enumerate(names):
+        if not isinstance(name, str):
+            out.add(file, f"{prefix}other_names[{index}]", NOT_TEXT)
+        elif not name.strip():
+            out.add(file, f"{prefix}other_names[{index}]", EMPTY)
+
+
 def _check_candidates(out: _Problems, file: str, data: dict, key: str) -> None:
     for where, entry in _entries(out, file, data, key):
         _text(out, file, entry, "name", where)
+        _check_other_names(out, file, entry, where)
         if entry.get("status") != "candidate":
             out.add(file, where + "status", CANDIDATES_ONLY)
         suggested_by = entry.get("suggested_by")
@@ -250,9 +267,12 @@ def check(data: dict, file_name: str) -> list[Problem]:
     out = _Problems()
     _check_id(out, file_name, data)
     _text(out, file_name, data, "company")
+    _check_other_names(out, file_name, data)
     _text(out, file_name, data, "industry")
     if not isinstance(data.get("illustrative"), bool):
         out.add(file_name, "illustrative", ILLUSTRATIVE_NOT_ALLOWED)
+    if "screening" in data and not isinstance(data["screening"], bool):   # optional: a company pack leaves it out
+        out.add(file_name, "screening", SCREENING_NOT_ALLOWED)
     _check_questions(out, file_name, data)
     _check_candidates(out, file_name, data, "competitors")
     _check_candidates(out, file_name, data, "watch")
@@ -280,6 +300,35 @@ def summary(data: dict) -> dict:
     return {"id": pack_id if isinstance(pack_id, str) else None,
             "company": company if isinstance(company, str) else None,
             "illustrative": illustrative if isinstance(illustrative, bool) else None}
+
+
+# --- the companies ----------------------------------------------------------
+
+def _other_names_of(record: dict) -> list[str]:
+    names = record.get("other_names")
+    return [name for name in names if _filled(name)] if isinstance(names, list) else []
+
+
+def companies_of(data: dict) -> list[dict]:
+    """The companies a pack names, for the run: the pack's own company first (`home`), then the competitors, then the
+    watched companies, in the pack's order. A name that is already listed is skipped (compared without regard to case,
+    spacing or look-alike characters). A value of the wrong kind is left out, so this never raises."""
+    found: list[dict] = []
+    seen: set[str] = set()
+    candidates = [(data.get("company"), data, True)]
+    for key in ("competitors", "watch"):
+        entries = data.get(key)
+        if isinstance(entries, list):
+            candidates.extend((entry.get("name"), entry, False) for entry in entries if isinstance(entry, dict))
+    for name, record, home in candidates:
+        if not _filled(name):
+            continue
+        key = normalise(name).casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        found.append({"name": name, "other_names": _other_names_of(record), "home": home})
+    return found
 
 
 # --- the time window --------------------------------------------------------

@@ -2,20 +2,26 @@ import contextlib
 import ipaddress
 import json
 import socket
+import ssl
 import threading
+import time
+import urllib.error
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from radar import cli, extract_text, fetch, store
+import radar
+from radar import cli, extract_text, fetch, schema, store
 from radar.report import model
+from radar.status import run_status
 from helpers import add_source, make_run, make_pdf
 
 META = {"publisher": "Competitor A", "title": "Expansion", "date": "2026-05-14",
         "type": "company_release", "speaker": "the company", "interest": "wants to look strong",
         "language": "en"}
-BODY = "<html><body><p>" + "The expansion adds two high-speed syringe lines. " * 8 + "</p></body></html>"
+# An ordinary article page: more than 800 characters of running text, so it is saved without a note (Task 10, change F)
+BODY = "<html><body><p>" + "The expansion adds two high-speed syringe lines. " * 17 + "</p></body></html>"
 
 OWN = {"supplied_by": "the tester", "basis": "own company document"}
 
@@ -143,7 +149,7 @@ def test_sends_plain_user_agent(tmp_path, site):
     base, routes = site
     routes["/news"] = (200, {"Content-Type": "text/html"}, BODY.encode())
     save(make_run(tmp_path), base + "/news")
-    assert routes["_seen_user_agents"][-1] == "strategy-radar/0.1"
+    assert routes["_seen_user_agents"][-1] == "strategy-radar/" + radar.__version__
 
 
 @pytest.mark.parametrize("route, expected", [
@@ -283,8 +289,41 @@ def test_unreachable_host_is_network_error(tmp_path):
     assert rec["access_reason"] == "network_error"
 
 
+class _FakeContext:
+    def __init__(self, cas):
+        self.cas, self.loaded = cas, []
+
+    def cert_store_stats(self):
+        return {"x509_ca": self.cas}
+
+    def load_verify_locations(self, **kwargs):
+        self.loaded.append(kwargs)
+
+
+@pytest.mark.parametrize("cas, file_exists, loaded", [(0, True, True), (5, True, False), (0, False, False)])
+def test_an_empty_store_falls_back_to_the_system_file(tmp_path, monkeypatch, cas, file_exists, loaded):
+    fake = _FakeContext(cas)
+    monkeypatch.setattr(ssl, "create_default_context", lambda *a, **k: fake)
+    system_file = tmp_path / "cert.pem"
+    if file_exists:
+        system_file.write_text("x")
+    assert fetch.ssl_context(str(system_file)) is fake
+    assert fake.loaded == ([{"cafile": str(system_file)}] if loaded else [])
+
+
+def test_a_failed_certificate_check_is_named(tmp_path, monkeypatch):
+    class Opener:
+        def open(self, url, timeout=None):
+            raise urllib.error.URLError(ssl.SSLCertVerificationError(1, "certificate verify failed"))
+
+    monkeypatch.setattr(fetch, "_opener", Opener)
+    rec = save(make_run(tmp_path), "http://example.com/")
+    assert (rec["access"], rec["access_reason"]) == ("not_accessible", "certificate_failed")
+
+
 def test_silent_server_is_a_timeout(tmp_path, monkeypatch):
     monkeypatch.setattr(fetch, "TIMEOUT_SECONDS", 0.3)
+    monkeypatch.setattr(fetch, "ROBOTS_TIMEOUT_SECONDS", 0.3)   # the robots file is asked for first, with its own limit
     listener = socket.socket()
     listener.bind(("127.0.0.1", 0))
     listener.listen(5)  # accepts connections into the backlog, never answers
@@ -1531,3 +1570,243 @@ def test_a_label_in_free_words_with_visible_letters_and_spaces_is_kept_as_writte
 def test_the_label_refusal_is_a_plain_sentence():
     assert fetch.INVISIBLE_IN_LABEL == ("The place where the document lives must not hold control characters or "
                                         "invisible characters such as a zero-width character or a direction mark.")
+
+
+# --- Plan 2b, Task 10, change C: the robots file has a shorter limit of its own -------------------------------------
+
+@contextlib.contextmanager
+def _never_answers(hanging: str):
+    """A stand-in site that never answers on the path `hanging` while the test runs; otherwise robots.txt answers 404
+    at once and every other path serves BODY."""
+    release, seen = threading.Event(), []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            seen.append(self.path)
+            if self.path == hanging:
+                release.wait(60)   # no answer at all: the connection is held open until the test ends
+                return
+            found = self.path != "/robots.txt"
+            body = BODY.encode() if found else b"not found"
+            self.send_response(200 if found else 404)
+            self.send_header("Content-Type", "text/html")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_address[1]}", seen
+    finally:
+        release.set()
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_the_robots_file_waits_ten_seconds_and_the_page_thirty():
+    assert (fetch.ROBOTS_TIMEOUT_SECONDS, fetch.TIMEOUT_SECONDS) == (10, 30)
+
+
+def test_a_robots_file_that_does_not_answer_ends_the_save_as_a_timeout_and_the_page_is_never_asked_for(
+        tmp_path, monkeypatch):
+    """The robots file is given up on after its own limit, not the page's: a hanging site no longer costs two waits of
+    30 seconds. The page is then not asked for (the safe side), and the reason is the one a page gets."""
+    monkeypatch.setattr(fetch, "ROBOTS_TIMEOUT_SECONDS", 0.5)   # TIMEOUT_SECONDS keeps its 30 seconds
+    with _never_answers("/robots.txt") as (base, seen):
+        started = time.monotonic()
+        rec = save(make_run(tmp_path), base + "/news")
+        took = time.monotonic() - started
+    assert (rec["access"], rec["access_reason"], rec["copy_file"]) == ("not_accessible", "timeout", None)
+    assert seen == ["/robots.txt"]   # the page itself was never requested
+    assert 0.5 <= took < 5, took     # the robots limit and some slack, far below the page's 30 seconds
+
+
+def test_a_page_that_does_not_answer_is_given_up_on_after_the_page_s_own_limit(tmp_path, monkeypatch):
+    """The mirror of the test above: the robots file answers at once, the page hangs, and the page's limit applies,
+    not the robots file's 10 seconds."""
+    monkeypatch.setattr(fetch, "TIMEOUT_SECONDS", 0.5)   # ROBOTS_TIMEOUT_SECONDS keeps its 10 seconds
+    with _never_answers("/news") as (base, seen):
+        started = time.monotonic()
+        rec = save(make_run(tmp_path), base + "/news")
+        took = time.monotonic() - started
+    assert (rec["access"], rec["access_reason"], rec["copy_file"]) == ("not_accessible", "timeout", None)
+    assert seen == ["/robots.txt", "/news"]
+    assert 0.5 <= took < 5, took
+
+
+def test_a_wait_that_ran_out_is_told_apart_from_other_failures_in_both_forms_a_request_raises_it():
+    assert fetch._is_timeout(TimeoutError("timed out"))                          # no answer to the request
+    assert fetch._is_timeout(urllib.error.URLError(TimeoutError("timed out")))   # no answer to the connection
+    assert not fetch._is_timeout(urllib.error.URLError(ConnectionRefusedError()))
+    assert not fetch._is_timeout(ConnectionResetError())
+
+
+def test_a_robots_file_that_fails_in_another_way_still_lets_the_page_through(tmp_path, site):
+    base, routes = site
+    routes["/robots.txt"] = (503, {}, b"busy")
+    routes["/news"] = _html()
+    rec = save(make_run(tmp_path), base + "/news")
+    assert rec["access"] == "ok" and routes["_seen_robots"] == ["/robots.txt"] and routes["_seen_paths"] == ["/news"]
+
+
+# --- Plan 2b, Task 10, change F: a web page that holds little running text is flagged, never refused ----------------
+# Everything here is invented. A line of eight or more words is running text; menu entries, headings and footer links
+# are shorter lines.
+
+MENU = ["Home", "About us", "Our company", "Products and services", "Contract manufacturing", "Fill and finish",
+        "Quality and compliance", "Sustainability", "Careers", "Open positions", "News and media", "Press releases",
+        "Events", "Investors", "Financial reports", "Contact", "Locations", "Customer portal", "Search", "Language"]
+FOOTER = ["Imprint", "Privacy notice", "Cookie settings", "Terms of use", "Accessibility", "Sitemap",
+          "Copyright 2026 Competitor D, an invented company"]
+ARTICLE = [
+    "Competitor D, an invented company, said on Tuesday that it will add two filling lines at its Plant East site "
+    "before the end of 2027.",
+    "The two lines are meant for the company's own injectable products, and the company says that no capacity on them "
+    "will be offered to other customers.",
+    "According to the release, the building work starts in the spring, and the first line is to be ready for its "
+    "qualification runs about one year later.",
+    "The company did not state what the expansion costs. It said only that the money comes from its own funds and that "
+    "about eighty new jobs are planned at the site.",
+    "A spokesperson added that a third line is being looked at for a later stage, but that no decision on it has been "
+    "taken yet and none is expected this year.",
+    "The invented Plant East site already runs four lines for vials and two for syringes, according to the company's "
+    "earlier statements on its own website."]
+RELEASE = [
+    "Competitor D, an invented company, opens a new warehouse for finished products next to its Plant East site in "
+    "the coming month.",
+    "The warehouse holds space for about twelve thousand pallets and is cooled for products that must be kept cold. "
+    "The company says it shortens the way from its filling lines to its customers.",
+    "Twenty people will work there in two shifts. The release names no figure for the cost of the building and no "
+    "date for any further step.",
+    "The company also says that solar panels on the roof of the warehouse are to cover most of the power that its "
+    "cooling needs over a year."]
+
+
+def _menu(items) -> str:
+    return "<ul>" + "".join(f'<li><a href="/x">{item}</a></li>' for item in items) + "</ul>"
+
+
+def _page(main: str) -> str:
+    """An invented company page: a header with a long menu, the main part given, and a footer of links."""
+    return ("<!DOCTYPE html><html><head><title>Competitor D: News</title></head><body>"
+            f"<header><p>Competitor D</p><nav>{_menu(MENU)}</nav></header>"
+            f'<main id="app">{main}</main><footer>{_menu(FOOTER)}</footer></body></html>')
+
+
+SHELL_PAGE = _page("")   # the article would be built by a script in a browser: the main part is empty
+ARTICLE_PAGE = _page("<h1>Competitor D adds two lines</h1>" + "".join(f"<p>{text}</p>" for text in ARTICLE))
+RELEASE_PAGE = ("<html><body><h1>Competitor D opens a warehouse</h1>"
+                + "".join(f"<p>{text}</p>" for text in RELEASE) + "</body></html>")
+SEVEN_LONG_WORDS = " ".join(["Manufacturing-capacity-announcement-of-the-invented-company"] * 7)
+
+
+def _page_with_running_text(chars: int) -> tuple[str, str]:
+    """An invented page whose one line of eight or more words is exactly `chars` long, and the line itself. A heading
+    of seven very long words (419 characters) stands above it; it is no running text, so it does not count."""
+    sentence = "Competitor D adds filling lines at its invented Plant East site. "
+    line = (sentence * (chars // len(sentence) + 1))[:chars]
+    line = line[:-1] + "s" if line.endswith(" ") else line
+    return f"<html><body><h1>{SEVEN_LONG_WORDS}</h1><p>{line}</p></body></html>", line
+
+
+def _saved_both_ways(tmp_path, site, page: str) -> list[tuple[Path, dict]]:
+    """The page saved by save-source from the stand-in site and added by hand as an .html and an .htm file."""
+    base, routes = site
+    routes["/page"] = _html(page)
+    downloaded = make_run(tmp_path / "downloaded")
+    saved = [(downloaded, save(downloaded, base + "/page"))]
+    for suffix in (".html", ".htm"):
+        run, file = make_run(tmp_path / suffix[1:]), tmp_path / f"saved{suffix}"
+        file.write_text(page, encoding="utf-8")
+        saved.append((run, fetch.add_copy(run, file, "https://www.competitor-d.example/news", META,
+                                          data_class="public")))
+    return saved
+
+
+def test_running_text_is_the_characters_of_the_lines_of_eight_or_more_words():
+    text = ("one two three four five six seven eight\n"          # 8 words, 39 characters: counted
+            "a b c d e f g\n"                                    # 7 words: not counted
+            "   nine ten eleven twelve thirteen fourteen fifteen sixteen   \n"   # stripped: 56 characters, counted
+            "\n"
+            "Home\nAbout us\n")
+    assert fetch.prose_chars(text) == 39 + 56
+    assert fetch.prose_chars("") == 0 and fetch._MIN_PROSE_CHARS == 800
+
+
+def test_a_shell_page_whose_article_a_script_builds_is_saved_and_flagged(tmp_path, site):
+    for run, rec in _saved_both_ways(tmp_path, site, SHELL_PAGE):
+        copy = (run / rec["copy_file"]).read_text(encoding="utf-8")
+        assert len(copy.strip()) >= 300, copy   # menu words enough for the rule of 200 characters to let it through
+        assert (rec["access"], rec["access_reason"], rec["text_note"]) == ("ok", None, "little_running_text")
+        assert store.read_sources(run)["S1"] == rec and schema.check_data(run) == []
+
+
+def test_a_page_that_holds_its_article_is_not_flagged(tmp_path, site):
+    for run, rec in _saved_both_ways(tmp_path, site, ARTICLE_PAGE):
+        assert rec["access"] == "ok" and "text_note" not in rec
+        assert "Competitor D, an invented company, said on Tuesday" in (run / rec["copy_file"]).read_text("utf-8")
+
+
+@pytest.mark.parametrize("chars, flagged", [(799, True), (800, False), (801, False)])
+def test_a_page_just_below_the_line_of_800_characters_is_flagged_and_one_at_or_above_it_is_not(tmp_path, site,
+                                                                                                chars, flagged):
+    page, line = _page_with_running_text(chars)
+    assert len(line) == chars and len(line.split()) >= 8 and len(SEVEN_LONG_WORDS) == 419
+    for run, rec in _saved_both_ways(tmp_path, site, page):
+        assert line in (run / rec["copy_file"]).read_text(encoding="utf-8").splitlines()
+        assert rec["access"] == "ok" and ("text_note" in rec) is flagged, (chars, rec)
+
+
+def test_a_short_press_release_is_flagged_but_saved_and_counted_as_saved(tmp_path, site):
+    assert 550 <= sum(len(text) for text in RELEASE) <= 650   # about 600 characters of running text
+    base, routes = site
+    routes["/release"] = _html(RELEASE_PAGE)
+    run = make_run(tmp_path)
+    rec = save(run, base + "/release")
+    assert (rec["access"], rec["text_note"]) == ("ok", "little_running_text") and (run / rec["copy_file"]).is_file()
+    assert run_status(run)["steps"][0] == {"name": "collect", "state": "done",
+                                           "detail": "1 source saved, 0 not accessible, 1 with little running text"}
+    assert run_status(run)["sources_to_read"] == ["S1"]   # it waits to be read like any saved source
+
+
+def test_a_pdf_a_text_and_a_table_are_never_flagged(tmp_path, site):
+    """Only a web page is judged: the same short lines in a PDF, a plain text or a table get no note."""
+    base, routes = site
+    lines = MENU + FOOTER[:-1]   # short lines only: no running text at all
+    routes["/report.pdf"] = (200, {"Content-Type": "application/pdf"}, make_pdf(lines))
+    routes["/notes"] = (200, {"Content-Type": "text/plain; charset=utf-8"}, "\n".join(lines).encode())
+    run = make_run(tmp_path / "downloaded")
+    for path in ("/report.pdf", "/notes"):
+        rec = save(run, base + path)
+        assert rec["access"] == "ok" and "text_note" not in rec, rec
+    by_hand = make_run(tmp_path / "by-hand")
+    files = {"report.pdf": make_pdf(lines), "notes.txt": "\n".join(lines).encode(),
+             "table.csv": "\n".join(f"{entry},1" for entry in lines).encode()}
+    for name, content in files.items():
+        (tmp_path / name).write_bytes(content)
+        rec = fetch.add_copy(by_hand, tmp_path / name, "https://www.competitor-d.example/" + name, META,
+                             data_class="public")
+        assert rec["access"] == "ok" and "text_note" not in rec, (name, rec)
+    assert schema.check_data(run) == [] and schema.check_data(by_hand) == []
+
+
+def test_a_flagged_record_has_the_keys_of_every_record_and_the_note(tmp_path, site):
+    base, routes = site
+    routes["/news"] = _html(SHELL_PAGE)
+    rec = save(make_run(tmp_path), base + "/news")
+    assert list(rec)[-1] == "text_note" and set(rec) - {"text_note"} == {
+        "id", "url", "publisher", "title", "date", "type", "speaker", "interest", "language", "data_class",
+        "saved_at", "saved_by", "access", "access_reason", "copy_file", "orig_file", "copy_sha256", "based_on",
+        "provenance", "final_url"}
+
+
+def test_a_page_that_could_not_be_saved_gets_no_note(tmp_path, site):
+    base, _ = site
+    rec = save(make_run(tmp_path), base + "/missing")
+    assert rec["access_reason"] == "http_404" and "text_note" not in rec

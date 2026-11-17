@@ -12,18 +12,23 @@ import unicodedata
 
 from ..textnorm import normalise
 from ..verify import is_early_signal
+from . import companies as company_view, visuals
+from .model import load_labels
 
 _FORMULA_SIGNS = ("=", "+", "-", "@")
 _BLANK_CATEGORIES = ("Zs", "Zl", "Zp", "Cc", "Cf")   # spaces, separators, control and format characters
 _LINE_BREAK = re.compile("\r\n|[\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029]")
 _CELL_SEPARATORS = (";", "\t")   # where a program set to a semicolon or tab separator starts a new cell
+NOT_NAMED = "not named"   # a connection whose party the quote does not name: `tie: not named (description)`
 ENTRY_SEPARATOR = " | "   # between the entries of one cell that lists several quotes (a quote may hold a semicolon)
 
 FACT_COLUMNS = ("fact_id", "illustrative", "status", "status_reason", "data_class", "kind", "early_signal", "company",
                 "home_company", "move_type", "stage", "site", "country", "what_added", "size_value", "size_unit",
                 "announced", "planned_start", "access", "delivery", "statement", "quote", "quote_language",
                 "quote_translation", "supporting_quotes", "supporting_sources", "supporting_translations",
-                "source_id", "source_title", "source_publisher", "source_date", "source_url")
+                "source_id", "source_title", "source_publisher", "source_date", "source_url",
+                "about_company", "report_company", "status_shown", "uncertain_reasons", "project_id", "project_name",
+                "connections", "countries", "size_shown", "size_converted")
 SOURCE_COLUMNS = ("source_id", "illustrative", "data_class", "type", "publisher", "title", "date", "url", "final_url", "speaker", "interest",
                   "language", "saved_at", "saved_by", "access", "access_reason", "based_on", "supplied_by", "basis")
 _FIELD_COLUMNS = ("company", "move_type", "stage", "site", "country", "what_added", "size_value", "size_unit",
@@ -93,9 +98,34 @@ def _illustrative(model: dict) -> str:
     return "yes" if model.get("illustrative") else ""
 
 
+def _connection_entry(connection: dict) -> str:
+    """`tie: party`, or `tie: not named (description)` where no party is named (the description is left out when
+    there is none)."""
+    if connection.get("party_name"):
+        return f"{connection.get('tie')}: {connection['party_name']}"
+    description = connection.get("description")
+    return f"{connection.get('tie')}: {NOT_NAMED}" + (f" ({description})" if description else "")
+
+
+def _size_cells(fact: dict, fields: dict, labels: dict) -> dict:
+    """The size as stated with its unit tidied, and, where the tidy size has one, its value in the unit sizes are
+    compared in (`about` first when that value is rounded). Only a capacity move has a size."""
+    if fact.get("kind") != "capacity_move" or not fields:
+        return {}
+    converted = (fact["size"] if isinstance(fact.get("size"), dict) else company_view.size_of(fields)).get("converted")
+    value = f"{converted['number']} {converted['unit']}" if isinstance(converted, dict) else ""
+    return {"size_shown": visuals.stated_size(fact),
+            "size_converted": labels["converted_about"].format(value=value) if value and converted.get("about") else value}
+
+
 def facts_csv(model: dict) -> str:
     """One row per fact in id order, rejected facts included."""
     home = _company_key(model.get("home_company"))
+    labels = load_labels()
+    project_of = {fact["id"]: item for item in model["projects"]["items"] for fact in item["facts"]}
+    connections_of: dict[str, list[dict]] = {}
+    for connection in model["connections"]:
+        connections_of.setdefault(connection["fact"]["id"], []).append(connection)
     records = []
     for fact in sorted(model["facts"] + model["rejected"], key=lambda fact: _id_number(fact["id"])):
         fields = fact.get("fields") if isinstance(fact.get("fields"), dict) else {}
@@ -114,7 +144,18 @@ def facts_csv(model: dict) -> str:
                                               if any(entry.get("quote_translation") for entry in supporting) else ""),
                   "source_id": fact.get("source_id"), "source_title": source.get("title"),
                   "source_publisher": source.get("publisher"), "source_date": source.get("date"),
-                  "source_url": source.get("url")}
+                  "source_url": source.get("url"),
+                  # empty when the report's name check dropped the stored name (the fact then falls under "none")
+                  "about_company": (None if (fact.get("company") or {}).get("key") == "none"
+                                    else fact.get("about_company")),
+                  "report_company": (fact.get("company") or {}).get("name"),   # a rejected fact has none
+                  "status_shown": fact.get("shown_status"),
+                  "uncertain_reasons": fact.get("uncertain_reasons"),
+                  "project_id": (project_of.get(fact["id"]) or {}).get("id"),
+                  "project_name": (project_of.get(fact["id"]) or {}).get("name"),
+                  "connections": _entries(_connection_entry(entry) for entry in connections_of.get(fact["id"], [])),
+                  "countries": _entries(fact.get("countries") or [])}
+        record.update(_size_cells(fact, fields, labels))
         record.update({name: fields.get(name) for name in _FIELD_COLUMNS})
         records.append(record)
     return _table(FACT_COLUMNS, records)

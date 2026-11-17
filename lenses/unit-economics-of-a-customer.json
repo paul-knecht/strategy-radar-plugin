@@ -1,0 +1,27 @@
+{
+ "id": "unit-economics-of-a-customer",
+ "name": "Profit per customer against its cost",
+ "idea": "An essay on subscription software states that a great way to understand any business model is to ask whether more profit can be made from customers than it costs to acquire them, using the lifetime value of a typical customer and the cost to acquire one. It states that the best such businesses have a ratio above 3, and that many of the best recover the cost to acquire in 5-7 months.",
+ "suggests": "Look at what a typical customer brings in over its life, what it costs to win one, and how long it takes to earn that cost back, for each kind of customer separately.",
+ "limits": "The essay stresses that its ratios are only guidelines and that entrepreneurs are usually overoptimistic about the cost of winning a customer. An executive of a software company quoted in it says that working out the ratio by segment can be hard, especially the cost side.",
+ "competing_idea": "A magazine article reporting a paper states that, according to the paper's authors, a lifetime-value calculation must take margin, retention rate and the discount rate into account. It adds that an investor company able to calculate it and forecast customer numbers can gauge a company's customer base.",
+ "questions": [
+  "What does a typical customer bring in over its life, and what does it cost to win and serve one?",
+  "How long does it take for a customer to repay what it cost to acquire?",
+  "Do some kinds of customer repay their cost much faster than others?"
+ ],
+ "originals": [
+  {
+   "reference": "David Skok, \"SaaS Metrics 2.0 - A Guide to Measuring and Improving what Matters\", forEntrepreneurs.com, undated online article",
+   "level": "original_read",
+   "link": "https://www.forentrepreneurs.com/saas-metrics-2/"
+  },
+  {
+   "reference": "Lauren Keller Johnson, \"The Real Value of Customer Loyalty\", MIT Sloan Management Review, 15 January 2002",
+   "level": "secondary_source_read",
+   "about": "Sunil Gupta and Donald R. Lehmann, \"Customers as Assets\", working paper, Columbia Business School, August 2001",
+   "link": "https://sloanreview.mit.edu/?p=10018"
+  }
+ ],
+ "checked_on": "2026-11-17"
+}

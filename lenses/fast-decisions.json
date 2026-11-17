@@ -1,0 +1,21 @@
+{
+  "id": "fast-decisions",
+  "name": "Deciding fast in fast markets",
+  "idea": "The work argues that firms which make strategic decisions quickly in fast-changing industries do not do so by cutting back on information or options. They use up-to-date information about how the business is running, weigh several alternatives at the same time, and lean on advisers with relevant experience.",
+  "suggests": "Look at how the company decides when its market moves quickly: what information it uses day to day, how many options it keeps open at once, and whom it asks for advice.",
+  "limits": "The work is about decisions in industries that change quickly, so what it argues is tied to that kind of setting.",
+  "competing_idea": "The work sets its account against the common view that deciding fast means doing less analysis, a view in which thorough and slower analysis is what leads to better decisions.",
+  "questions": [
+    "What information does the company use when it must decide quickly, and how current is it?",
+    "How many alternatives does the company keep open at once when it decides under time pressure?",
+    "Who advises on fast decisions, and what experience do they bring?"
+  ],
+  "originals": [
+    {
+      "reference": "K. M. Eisenhardt, \"Making Fast Strategic Decisions in High-Velocity Environments\", Academy of Management Journal, Vol. 32 No. 3, 1989, pp. 543-576",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.2307/256434"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

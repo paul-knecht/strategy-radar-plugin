@@ -1,0 +1,22 @@
+{
+  "id": "gains-from-partners",
+  "name": "Gains from partners",
+  "idea": "An encyclopedia article states that the work analyses networks and pairs of firms to explain relational rents: supernormal profits earned jointly in an exchange that neither firm could earn alone, through the partners' joint, idiosyncratic contributions. It names four sources: assets specific to the relationship, routines for sharing knowledge, complementary resources and effective governance.",
+  "suggests": "Look at which of a company's results come from close, specific ties with partners, what each side has invested in the tie, and how the partners share knowledge and settle disputes.",
+  "limits": "The article states that earning relational rents is subject to relational risk.",
+  "competing_idea": "Other views the article sets beside it: the industry structure view explains superior returns by belonging to an industry with particular structural traits, and the resource-based view by differences between firms.",
+  "questions": [
+    "Which of the company's partners have made investments that only pay off within the relationship?",
+    "How do the company and its partners share knowledge, and who governs the tie?",
+    "Could either side earn the same profit alone, or does it depend on the pair?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Relational view\", Wikipedia, The Free Encyclopedia, revision 1149321916 of 11 April 2023",
+      "level": "secondary_source_read",
+      "about": "Jeffrey H. Dyer and Harbir Singh, \"The Relational View: Cooperative Strategy and Sources of Interorganizational Competitive Advantage\", The Academy of Management Review, Vol. 23 No. 4, October 1998, beginning p. 660",
+      "link": "https://en.wikipedia.org/w/index.php?title=Relational_view&oldid=1149321916"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

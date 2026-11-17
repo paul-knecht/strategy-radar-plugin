@@ -59,6 +59,11 @@
     "why": "The reason was written or changed by hand after the facts were settled.",
     "do": "Settle the facts again so that every reason follows from its checks."
   },
+  "the reasons for uncertain do not follow from the checks": {
+    "what": "The reasons recorded for fact {id} (why it is uncertain) do not match its checks.",
+    "why": "The program works the reasons out when it settles the facts. They were changed by hand, or a source was marked as repeating another one since.",
+    "do": "Settle the facts again so that the reasons follow from the checks."
+  },
   "saved copy has changed": {
     "what": "The saved copy of source {id} is no longer the text that was saved.",
     "why": "The file was edited or replaced after it was saved.",
@@ -114,6 +119,16 @@
     "why": "The run stops twice for your decision: before the lenses are chosen and before the final report.",
     "do": "Answer the open question for this run. The report is built after that."
   },
+  "a text that says an amount is missing names none of the confirmed facts that state an amount": {
+    "what": "A text of the analysis says that no source gives a price, a cost or another amount, while confirmed facts of this run state amounts.",
+    "why": "A reader would take the amount as missing, while the run holds amounts that may answer it.",
+    "do": "Name at least one of the listed facts in the text and say why its amount does not answer the point, or change the text."
+  },
+  "a not-found entry about money names none of the confirmed facts that state an amount": {
+    "what": "The analysis says a price or cost was not found, but confirmed facts state amounts of money (the problem lists them).",
+    "why": "A reader would believe no source gives any figure, while the run holds some; they may answer the question or may not.",
+    "do": "Use those amounts, or name one in the entry and say why it does not answer (F35 is a build budget, not a price). An older run may need this to rebuild."
+  },
   "fact was never settled": {
     "what": "Fact {id} was proposed but never checked to the end.",
     "why": "Either its quote check or its support check is missing.",
@@ -164,6 +179,11 @@
     "why": "Every source, fact and analysis part has to be filled in before it can be shown.",
     "do": "Fill in the blank part, or run the step that writes it again."
   },
+  "in_question is missing; it must be yes or no, set by the extractor": {
+    "what": "A proposed capacity move does not say whether it falls inside the run's question.",
+    "why": "The answer counts only moves inside the question; whether one is inside is the extractor's judgement, made against the question and checked by the support checker.",
+    "do": "Send the move back to the extractor to propose it again with in_question set to yes or no. Do not decide it yourself."
+  },
   "not an allowed value": {
     "what": "An entry has a value the program does not recognise.",
     "why": "Only the listed choices can be used there, such as a source type or a confidence level.",
@@ -183,6 +203,11 @@
     "what": "A source that is not public does not say where it came from.",
     "why": "For licensed and internal material, the report must show who supplied it and on what basis.",
     "do": "Add who supplied the source and on what basis."
+  },
+  "only a saved web page can have the note little_running_text": {
+    "what": "Source {id} carries the note that its copy holds little running text, but it is not a saved web page.",
+    "why": "The program gives this note only to a web page it saved, so the note was added or changed by hand.",
+    "do": "Take the note out of source {id}, or save the page again as a new source."
   },
   "source {id} does not exist": {
     "what": "A fact or source points to source {id}, which is not saved in this run.",
@@ -417,7 +442,7 @@
   "a pack setting must be a list": {
     "what": "In the pack, {field} should be a list, but it is missing or holds a single value.",
     "why": "Each entry is read on its own, so a single value cannot stand in for a list.",
-    "do": "Write {field} as a list, even with one entry. Only competitors, watch, units, demand drivers and vocabulary may be empty."
+    "do": "Write {field} as a list, even with one entry. Only competitors, watch, units, demand drivers, vocabulary and other names may be empty or left out."
   },
   "a pack list entry must be text": {
     "what": "In the pack, {field} is not plain text.",
@@ -459,6 +484,11 @@
     "why": "Readers must be able to tell invented practice material from a real pack.",
     "do": "Write true for practice material with invented companies, or false for a real company pack."
   },
+  "the screening mark must be true or false": {
+    "what": "The pack does not say clearly whether it is for screening a startup.",
+    "why": "A screening run writes a memo on one startup, so the run must know which kind it is.",
+    "do": "Write true for a pack on a startup to screen, or leave the setting out for a company pack."
+  },
   "the kind of a place to look is not one the pack allows": {
     "what": "A place to look in the pack has a kind that is missing or not allowed.",
     "why": "The kind tells the search what sort of source to expect there.",
@@ -493,6 +523,26 @@
     "what": "This run is marked as the invented practice run, but it is not one.",
     "why": "Only the private practice run that the demo command builds may carry that mark. The mark was added by hand, or the run was changed afterwards.",
     "do": "Build the practice run again with the demo command, or start a new run for your own material."
+  },
+  "a capacity move names its company in fields.company": {
+    "what": "A capacity move names its company a second time, as the company the fact is about.",
+    "why": "A capacity move keeps its company with the other details of the move. A second place for it could name a different company.",
+    "do": "Leave out the company the fact is about on a capacity move, and keep the company with the details of the move."
+  },
+  "a connection that names no party must describe it": {
+    "what": "A fact lists a customer, buyer, seller or partner without a name and without a description.",
+    "why": "A party the source does not name is shown by the words the source uses for it. Without them the report cannot say who is meant.",
+    "do": "Copy the source's words for the party into description, or give its name in party."
+  },
+  "a connection names its other party; leave out a tie whose party the source does not name": {
+    "what": "A proposed fact lists a customer, buyer, seller or partner without naming it.",
+    "why": "A tie with no named party tells the reader nothing they can follow up. The fact's statement can still say that the source mentions an unnamed party.",
+    "do": "Name the party in party, or leave the connection out and let the statement say it."
+  },
+  "at most one company of a run is its own company": {
+    "what": "The run's list of companies marks more than one company as the company the report is for.",
+    "why": "A report is written for one company. With two, the report cannot tell which one is meant.",
+    "do": "Keep the mark on one company and take it off the others, or start the run again from its pack."
   },
   "a public run may not be compared with a run that holds non-public material": {
     "what": "This public run is compared with an earlier run that holds material that is not public.",
@@ -536,13 +586,18 @@
   },
   "the key {id} is not known in a flag": {
     "what": "A flag of the look for bias holds a part called {id} that the program does not know.",
-    "why": "A flag is exactly a check and a text, and the report prints nothing else of it.",
-    "do": "Have the look for bias done again, and copy only the check and the text of each flag."
+    "why": "A flag is a check, a text and the messages it is about, and the report prints nothing else of it.",
+    "do": "Have the look for bias done again, and copy only the check, the text and the messages of each flag."
   },
   "a flag names fact {id}, which does not exist": {
     "what": "A flag of the look for bias names fact {id}, but there is no such fact in this run.",
     "why": "A reader would look for a fact that is not there, and a flag is never changed by hand.",
     "do": "Have the look for bias done again, so that its flags name only facts of this run."
+  },
+  "a flag names message {id}, which does not exist": {
+    "what": "A flag of the look for bias names message {id}, but there is no such message in this analysis.",
+    "why": "The report puts each flag under the messages it is about, and a message that is not there has no place for it.",
+    "do": "A message was dropped, so the audit no longer fits. Set the audit's list of findings back to the empty list, and do the look for bias again."
   },
   "write the size as text, such as \"2.5\"": {
     "what": "The size of a capacity move is written as a bare number, not as text.",
@@ -553,5 +608,350 @@
     "what": "This is the invented practice run, and the earlier run is not a practice run.",
     "why": "The practice run takes no material from outside the practice, so it takes no values from another run either.",
     "do": "Compare it with another practice run built with the demo command, or compare runs of your own."
+  },
+  "no lens files": {
+    "what": "The folder holds no lenses.",
+    "why": "Thinking lenses are chosen from this folder, so a folder without any offers nothing to choose.",
+    "do": "Give the folder that holds the lenses, or add a lens to it."
+  },
+  "a lens id may use only letters, digits, hyphens and underscores": {
+    "what": "The id of a lens is missing or uses a character that is not allowed.",
+    "why": "The id is also the name the lens is saved under, so it may use only letters, digits, hyphens and underscores.",
+    "do": "Write the id with letters, digits, hyphens and underscores only, such as firm-boundaries, and save the lens under that name."
+  },
+  "a lens id must match the name the lens is saved under": {
+    "what": "A lens is saved under a name that differs from its id.",
+    "why": "The program finds a lens by its id, so the two must be the same. The lens was renamed, or its id was changed by hand.",
+    "do": "Save the lens under its id, or change the id to the name it is saved under."
+  },
+  "a lens holds a part that the program does not know": {
+    "what": "The program does not recognise {field} in the lens.",
+    "why": "The name may be misspelt, or text was added that does not belong in a lens. A part the program does not know would otherwise be ignored without a warning.",
+    "do": "Correct the name of {field}, or remove it from the lens."
+  },
+  "a lens part must be filled in with text": {
+    "what": "In the lens, {field} is blank, missing or not plain text.",
+    "why": "The lens file holds every part of a lens, so each one needs its own words.",
+    "do": "Write {field} as plain text, in your own words."
+  },
+  "a lens text may be at most 400 characters long": {
+    "what": "In the lens, {field} is longer than 400 characters.",
+    "why": "A lens says its idea in a few short sentences of its own. A long text may hold a passage copied from the original, which must not be shipped.",
+    "do": "Shorten {field} to at most 400 characters, in your own words."
+  },
+  "a lens needs at least one original": {
+    "what": "The lens names no original that it rests on.",
+    "why": "Anyone who uses a lens must be able to see which work or course it comes from, and how closely that was checked.",
+    "do": "Add at least one original with its reference, its level and its link, the way the demo lenses do."
+  },
+  "an original of a lens needs its reference, level and link": {
+    "what": "In the lens, {field} is not written with a reference, a level and a link.",
+    "why": "Each original says which work the lens rests on, how closely it was checked and where a reader can find it.",
+    "do": "Write {field} the way the demo lenses write their originals."
+  },
+  "a lens link must be none or a web address starting with http or https": {
+    "what": "In the lens, {field} is not a usable link.",
+    "why": "A link must open for a reader: it starts with http or https, has a port from 1 to 65535 if any, and holds no user name, password, space or hidden character.",
+    "do": "Write the address in that form, with a site name of plain letters a to z, digits, hyphens and dots, or set the link to none, as the demo lenses do."
+  },
+  "a lens for real use must say when it was checked": {
+    "what": "A lens that is meant to ship does not say on which day it was checked.",
+    "why": "A lens that ships with the plugin keeps in its file the day its statements were last checked against its originals.",
+    "do": "Add the day the lens was checked, written as year, month and day, such as 2026-11-15."
+  },
+  "the day a lens was checked must be written as year, month and day": {
+    "what": "The day the lens was checked is not a usable date.",
+    "why": "The day is written as year, month and day, so that anyone can tell how recent the check of the lens is.",
+    "do": "Write the day as year, month and day, such as 2026-11-15."
+  },
+  "the day a lens was checked lies in the future": {
+    "what": "The day the lens was checked lies in the future.",
+    "why": "A lens can only name the day of a check that has taken place. A later date is a typing error.",
+    "do": "Write the day on which the lens was really checked."
+  },
+  "a lens for real use may not rest on an illustrative reference": {
+    "what": "A lens that is meant to ship names an invented reference as its original.",
+    "why": "A reference that begins with the word Illustrative belongs to an invented practice lens, which may not be shipped as a real one.",
+    "do": "Name the real work or course the lens rests on, or keep the lens as practice material."
+  },
+  "a lens cannot be read": {
+    "what": "A lens cannot be read.",
+    "why": "It is empty, damaged, nested too deeply, not one set of named parts, saved in another text format, or a folder. Or your user account may not open it.",
+    "do": "Restore the lens from a backup, or start again from a copy of a demo lens. If it is locked, allow your user account to read it."
+  },
+  "a lens level must be original_read, course_slides, secondary_source_read or reference_confirmed": {
+    "what": "In the lens, {field} is missing or not one of the four levels.",
+    "why": "The level says how closely the original was checked, from original_read, the work itself, down to reference_confirmed, its reference only. The levels between are course_slides and secondary_source_read.",
+    "do": "Write original_read, course_slides, secondary_source_read or reference_confirmed, and never a higher level than the check reached."
+  },
+  "a lens entry read as a source about a work must name that work": {
+    "what": "In the lens, {field} is missing.",
+    "why": "An entry whose level says that a source about the work was read must say which work the source is about, so that nobody takes the source for the work.",
+    "do": "Write in {field} the work that the source is about, in plain words."
+  },
+  "only a lens entry read as a source about a work may name that work": {
+    "what": "In the lens, {field} stands in an entry that is not read as a source about a work.",
+    "why": "Only an entry whose level is secondary_source_read has a work that it is about. Anywhere else the part would be ignored without a warning.",
+    "do": "Remove {field}, or change the level of the entry to secondary_source_read if a source about the work was read."
+  },
+  "a shipped lens entry at the level reference confirmed needs a web address as its link, to the page that confirms the work": {
+    "what": "In the lens, {field} is not a web address.",
+    "why": "Its text was not read, so a reader must be able to find the work itself and read further.",
+    "do": "Write the web address of the page that confirms the work, starting with http or https."
+  },
+  "a lens entry read as a source about a work needs a web address as its link": {
+    "what": "In the lens, {field} is not a web address.",
+    "why": "A source that stands in for the work must be one that anyone can open and confirm, so its link may not be none.",
+    "do": "Write the web address of the source that was read, starting with http or https."
+  },
+  "the lens folder cannot be read": {
+    "what": "The lens folder, or a name in it, cannot be opened.",
+    "why": "Your user account may not list the folder, or may list it but not open the files in it.",
+    "do": "Allow your user account to read and open the lens folder, then check the lenses again."
+  },
+  "the lens folder for real use needs a themes index": {
+    "what": "The lens folder has no list that sorts its lenses into themes.",
+    "why": "The lenses that ship are offered grouped by theme, and the grouping is read from one list kept in the lens folder.",
+    "do": "Add the list of themes to the lens folder, with each lens in exactly one theme."
+  },
+  "the themes index of the lenses cannot be read": {
+    "what": "The themes index of the lenses cannot be read.",
+    "why": "It is empty, damaged, nested too deeply, not one set of named parts, saved in another text format, or a folder. Or your user account may not open it.",
+    "do": "Write the list of themes again, each theme with a name and its lens ids."
+  },
+  "the themes index of the lenses holds a part that the program does not know": {
+    "what": "The program does not recognise {field} in the themes index of the lenses.",
+    "why": "The name may be misspelt, or text was added that does not belong in the index. A part the program does not know would otherwise be ignored without a warning.",
+    "do": "Correct the name of {field}, or remove it from the index."
+  },
+  "the themes index of the lenses must hold a list of themes": {
+    "what": "In the themes index of the lenses, {field} is missing or is not a list.",
+    "why": "The index holds one list of themes, and each theme holds the lenses it groups.",
+    "do": "Write {field} as a list of themes, each with a name and a list of lens ids."
+  },
+  "a theme of the lenses needs a name and a list of lens ids": {
+    "what": "In the themes index of the lenses, {field} is not written as a name and a list of lens ids.",
+    "why": "Each theme groups lenses under a name, and a lens id is plain text.",
+    "do": "Write {field} the way the other themes are written: a name, and the lens ids in a list."
+  },
+  "a theme of the lenses needs a name of at most 400 characters": {
+    "what": "In the themes index of the lenses, {field} is blank, missing, not plain text or longer than 400 characters.",
+    "why": "A theme is offered under its name, and a short name keeps every theme easy to read.",
+    "do": "Write a short name for the theme in {field}, in plain text."
+  },
+  "a theme of the lenses names a lens that has no file": {
+    "what": "In the themes index of the lenses, {field} names a lens that is not in the lens folder.",
+    "why": "The id may be misspelt or written in another case than the lens is named, or the lens may have been removed or renamed.",
+    "do": "Write the id exactly as the lens is named in the lens folder, or remove it from the theme."
+  },
+  "a lens may be listed only once in the themes index": {
+    "what": "In the themes index of the lenses, {field} names a lens that is already listed.",
+    "why": "Each lens belongs to exactly one theme, so that it is offered once.",
+    "do": "Keep the lens in one theme and remove it from the other."
+  },
+  "a lens for real use must be in one theme of the themes index": {
+    "what": "The lens is in no theme of the themes index.",
+    "why": "Every lens that ships is offered under a theme, so a lens that is in none would be left unsorted.",
+    "do": "Add the lens id to one theme in the list of themes, or add a new theme for it."
+  },
+  "a lens recommendation may name at most 4 lenses": {
+    "what": "The lens advisor suggested more than four lenses.",
+    "why": "A short list keeps the first stop easy to read, and the person can still pick any lens from the full list.",
+    "do": "Keep the four lenses that fit the question best, and suggest the list again."
+  },
+  "a lens recommendation that names no lens must say in its note why none fits": {
+    "what": "The lens advisor suggested no lens but did not say why.",
+    "why": "An empty list is allowed, but the person needs the reason to judge it.",
+    "do": "Add a note that says in a sentence why no lens fits the question, and suggest the list again."
+  },
+  "the lens recommendation must hold a list of entries": {
+    "what": "The lens suggestion does not hold a list of lenses.",
+    "why": "The program can only check and keep a list, one lens after another in the order of their rank.",
+    "do": "Send the suggestion again with its lenses as a list, which may be empty."
+  },
+  "an entry of the lens recommendation must hold exactly the lens, the part of the question, why, the facts and what it lacks": {
+    "what": "A suggested lens does not hold exactly its five parts.",
+    "why": "Each suggestion names the lens, the part of the question, why it fits, the facts it could use and what it lacks, and nothing else.",
+    "do": "Give each suggested lens exactly those five parts, and suggest the list again."
+  },
+  "an entry of the lens recommendation names no lens of the lens folder": {
+    "what": "A suggested lens is not in the lens folder of this run.",
+    "why": "Only a lens that the program can read and check may be suggested to the person.",
+    "do": "Use the exact name of a lens from the list of lenses, and suggest the list again."
+  },
+  "an entry of the lens recommendation names a lens that fails the lens check": {
+    "what": "A suggested lens fails the lens check.",
+    "why": "A lens with a missing or broken part cannot be offered to the person as a choice.",
+    "do": "Suggest another lens, or repair that lens and check the lens folder again."
+  },
+  "the lens recommendation names a lens twice": {
+    "what": "The same lens is suggested twice.",
+    "why": "Each lens may stand in the list once, so that its place in the ranking is clear.",
+    "do": "Keep the lens once, where it ranks best, and suggest the list again."
+  },
+  "the part of the question in a lens recommendation must have 2 to 15 words": {
+    "what": "The part of the question named for a lens is shorter than 2 words or longer than 15.",
+    "why": "A short, exact part shows which words of the question the lens is about.",
+    "do": "Copy between 2 and 15 words from the question, and suggest the list again."
+  },
+  "the part of the question in a lens recommendation is not copied word for word from the question": {
+    "what": "The part of the question named for a lens is not in the question word for word.",
+    "why": "Only capital letters and spacing may differ, so a word cut in half or changed does not count as a copy.",
+    "do": "Copy the words exactly as the question has them, and suggest the list again."
+  },
+  "the facts of an entry of the lens recommendation must come as a list of fact numbers": {
+    "what": "The facts named for a suggested lens are not a list of fact numbers.",
+    "why": "The program checks each named fact on its own, so the facts come as a list, which may be empty.",
+    "do": "Name the facts as a list of numbers such as F2, and suggest the list again."
+  },
+  "the lens recommendation names a fact number that the run does not hold": {
+    "what": "A suggested lens names a fact number that this run does not have.",
+    "why": "Only facts of this run may stand behind a suggestion.",
+    "do": "Use the numbers of the facts that count, as the lens advisor was shown them, and suggest the list again."
+  },
+  "the lens recommendation names a fact that does not count": {
+    "what": "A suggested lens names a fact that does not count.",
+    "why": "A rejected, withdrawn or unchecked fact may not stand behind a suggestion, just as it may not stand behind the report.",
+    "do": "Leave that fact out or name one that counts, and suggest the list again."
+  },
+  "a text of the lens recommendation must be filled in": {
+    "what": "A text of the lens suggestion is empty or is not text.",
+    "why": "Every part that the person reads must say something.",
+    "do": "Fill in the text, and suggest the list again."
+  },
+  "a text of the lens recommendation may be at most 400 characters long": {
+    "what": "A text of the lens suggestion is longer than 400 characters.",
+    "why": "Short texts keep the first stop easy to read.",
+    "do": "Shorten the text, and suggest the list again."
+  },
+  "only the lens advisor may record the lens recommendation": {
+    "what": "Someone other than the lens advisor tried to keep a lens suggestion.",
+    "why": "Only the lens advisor makes the suggestion, so the person always knows where it came from.",
+    "do": "Let the lens advisor make the suggestion. It is never written by another helper or by hand."
+  },
+  "the lens recommendation was refused because it does not pass the form check": {
+    "what": "The lens suggestion was not kept because it does not pass the form check.",
+    "why": "Each problem it has is named on its own.",
+    "do": "Fix each named problem, and suggest the list again."
+  },
+  "the saved lens recommendation does not hold exactly the parts the program writes": {
+    "what": "The saved lens suggestion of this run lacks a part, or holds a part that the program does not write.",
+    "why": "It was changed after the program wrote it, so it can no longer be shown as it was made.",
+    "do": "It does not stop the report or the run. Nothing is repaired: the list is only advice, so what can still be read is shown, each changed part marked where it stands."
+  },
+  "a part of the saved lens recommendation has the wrong form": {
+    "what": "A part of the saved lens suggestion of this run has the wrong form.",
+    "why": "It was changed after the program wrote it, so it can no longer be shown as it was made.",
+    "do": "It does not stop the report or the run. Nothing is repaired: the list is only advice, so what can still be read is shown, each changed part marked where it stands."
+  },
+  "a reader's note on a link of the saved lens recommendation may be at most 2,000 characters long": {
+    "what": "A second reader's note on a link of the saved lens suggestion is longer than 2,000 characters.",
+    "why": "A note is one to three sentences, so a longer one was changed after the program wrote it.",
+    "do": "It does not stop the report or the run. Nothing is repaired: the list is only advice, so what can still be read is shown, each changed part marked where it stands."
+  },
+  "an entry of the lens recommendation names the same fact twice": {
+    "what": "A suggested lens names the same fact twice.",
+    "why": "Each fact stands behind a lens once, so that each link between them is read once.",
+    "do": "Name the fact once, and suggest the list again."
+  },
+  "only a link reader may record a verdict on a link of the lens recommendation": {
+    "what": "Someone other than a link reader tried to give a verdict on a suggested link.",
+    "why": "Only the two readers judge a link, so that each verdict is known to be theirs.",
+    "do": "Let a link reader give its own verdict. A verdict is never written by another helper or by hand."
+  },
+  "a link reader named a link that the lens recommendation does not hold": {
+    "what": "A link reader named a lens and a fact that the lens suggestion does not tie together.",
+    "why": "A reader judges only the links the lens advisor suggested.",
+    "do": "Name the lens and the fact exactly as the reader was given them."
+  },
+  "this run holds no lens recommendation that a link reader can record a verdict on": {
+    "what": "The run has no readable lens suggestion for a link reader to judge.",
+    "why": "A verdict belongs to a link of a suggestion, so without one there is nothing to attach it to.",
+    "do": "Let the lens advisor suggest the list first, then let the readers read its links."
+  },
+  "a link reader's verdict must be that the fact bears on the lens or that it is in doubt": {
+    "what": "A link reader's verdict was neither that the fact bears on the lens nor that it is in doubt.",
+    "why": "Only those two verdicts can be counted, so each link ends with a clear mark or none.",
+    "do": "Give the verdict again with one of the two allowed verdicts. If the link is unclear, give a doubt."
+  },
+  "a link reader that doubts a link must say why in a note": {
+    "what": "A link reader doubted a link but gave no note.",
+    "why": "The person sees the note beside the mark, and a doubt without a reason cannot be weighed.",
+    "do": "Give the verdict again with one sentence that says what the fact does not answer."
+  },
+  "a link reader's note may be at most 2,000 characters long": {
+    "what": "A link reader's note is longer than 2,000 characters.",
+    "why": "A note is one to three sentences, so that the person can read it at a glance.",
+    "do": "Shorten the note, and give the verdict again."
+  },
+  "only the project grouper may record the projects": {
+    "what": "Someone other than the project grouper tried to keep a grouping of the moves into projects.",
+    "why": "Only the project grouper groups the moves, so the person always knows where a project came from.",
+    "do": "Let the project grouper group the moves. A grouping is never written by another helper or by hand."
+  },
+  "a project names a fact that is not a capacity move that counts": {
+    "what": "A project names fact {field}, which is not a confirmed or uncertain move to add capacity.",
+    "why": "A project gathers the reports of one plan, so only moves that count may sit in it.",
+    "do": "Take that fact out of the project, check the fact numbers, and group the moves again."
+  },
+  "the projects leave out a capacity move that counts": {
+    "what": "Fact {field}, a confirmed or uncertain move to add capacity, sits in no project.",
+    "why": "The report shows every move inside a project, so a move left out would be lost from view.",
+    "do": "Put the move into the project it belongs to, or into a project of its own, and group the moves again."
+  },
+  "the projects name the same fact twice": {
+    "what": "Fact {field} is named twice in the projects.",
+    "why": "Each move belongs to one project only, or it would be counted twice.",
+    "do": "Keep the fact in the one project it belongs to, and group the moves again."
+  },
+  "a project holds moves of more than one company": {
+    "what": "One project holds moves of two different companies.",
+    "why": "A project is one company's plan, and two spellings of one name already count as one company.",
+    "do": "Split the project so that each holds the moves of one company, and group the moves again."
+  },
+  "a project holds moves in different countries": {
+    "what": "The moves of one project name different countries.",
+    "why": "A project is one plan at one place. A move that names no country does not count against this.",
+    "do": "Split the project by country, and group the moves again."
+  },
+  "a project needs a name of at most 120 characters": {
+    "what": "A project has no name, or its name is longer than 120 characters.",
+    "why": "The report shows each project under its name, so the name must be there and short.",
+    "do": "Give the project a short name, such as the company and the site, and group the moves again."
+  },
+  "the saved projects do not hold exactly the parts the program writes": {
+    "what": "The saved grouping of the moves into projects was changed by hand or is damaged.",
+    "why": "The report can only show projects in the form the program writes. Until then it shows each move on its own.",
+    "do": "Let the project grouper group the moves again. Its new grouping replaces the damaged one."
+  },
+  "no such part": {
+    "what": "A part of the helper's input was asked for that is not there.",
+    "why": "The input comes in parts so that each one can be read whole, and part 1 says how many parts there are.",
+    "do": "Ask for a part from 1 up to the number that part 1 gives under parts."
+  },
+  "no saved answer for source": {
+    "what": "A source of this round has no saved answer from its extractor.",
+    "why": "Only saved answers can be joined, and nothing is joined while one is missing.",
+    "do": "Save the reading helper's answer for that source, or leave the source out, and join again."
+  },
+  "the saved answer is not an extractor's answer": {
+    "what": "A saved answer does not hold a list of proposals.",
+    "why": "It must be the reading helper's answer as it came, with its proposals and its notes.",
+    "do": "Ask the reading helper once more, save its answer unchanged, and join again."
+  },
+  "no such proposal": {
+    "what": "A merge names a proposal that is not there.",
+    "why": "A proposal is named by its source and its place in that source's proposals, counted from 1, and only sources of this round count.",
+    "do": "Correct the name in the list of merges, and join again."
+  },
+  "a proposal is named twice in the merges": {
+    "what": "One proposal is named in two places of the merges.",
+    "why": "A proposal is either kept or folded into one other proposal, never both and never twice.",
+    "do": "Name it once in the list of merges, and join again."
+  },
+  "a proposal is folded into itself": {
+    "what": "A merge folds a proposal into itself.",
+    "why": "A fold adds the quote of another proposal; a proposal cannot support itself.",
+    "do": "Take it out of its own merge, and join again."
   }
 }

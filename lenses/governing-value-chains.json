@@ -1,0 +1,22 @@
+{
+  "id": "governing-value-chains",
+  "name": "How a global value chain is governed",
+  "idea": "An encyclopedia entry says that a paper found five governance patterns of global value chains. The entry lists hierarchical chains as in-house operations of integrated firms, captive chains as weak suppliers closely run by lead firms, relational and modular chains as durable ties with little chain governance, often because main suppliers have unique competences, and market chains as arm's-length.",
+  "suggests": "Look at how a company's supply chain is run: whether it makes key parts itself, closely manages dependent suppliers, works with capable suppliers who could act on their own, or buys at arm's length, and who in the chain holds the power.",
+  "limits": "The entry states that, with capabilities growing across many low- and middle-income economies, governance has tended to move from quasi-hierarchical towards modular chains, and that this has let some leading intermediaries build skills such as design and branding, so that in the long term they could become competitors to the lead firm.",
+  "competing_idea": "Another view in the same entry, from a 1994 paper, distinguishes two types of governance, the first being buyer-driven chains, led by final buyers such as retailers and brand owners. The entry also describes producer-driven chains as typically led by advanced manufacturers that control raw materials and distribution.",
+  "questions": [
+    "Does the company make key parts itself, closely manage dependent suppliers, partner with capable suppliers, or buy on the open market?",
+    "Who leads the chain: final buyers such as retailers and brand owners, or manufacturers that control inputs and distribution?",
+    "Could a supplier that has built its own design or brand skills turn into a competitor?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Global value chain\", Wikipedia, the free encyclopedia (an open encyclopedia entry, read on 16 November 2026)",
+      "level": "secondary_source_read",
+      "about": "Gary Gereffi, John Humphrey and Timothy Sturgeon, \"The governance of global value chains\", Review of International Political Economy, vol. 12, no. 1, February 2005, pp. 78-104",
+      "link": "https://en.wikipedia.org/wiki/Global_value_chain"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

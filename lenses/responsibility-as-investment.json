@@ -1,0 +1,22 @@
+{
+  "id": "responsibility-as-investment",
+  "name": "Responsibility weighed as an investment",
+  "idea": "An encyclopedia entry reports that the work examined corporate social responsibility as a differentiation strategy, and concluded that managers could set the right level of such spending by weighing costs against benefits, as they do for other investments.",
+  "suggests": "Treat a planned responsibility initiative like any other investment: list its costs and benefits, and ask whether it sets the company apart in a way rivals cannot easily match.",
+  "limits": "The entry says that a firm might sustain high returns on a responsibility-based strategy only if rivals cannot copy it, and it reports an earlier study that found the same of abnormal returns.",
+  "competing_idea": "The entry also reports critics who say responsibility efforts distract a business from its economic role, set against proponents who hold that they raise long-term profits.",
+  "questions": [
+    "What would this initiative cost, and what benefits does the company expect from it?",
+    "Could competitors copy the initiative quickly, and if so, what is left of the advantage?",
+    "Does the company's financial result come from the responsibility effort itself, or from something that comes with it, such as innovation?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Corporate social responsibility\", Wikipedia, the free encyclopedia, article as last edited on 7 November 2026",
+      "level": "secondary_source_read",
+      "about": "Abagail McWilliams and Donald S. Siegel, \"Corporate Social Responsibility: A Theory of the Firm Perspective\", Academy of Management Review, Vol. 26 No. 1, January 2001, from p. 117",
+      "link": "https://en.wikipedia.org/wiki/Corporate_social_responsibility"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

@@ -1,0 +1,22 @@
+{
+  "id": "resource-dependence",
+  "name": "Dependence on outside resources",
+  "idea": "An encyclopedia entry states that the theory, formalised by the work, studies how an organisation's external resources affect its behaviour. It states that an organisation becomes dependent when a resource it seeks is important and held by few, and that power over another organisation needs an asymmetric exchange. It adds that mergers can control such asymmetrical interdependence by absorbing it.",
+  "suggests": "Look at which outside resources a company cannot do without, how few suppliers or buyers control them, and whether it has merged with or bought organisations it depends on.",
+  "limits": "The article states that the theory does not explain an organisation's performance as such. It adds that other factors or theories may also account for why organisations merge.",
+  "competing_idea": "Another view the article names: transaction cost economics, whose predictions it calls similar; the theory also shares some aspects with institutional theory.",
+  "questions": [
+    "Which resources does the company depend on, and how few organisations control them?",
+    "Is the dependence mutual, or does one side need the other more?",
+    "Has the company merged with or bought organisations it depends on, and did that lessen its dependence?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Resource dependence theory\", Wikipedia, The Free Encyclopedia, revision 1384610191 of 9 November 2026",
+      "level": "secondary_source_read",
+      "about": "Jeffrey Pfeffer and Gerald Salancik, The External Control of Organizations: A Resource Dependence Perspective, Harper & Row, 1978",
+      "link": "https://en.wikipedia.org/w/index.php?title=Resource_dependence_theory&oldid=1384610191"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

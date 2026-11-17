@@ -1,0 +1,28 @@
+{
+  "id": "industry-life-cycle",
+  "name": "How industries age from birth to maturity",
+  "idea": "A 1996 article's record says it sums up how entry, exit, market structure and innovation change over the life of technologically progressive industries, from birth to maturity, and builds a model to explain them. It says the model predicts that, over time, firms give more effort to process innovation, while firm numbers and the pace and variety of product innovation eventually fade.",
+  "suggests": "Look at how long the industry has existed, how many firms are still entering or leaving, and whether firms are putting more effort than before into improving processes, and let that tell you which stage the industry is in.",
+  "limits": "A record of a 1997 article, which reprints its abstract, says the product life cycle fits how many industries develop in their early years, but that regular patterns appear in mature industries which it does not predict.",
+  "competing_idea": "The record of the 1997 article says patterns in entry, exit, survival and firm structure are also worked out for industries that depart markedly from the product life cycle, and that further research is open on the factors that condition which pattern an industry follows.",
+  "questions": [
+    "At which stage of its life is this industry, from birth through maturity, and what in the record of entries and exits shows it?",
+    "Are firms in the industry putting more effort into improving processes than they used to?",
+    "Does this industry follow the usual product life cycle, or does it look like one that departs from it?"
+  ],
+  "originals": [
+    {
+      "reference": "IDEAS (RePEc) bibliographic record of an article, \"Entry, Exit, Growth, and Innovation over the Product Life Cycle\", American Economic Review, 86(3), 562-583, June 1996, with its abstract",
+      "level": "secondary_source_read",
+      "about": "Steven Klepper, \"Entry, Exit, Growth, and Innovation over the Product Life Cycle\", American Economic Review, 86(3), 562-583, June 1996",
+      "link": "https://ideas.repec.org/a/aea/aecrev/v86y1996i3p562-83.html"
+    },
+    {
+      "reference": "IDEAS (RePEc) bibliographic record of an article, \"Industry Life Cycles\", Industrial and Corporate Change, 6(1), 145-181, 1997, with its abstract",
+      "level": "secondary_source_read",
+      "about": "Steven Klepper, \"Industry Life Cycles\", Industrial and Corporate Change, 6(1), 145-181, 1997",
+      "link": "https://ideas.repec.org/a/oup/indcch/v6y1997i1p145-81.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

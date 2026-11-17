@@ -52,6 +52,19 @@ def test_collect_counts_sources_that_could_not_be_saved(tmp_path):
     assert run_status(run)["steps"][0]["detail"] == "1 source saved, 1 not accessible"
 
 
+def test_collect_names_the_saved_pages_that_hold_little_running_text_and_only_when_there_are_any(tmp_path):
+    """Plan 2b, Task 10, change F: the clause is added only for a flagged page; the strings above stay as they are."""
+    run = make_run(tmp_path); add_source(run, TEXT)
+    add_source(run, "", access="not_accessible", access_reason="timeout", copy_file=None, copy_sha256=None)
+    assert run_status(run)["steps"][0]["detail"] == "1 source saved, 1 not accessible"
+    add_source(run, TEXT, orig_file="copies/S3.orig.html", text_note="little_running_text")
+    collect = run_status(run)["steps"][0]
+    assert (collect["state"], collect["detail"]) == ("done", "2 sources saved, 1 not accessible, "
+                                                             "1 with little running text")
+    add_source(run, TEXT, orig_file="copies/S4.orig.html", text_note="little_running_text")
+    assert run_status(run)["steps"][0]["detail"] == "3 sources saved, 1 not accessible, 2 with little running text"
+
+
 def test_run_waits_for_the_person_at_a_checkpoint(tmp_path):
     run = make_run(tmp_path); add_source(run, TEXT)
     add_fact(run, source_id="S1", primary_source=True, quote="adds two high-speed syringe lines for customers")
@@ -277,7 +290,8 @@ def test_the_code_reading_helper_finds_the_known_messages():
 
 def test_every_fixed_message_in_the_code_is_explained():
     unexplained = []
-    for module in ("schema.py", "schema_analysis.py", "gate.py", "calc.py", "pack.py"):
+    for module in ("schema.py", "schema_analysis.py", "gate.py", "calc.py", "pack.py", "lenses.py",
+                   "recommend.py", "projects.py"):
         for text in sorted(_messages_in(ENGINE / module)):
             if not explain(Problem("analysis.json", None, text))["known"]:
                 unexplained.append(f"{module}: {text}")
@@ -436,6 +450,46 @@ def test_each_input_of_the_report_counts_for_its_age(tmp_path):
         os.utime(run / name, (stamp + 10, stamp + 10))
         assert states(run_status(run, LENSES))["build"] == "pending", name
         os.utime(run / name, (stamp - 10, stamp - 10))
+    assert states(run_status(run, LENSES))["build"] == "done"
+
+
+def test_a_recommendation_recorded_after_the_build_means_the_report_is_not_built(tmp_path):
+    from radar import recommend
+    run = ready_run(tmp_path); build_report(run, LENSES)
+    assert states(run_status(run, LENSES))["build"] == "done"
+    entry = {"lens": "firm-boundaries", "question_part": "adds capacity", "why": "Two lines for one customer.",
+             "facts": ["F1"], "missing": "Nothing found."}
+    recommend.record_recommendation(run, LENSES, [entry], None, recommend.ADVISOR)
+    stamp = (run / "report" / "report.html").stat().st_mtime
+    os.utime(run / recommend.RECORD, (stamp + 10, stamp + 10))
+    from radar.gate import gate
+    assert gate(run, LENSES) == []   # the gate does not stop on a recommendation: only the report is out of date
+    st = run_status(run, LENSES)
+    assert states(st)["build"] == "pending" and st["steps"][6]["detail"] == "not built yet" and st["next"] == "build"
+    build_report(run, LENSES)
+    newer = (run / recommend.RECORD).stat().st_mtime + 10
+    os.utime(run / "report" / "report.html", (newer, newer))   # the rebuilt report is newer than everything
+    assert states(run_status(run, LENSES))["build"] == "done"
+    recommend.record_recommendation(run, LENSES, [entry], None, recommend.ADVISOR)   # recorded again
+    os.utime(run / recommend.RECORD, (newer + 10, newer + 10))
+    assert states(run_status(run, LENSES))["build"] == "pending"
+
+
+def test_a_grouping_recorded_after_the_report_makes_the_report_out_of_date(tmp_path):
+    from radar import projects
+    run = ready_run(tmp_path); build_report(run, LENSES)
+    assert states(run_status(run, LENSES))["build"] == "done"
+    grouping = [{"name": f"Move {fact_id}", "fact_ids": [fact_id]} for fact_id in projects.moves(run)]
+    projects.record_projects(run, grouping, projects.GROUPER)
+    stamp = (run / "report" / "report.html").stat().st_mtime
+    os.utime(run / projects.RECORD, (stamp + 10, stamp + 10))
+    from radar.gate import gate
+    assert gate(run, LENSES) == []   # the gate does not stop on a grouping: only the report is out of date
+    st = run_status(run, LENSES)
+    assert states(st)["build"] == "pending" and st["next"] == "build" and st["grouping"] == "grouped"
+    build_report(run, LENSES)
+    newer = stamp + 20
+    os.utime(run / "report" / "report.html", (newer, newer))
     assert states(run_status(run, LENSES))["build"] == "done"
 
 
@@ -761,3 +815,26 @@ def test_the_two_refusals_say_what_can_be_done_in_a_public_run():
     assert "earlier public run" in compared and "without" in compared
     held = entries["non-public source in a public run"]["do"]
     assert "anyone can read" in held
+
+
+def test_a_link_between_sources_that_changes_only_the_codes_sends_the_run_back_to_verify(tmp_path):
+    from radar.gate import REASONS_DO_NOT_FOLLOW, gate
+    run = make_run(tmp_path)
+    add_source(run, TEXT, publisher="Competitor A")
+    add_source(run, "Competitor A confirmed two new syringe lines will open in 2028, the paper reported.",
+               publisher="Trade Paper")
+    add_fact(run, source_id="S1", primary_source=False, certainty="tentative", tentative_reason="one report only",
+             quote="adds two high-speed syringe lines for customers",
+             supporting=[{"source_id": "S2", "quote": "two new syringe lines will open in 2028"}])
+    verify.check_quotes(run); verify.record_support(run, "F1", True, "support-checker", ""); verify.settle(run)
+    assert store.read_facts(run)["F1"]["uncertain_reasons"] == ["tentative"]
+    store.add_based_on(run, "S2", "S1")   # the status and its reason stay; only the codes change
+    fact = store.read_facts(run)["F1"]
+    assert (fact["status"], fact["uncertain_reasons"]) == ("uncertain", ["tentative"])
+    assert Problem("facts/F1.json", "uncertain_reasons", REASONS_DO_NOT_FOLLOW) in gate(run)
+    assert_settle_again(run_status(run), "0 confirmed, 1 uncertain, 0 rejected, 0 still to check; "
+                                         "1 fact must be settled again")
+    verify.settle(run)
+    assert store.read_facts(run)["F1"]["uncertain_reasons"] == ["tentative", "single_source"]
+    assert not [p for p in gate(run) if p.field == "uncertain_reasons"]
+    assert run_status(run)["steps"][2]["state"] == "done"

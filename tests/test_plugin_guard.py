@@ -2176,7 +2176,9 @@ def test_an_error_while_judging_anyone_else_s_call_still_lets_it_through(monkeyp
 LEAD_EVENT = json.dumps(event("Bash", command="ls")).encode("utf-8")
 HELPER_EVENTS = [json.dumps(event("Bash", agent, command="radar quote-context --run x --fact F1")).encode("utf-8")
                  for agent in ("support-checker", CHECKER, "source-scout", "strategy-radar:fact-extractor",
-                               "strategy-radar:bias-auditor")]
+                               "strategy-radar:bias-auditor", "lens-advisor", "strategy-radar:lens-advisor",
+                               "lens-link-reader", "strategy-radar:lens-link-reader", "lens-link-reader-quick",
+                               "strategy-radar:lens-link-reader-quick", "project-grouper", "strategy-radar:project-grouper")]
 NOT_STARTED = SENDER + ("The guard cannot start on this computer, so the helpers of Strategy Radar may not use "
                         "this tool now. Install Python from python.org, or install the plugin again.")
 
@@ -2210,6 +2212,7 @@ def test_when_the_guard_cannot_start_a_helper_s_call_is_refused_and_every_other_
         assert (result.returncode, result.stdout, result.stderr.decode("utf-8")) == (2, b"", NOT_STARTED + "\n"), data
     for data in (LEAD_EVENT, json.dumps(write(tmp_path / "a.md")).encode("utf-8"), b"not json", b"",
                  json.dumps(event("Bash", "other-plugin:support-checker", command="ls")).encode("utf-8"),
+                 json.dumps(event("Bash", "other-plugin:lens-advisor", command="ls")).encode("utf-8"),
                  json.dumps(event("Bash", "general-purpose", command="ls")).encode("utf-8")):
         result = started(data)
         assert (result.returncode, result.stdout, result.stderr) == (0, b"", b""), data
@@ -2227,3 +2230,839 @@ def test_a_recorded_real_helper_event_over_several_lines_is_refused_when_no_pyth
 
 def test_the_real_shell_tests_run_under_more_than_one_shell_here():
     assert len(REAL_SHELLS) >= 2 and any(path.endswith("/sh") for path in REAL_SHELLS)
+
+
+# --- the lens recommender: the advisor and the two blind link readers -----------------------------------------------
+# Each runs its two commands, in the form its file shows, and nothing else; each records only under its own name, so
+# one reader can never record under the other's; and nobody else records a link verdict or the recommendation.
+
+ADVISOR = "strategy-radar:lens-advisor"
+READER = "strategy-radar:lens-link-reader"
+QUICK = "strategy-radar:lens-link-reader-quick"
+LENS_HELPERS = ("lens-advisor", "lens-link-reader", "lens-link-reader-quick")
+ADVISOR_ONLY = SENDER + "This helper may only run: radar lens-advisor-input and radar record-lens-recommendation."
+READER_ONLY = SENDER + "This helper may only run: radar lens-link-context and radar record-link-check."
+LINK_VERDICT_ONLY = SENDER + ("Only the two link readers record whether a fact bears on a lens. "
+                              "Ask the link readers to read the suggested links.")
+LIST_ONLY = SENDER + ("Only the lens advisor records the lens recommendation. "
+                      "Ask the lens advisor to make the list.")
+LENSES_AT = '"/home/a b/plugin (1)/lenses"'
+LIST_OPEN = "<<'RADAR_LIST'"
+ADVISOR_INPUT = 'radar lens-advisor-input --run "/p/radar/runs/r1" --lenses "/p/plugin/lenses"'
+LIST_LINE = ('radar record-lens-recommendation --run "/p/radar/runs/r1" --lenses "/p/plugin/lenses" --by lens-advisor '
+             "--list-stdin " + LIST_OPEN)
+LIST_BODY = 'note: It says "no" $(rm -rf ~), `id` and $HOME, which is only text here.'
+LINK_CONTEXT = 'radar lens-link-context --run "/p/radar/runs/r1" --lenses "/p/plugin/lenses"'
+
+
+def recommendation(first_line=LIST_LINE, *lines, end="RADAR_LIST"):
+    return "\n".join([first_line, *(lines or (LIST_BODY,)), end])
+
+
+def check_line(by="lens-link-reader", verdict_word="doubt"):
+    return ('radar record-link-check --run "/p/radar/runs/r1" --lens firm-boundaries --fact F3 --verdict ' + verdict_word
+            + " --by " + by + " --note-stdin " + OPEN)
+
+
+def link_check(by="lens-link-reader", *lines, first_line=None, end="RADAR_NOTE"):
+    return "\n".join([first_line or check_line(by), *(lines or (BODY,)), end])
+
+
+ADVISOR_ACCEPTED = [
+    ADVISOR_INPUT,
+    "radar lens-advisor-input --run " + RUN + " --lenses " + LENSES_AT,                 # quoted absolute folders
+    "radar lens-advisor-input --lenses " + LENSES_AT + " --run " + RUN,                 # in any order
+    "radar lens-advisor-input --run /p/radar/runs/r1 --lenses /p/plugin/lenses",        # plain folders need no quotes
+    'radar lens-advisor-input --run "/p/it\'s (a) run; & 100%/r1" --lenses "/p/it\'s & more; 100%/lenses"',
+    OWN_RADAR + " lens-advisor-input --run x --lenses y",
+    '"' + OWN_RADAR + '" lens-advisor-input --run x --lenses y',
+    ADVISOR_INPUT + "\n",
+    ADVISOR_INPUT + " --part 2",                                                          # a later part of the input
+    "radar lens-advisor-input --part 10 --lenses " + LENSES_AT + " --run " + RUN,
+    recommendation(),
+    recommendation() + "\n",
+    recommendation("radar record-lens-recommendation --list-stdin --by lens-advisor --lenses " + LENSES_AT + " --run " + RUN
+                   + "  " + LIST_OPEN + " "),                                            # the four options in any order
+    recommendation('"' + OWN_RADAR + '" record-lens-recommendation --run x --lenses y --by lens-advisor --list-stdin '
+                   + LIST_OPEN),
+    recommendation(LIST_LINE, "lens: firm-boundaries", "part: adding capacity",
+                   "why: rm -rf ~; `id` $(id) | sh && x > /etc/passwd", "facts: F1, F2", "missing: x", "",
+                   "lens: capacity-commitment", "part: for whom", "why: y", "facts: none", "missing: z"),
+    recommendation(LIST_LINE, '{"entries": [], "note": "only text inside the quoted mark"}'),
+    recommendation(LIST_LINE, " RADAR_LIST", "RADAR_LIST ", "RADAR_LISTX", "xRADAR_LIST", "radar_list"),  # none ends it
+    recommendation(LIST_LINE, "RADAR_NOTE", "RADAR_JSON", "--from-json -"),               # only text inside the quoted mark
+    LIST_LINE + "\nRADAR_LIST",                                                           # an empty text: the program refuses it
+    recommendation(LIST_LINE, "note: a" + chr(0x2028) + "RADAR_LIST"),
+]
+
+
+def reader_accepted(by):
+    line = check_line(by)
+    return [
+        LINK_CONTEXT,
+        "radar lens-link-context --run " + RUN + " --lenses " + LENSES_AT,
+        "radar lens-link-context --lenses " + LENSES_AT + " --run " + RUN,
+        "radar lens-link-context --run /p/radar/runs/r1 --lenses /p/plugin/lenses",
+        OWN_RADAR + " lens-link-context --run x --lenses y",
+        LINK_CONTEXT + "\n",
+        link_check(by),
+        link_check(by) + "\n",
+        link_check(by, first_line=check_line(by, "bears")),
+        link_check(by, first_line="radar record-link-check --note-stdin --by " + by + " --verdict bears --fact F12 --lens "
+                   "what-a-firm-is-good-at --run " + RUN + "  " + OPEN + " "),            # the six options in any order
+        link_check(by, first_line='"' + OWN_RADAR + '" record-link-check --run x --lens a_b-2 --fact F1 --verdict doubt '
+                   "--by " + by + " --note-stdin " + OPEN),
+        link_check(by, "rm -rf ~; `id` $(id) | sh && x > /etc/passwd", '{"by": "someone", "note": "$HOME"}'),
+        link_check(by, " RADAR_NOTE", "RADAR_NOTE ", "RADAR_NOTEX", "RADAR_LIST", "radar_note"),
+        line + "\nRADAR_NOTE",
+    ]
+
+
+def hostile_for_both_kinds(good_read, good_record):
+    """What none of the three may run, built from one good command of each of the helper's two kinds."""
+    first, _, rest = good_record.partition("\n")
+    return [
+        "ls", "", " ", "\n", "radar", "radar settle --run x", "radar status --root x", "echo hi",
+        "radar quote-context --run x --fact F1", GOOD_VERDICT, verdict(),
+        # joined commands, pipes and redirects
+        good_read + "; rm -rf ~", good_read + " && ls", good_read + " || ls", good_read + " & ls", good_read + " &",
+        good_read + " | sh", good_read + " | cat", good_read + " > /tmp/out", good_read + " >> ~/.bashrc",
+        good_read + " 2>&1", good_read + " < /etc/passwd", good_read + " <<< hi", good_read + " `id`",
+        good_read + " $(id)", good_read + "\nrm -rf ~", "ls\n" + good_read, "(" + good_read + ")", good_read + "\n\n",
+        good_read + "\r", "X=1 " + good_read, "sh -c " + good_read, "env " + good_read,
+        good_record + "\nrm -rf ~", good_record + "\n" + good_read, good_read + "\n" + good_record,
+        good_record.replace("\n", "\r\n"), good_record + "\r\n",
+        first.replace(" <<", " | sh <<") + "\n" + rest, first.replace(" <<", " > /tmp/x <<") + "\n" + rest,
+        first.replace(" <<", " && ls <<") + "\n" + rest, first.replace(" <<", " ; ls <<") + "\n" + rest,
+        first + " | sh\n" + rest, first + " > /tmp/x\n" + rest, first + " ; ls\n" + rest, first + "\n" + rest + "\nls",
+        first + "\n" + rest + " | sh", first + "\n" + rest + ";ls",
+        # the program by another name
+        good_read.replace("radar ", "bin/radar ", 1), good_read.replace("radar ", "/tmp/evil/bin/radar ", 1),
+        good_read.replace("radar ", "Radar ", 1), good_read.replace("radar ", "radarx ", 1),
+        # the read command: its two options, once each, no more
+        good_read + " --from-json -", good_read + " --from-json /etc/passwd", good_read + " --open",
+        good_read + " extra", good_read + " --run y", good_read + " --lenses y", good_read + " --note-stdin",
+        good_read + " " + OPEN, good_read + " " + LIST_OPEN, good_read + " --by lens-advisor",
+        good_read.replace(' --lenses "/p/plugin/lenses"', ""), good_read.replace(' --run "/p/radar/runs/r1"', ""),
+        good_read.replace('--lenses "/p/plugin/lenses"', "--lenses -x"),
+        good_read.replace('--lenses "/p/plugin/lenses"', '--lenses "-x"'),
+        good_read.replace('--lenses "/p/plugin/lenses"', '--lenses "--from-json=/etc/passwd"'),
+        good_read.replace('--lenses "/p/plugin/lenses"', '--lenses "$HOME"'),
+        good_read.replace('--lenses "/p/plugin/lenses"', "--lenses $HOME"),
+        good_read.replace('--lenses "/p/plugin/lenses"', '--lenses "`id`"'),
+        good_read.replace('--lenses "/p/plugin/lenses"', "--lenses '/p/a b'"),
+        good_read.replace('--lenses "/p/plugin/lenses"', '--lenses ""'),
+        good_read.replace('--lenses "/p/plugin/lenses"', '--lenses "a\nb"'),
+        good_read.replace('--lenses "/p/plugin/lenses"', "--lenses=/p/plugin/lenses"),
+        good_read.replace('--lenses "/p/plugin/lenses"', "--lenses ~"),
+        good_read.replace('--lenses "/p/plugin/lenses"', "--lenses /p/" + chr(0xFC) + "ber"),
+        good_read.replace('--lenses "/p/plugin/lenses"', '"--lenses" /p/plugin/lenses'),
+        good_read.replace('--run "/p/radar/runs/r1"', "--run -x"),
+        # a part, where the read command takes one, is a positive whole number given once
+        good_read + " --part x", good_read + " --part 0", good_read + " --part -2", good_read + " --part",
+        good_read + ' --part "2"', good_read + " --part=2", good_read + " --part 2 --part 3", good_read + " --parts 2",
+        good_read + " --part 2 --all",
+        # the record command: its options, once each, its own here-document last
+        first, first + "\n", first + "\n" + rest.split("\n")[0],
+        first.replace(" " + first.split()[-1], "") + "\n" + rest,                       # no here-document opener
+        first + " --from-json -\n" + rest, first.replace("--by", "--from-json - --by") + "\n" + rest,
+        first.replace("--by", "--open --by") + "\n" + rest, first.replace("--by", "--run y --by") + "\n" + rest,
+        first.replace("--by", "--lenses y --by") + "\n" + rest, first.replace("--by", "--note fine --by") + "\n" + rest,
+        first.replace(first.split()[1], "settle", 1) + "\n" + rest,
+    ]
+
+
+ADVISOR_HOSTILE = hostile_for_both_kinds(ADVISOR_INPUT, recommendation()) + [
+    # the advisor records only under its own name
+    recommendation(LIST_LINE.replace("--by lens-advisor", "--by lens-link-reader")),
+    recommendation(LIST_LINE.replace("--by lens-advisor", "--by lens-link-reader-quick")),
+    recommendation(LIST_LINE.replace("--by lens-advisor", "--by support-checker")),
+    recommendation(LIST_LINE.replace("--by lens-advisor", "--by lead")),
+    recommendation(LIST_LINE.replace("--by lens-advisor", '--by "lens-advisor"')),
+    recommendation(LIST_LINE.replace("--by lens-advisor", "--by strategy-radar:lens-advisor")),
+    recommendation(LIST_LINE.replace("--by lens-advisor", "--by Lens-Advisor")),
+    recommendation(LIST_LINE.replace("--by lens-advisor", "--by lens-advisor2")),
+    recommendation(LIST_LINE.replace("--by lens-advisor", "--by=lens-advisor")),
+    recommendation(LIST_LINE.replace("--by lens-advisor", "--by lens-advisor --by lens-advisor")),
+    recommendation(LIST_LINE.replace(" --by lens-advisor", "")),
+    # the list comes as plain lines on standard input, from the here-document, and from nowhere else: never as JSON
+    # with --file, whose curly brackets would stop every recommendation for an approval
+    recommendation(LIST_LINE.replace("--list-stdin", "--file -")),
+    recommendation(LIST_LINE.replace("--list-stdin", "--file list.json")),
+    recommendation(LIST_LINE.replace("--list-stdin", "--file /etc/passwd")),
+    recommendation(LIST_LINE.replace("--list-stdin", "--list-stdin --file -")),
+    recommendation(LIST_LINE.replace("--list-stdin", '"--list-stdin"')),
+    recommendation(LIST_LINE.replace("--list-stdin", "--list-stdin=1")),
+    recommendation(LIST_LINE.replace("--list-stdin", "--list-stdin -")),
+    recommendation(LIST_LINE.replace("--list-stdin", "--list-stdin true")),
+    recommendation(LIST_LINE.replace("--list-stdin", "--list-stdin --list-stdin")),
+    recommendation(LIST_LINE.replace("--list-stdin", "--list-std")),
+    recommendation(LIST_LINE.replace("--list-stdin", "--note-stdin")),
+    recommendation(LIST_LINE.replace(" --list-stdin", "")),
+    recommendation(LIST_LINE.replace("--list-stdin", "--list-stdin --from-json -")),
+    recommendation(LIST_LINE.replace("--list-stdin", "--from-json -")),
+    recommendation(LIST_LINE.replace("--list-stdin", "--part 2 --list-stdin")),          # only its input comes in parts
+    # its own here-document, its end mark in single quotes, last on the first line
+    recommendation(LIST_LINE.replace(LIST_OPEN, OPEN), end="RADAR_NOTE"),
+    recommendation(LIST_LINE.replace(LIST_OPEN, OPEN)),
+    recommendation(LIST_LINE.replace(LIST_OPEN, "<<'RADAR_JSON'"), end="RADAR_JSON"),
+    recommendation(LIST_LINE.replace(LIST_OPEN, "<<RADAR_LIST")),
+    recommendation(LIST_LINE.replace(LIST_OPEN, "<<" + Q + "RADAR_LIST" + Q)),
+    recommendation(LIST_LINE.replace(LIST_OPEN, "<<-'RADAR_LIST'")),
+    recommendation(LIST_LINE.replace(LIST_OPEN, "<< 'RADAR_LIST'")),
+    recommendation(LIST_LINE.replace(LIST_OPEN, "<<'EOF'"), end="EOF"),
+    recommendation(LIST_LINE.replace(LIST_OPEN, LIST_OPEN + " " + LIST_OPEN)),
+    recommendation(LIST_LINE.replace(LIST_OPEN, LIST_OPEN + "\t")),
+    recommendation(LIST_LINE.replace("--by", LIST_OPEN + " --by")),
+    recommendation(end="RADAR_LIST "), recommendation(end=" RADAR_LIST"), recommendation(end="RADAR_LIST\r"),
+    recommendation(end="RADAR_LIST\n\n"), recommendation(end="radar_list"),
+    recommendation(end="RADAR_NOTE"), recommendation(end="RADAR_LIST" + chr(0)),
+    # a line of the text equal to the end mark would end it early, and what follows would run
+    recommendation(LIST_LINE, "RADAR_LIST", "rm -rf ~"), recommendation(LIST_LINE, LIST_BODY, "RADAR_LIST", "ls"),
+    recommendation(LIST_LINE, "RADAR_LIST"), recommendation() + "\n" + recommendation(),
+    # the readers' commands are not the advisor's
+    LINK_CONTEXT, link_check(), link_check("lens-link-reader-quick"), link_check("lens-advisor"),
+    link_check("lens-advisor", first_line=check_line("lens-advisor").replace(OPEN, LIST_OPEN), end="RADAR_LIST"),
+    recommendation(ADVISOR_INPUT + " " + LIST_OPEN),
+]
+
+
+def reader_hostile(by, other):
+    line = check_line(by)
+    first = line
+    return hostile_for_both_kinds(LINK_CONTEXT, link_check(by)) + [
+        # only the advisor's and the grouper's input come in parts
+        LINK_CONTEXT + " --part 2", link_check(by, first_line=line.replace("--note-stdin", "--part 2 --note-stdin")),
+        # a reader records only under its own name: the readers stay independent
+        link_check(by, first_line=line.replace("--by " + by, "--by " + other)),
+        link_check(by, first_line=line.replace("--by " + by, "--by lens-advisor")),
+        link_check(by, first_line=line.replace("--by " + by, "--by support-checker")),
+        link_check(by, first_line=line.replace("--by " + by, '--by "' + by + '"')),
+        link_check(by, first_line=line.replace("--by " + by, "--by strategy-radar:" + by)),
+        link_check(by, first_line=line.replace("--by " + by, "--by " + by.upper())),
+        link_check(by, first_line=line.replace("--by " + by, "--by=" + by)),
+        link_check(by, first_line=line.replace("--by " + by, "--by " + by + " --by " + by)),
+        link_check(by, first_line=line.replace("--by " + by, "--by " + by + " " + other)),
+        link_check(by, first_line=line.replace(" --by " + by, "")),
+        link_check(by, first_line=line.replace("--by " + by, "--by")),
+        # the note comes on standard input, never on the command line
+        link_check(by, first_line=line.replace("--note-stdin", "--note fine")),
+        link_check(by, first_line=line.replace("--note-stdin", '--note "fine"')),
+        link_check(by, first_line=line.replace("--note-stdin", "--note-stdin --note fine")),
+        link_check(by, first_line=line.replace("--note-stdin", "--note=fine")),
+        link_check(by, first_line=line.replace(" --note-stdin", "")),
+        link_check(by, first_line=line.replace("--note-stdin", "--note-stdin --note-stdin")),
+        link_check(by, first_line=line.replace("--note-stdin", "--note-stdin -")),
+        link_check(by, first_line=line.replace("--note-stdin", '"--note-stdin"')),
+        link_check(by, first_line=line.replace("--note-stdin", "--note-stdin --from-json -")),
+        line.replace(" --note-stdin " + OPEN, " --note fine"),
+        line.replace(" " + OPEN, ""),                                                    # no here-document
+        # the verdict is one of two plain words
+        link_check(by, first_line=line.replace("--verdict doubt", "--verdict yes")),
+        link_check(by, first_line=line.replace("--verdict doubt", "--verdict Bears")),
+        link_check(by, first_line=line.replace("--verdict doubt", '--verdict "bears"')),
+        link_check(by, first_line=line.replace("--verdict doubt", "--verdict")),
+        link_check(by, first_line=line.replace("--verdict doubt", "--verdict bears --verdict doubt")),
+        link_check(by, first_line=line.replace(" --verdict doubt", "")),
+        link_check(by, first_line=line.replace("--verdict doubt", "--verdict=doubt")),
+        # the lens is a plain lens name, the fact the letter F and digits
+        link_check(by, first_line=line.replace("--lens firm-boundaries", '--lens "firm-boundaries"')),
+        link_check(by, first_line=line.replace("--lens firm-boundaries", "--lens -x")),
+        link_check(by, first_line=line.replace("--lens firm-boundaries", "--lens --from-json")),
+        link_check(by, first_line=line.replace("--lens firm-boundaries", "--lens ../x")),
+        link_check(by, first_line=line.replace("--lens firm-boundaries", "--lens a/b")),
+        link_check(by, first_line=line.replace("--lens firm-boundaries", "--lens a.b")),
+        link_check(by, first_line=line.replace("--lens firm-boundaries", "--lens a:b")),
+        link_check(by, first_line=line.replace("--lens firm-boundaries", "--lens a=b")),
+        link_check(by, first_line=line.replace("--lens firm-boundaries", "--lens")),
+        link_check(by, first_line=line.replace("--lens firm-boundaries", "--lens $HOME")),
+        link_check(by, first_line=line.replace("--lens firm-boundaries", "--lens f" + chr(0xFC) + "r")),
+        link_check(by, first_line=line.replace(" --lens firm-boundaries", "")),
+        link_check(by, first_line=line.replace("--lens firm-boundaries", "--lens a --lens b")),
+        link_check(by, first_line=line.replace("--fact F3", "--fact f3")),
+        link_check(by, first_line=line.replace("--fact F3", '--fact "F3"')),
+        link_check(by, first_line=line.replace("--fact F3", "--fact F3,F4")),
+        link_check(by, first_line=line.replace(" --fact F3", "")),
+        # its own here-document, its end mark in single quotes, last on the first line
+        link_check(by, first_line=line.replace(OPEN, LIST_OPEN), end="RADAR_LIST"),
+        link_check(by, first_line=line.replace(OPEN, LIST_OPEN)),
+        link_check(by, first_line=line.replace(OPEN, "<<RADAR_NOTE")),
+        link_check(by, first_line=line.replace(OPEN, "<<" + Q + "RADAR_NOTE" + Q)),
+        link_check(by, first_line=line.replace(OPEN, "<<-'RADAR_NOTE'")),
+        link_check(by, first_line=line.replace(OPEN, "<<'EOF'"), end="EOF"),
+        link_check(by, first_line=line.replace("--by", OPEN + " --by")),
+        link_check(by, end="RADAR_NOTE "), link_check(by, end="RADAR_NOTE\n\n"), link_check(by, end="RADAR_LIST"),
+        link_check(by, "RADAR_NOTE", "rm -rf ~"), link_check(by, BODY, "RADAR_NOTE", "ls"),
+        link_check(by) + "\n" + link_check(by),
+        # the advisor's commands are not a reader's
+        ADVISOR_INPUT, recommendation(),
+        recommendation(LIST_LINE.replace("--by lens-advisor", "--by " + by)),
+        first.replace("record-link-check", "record-support"),
+    ]
+
+
+READER_HOSTILE = reader_hostile("lens-link-reader", "lens-link-reader-quick")
+QUICK_HOSTILE = reader_hostile("lens-link-reader-quick", "lens-link-reader")
+
+
+def test_the_sentences_of_the_lens_helpers_are_their_own():
+    assert guard.ADVISOR_REASON == ADVISOR_ONLY and guard.READER_REASON == READER_ONLY
+    assert guard.LINK_VERDICT_REASON == LINK_VERDICT_ONLY and guard.LIST_REASON == LIST_ONLY
+    reasons = {guard.VERDICT_REASON, guard.HELPER_REASON, guard.NO_COMMANDS_REASON, guard.RECORDS_REASON,
+               guard.ADVISOR_REASON, guard.READER_REASON, guard.LINK_VERDICT_REASON, guard.LIST_REASON,
+               guard.FAILED_REASON}
+    assert len(reasons) == 9
+
+
+def test_the_three_lens_helpers_are_helpers_and_each_records_under_its_own_name():
+    assert set(LENS_HELPERS) <= set(guard.HELPERS)       # the count of all helpers is in the grouper's section below
+    assert set(guard.LENS_COMMANDS) == set(LENS_HELPERS)
+    assert set(guard.LENS_COMMANDS["lens-advisor"]) == {"lens-advisor-input", "record-lens-recommendation"}
+    for reader in LENS_HELPERS[1:]:
+        assert set(guard.LENS_COMMANDS[reader]) == {"lens-link-context", "record-link-check"}
+    for helper in (CHECKER, "source-scout", "fact-extractor", "bias-auditor"):   # the four keep their rules
+        assert guard._helper_name(helper) not in guard.LENS_COMMANDS
+    assert set(guard.OPTIONS) == {"quote-context", "record-support"}             # the checker's table is unchanged
+
+
+@pytest.mark.parametrize("command", ADVISOR_ACCEPTED)
+def test_what_the_advisor_is_allowed(command):
+    assert guard.decide(event("Bash", ADVISOR, command=command)) is None
+    assert guard.decide(event("Bash", "lens-advisor", command=command)) is None
+
+
+@pytest.mark.parametrize("by", ["lens-link-reader", "lens-link-reader-quick"])
+def test_what_each_reader_is_allowed(by):
+    for command in reader_accepted(by):
+        assert guard.decide(event("Bash", "strategy-radar:" + by, command=command)) is None, command
+        assert guard.decide(event("Bash", by, command=command)) is None, command
+
+
+@pytest.mark.parametrize("command", ADVISOR_HOSTILE)
+def test_anything_outside_the_advisor_s_two_shapes_is_refused(command):
+    assert guard.decide(event("Bash", ADVISOR, command=command)) == ADVISOR_ONLY
+    assert guard.decide(event("Bash", "lens-advisor", command=command)) == ADVISOR_ONLY
+
+
+@pytest.mark.parametrize("command", READER_HOSTILE)
+def test_anything_outside_the_reader_s_two_shapes_is_refused(command):
+    assert guard.decide(event("Bash", READER, command=command)) == READER_ONLY
+    assert guard.decide(event("Bash", "lens-link-reader", command=command)) == READER_ONLY
+
+
+@pytest.mark.parametrize("command", QUICK_HOSTILE)
+def test_anything_outside_the_quick_reader_s_two_shapes_is_refused(command):
+    assert guard.decide(event("Bash", QUICK, command=command)) == READER_ONLY
+    assert guard.decide(event("Bash", "lens-link-reader-quick", command=command)) == READER_ONLY
+
+
+def test_the_lens_hostile_lists_are_not_refused_for_a_silly_reason():
+    assert len(set(ADVISOR_HOSTILE)) == len(ADVISOR_HOSTILE) and not set(ADVISOR_HOSTILE) & set(ADVISOR_ACCEPTED)
+    for by, hostile in (("lens-link-reader", READER_HOSTILE), ("lens-link-reader-quick", QUICK_HOSTILE)):
+        assert len(set(hostile)) == len(hostile) and not set(hostile) & set(reader_accepted(by))
+
+
+def test_one_reader_can_never_record_under_the_other_s_name():
+    assert guard.decide(event("Bash", READER, command=link_check("lens-link-reader"))) is None
+    assert guard.decide(event("Bash", QUICK, command=link_check("lens-link-reader-quick"))) is None
+    assert guard.decide(event("Bash", READER, command=link_check("lens-link-reader-quick"))) == READER_ONLY
+    assert guard.decide(event("Bash", QUICK, command=link_check("lens-link-reader"))) == READER_ONLY
+    for reader in (READER, QUICK):
+        assert guard.decide(event("Bash", reader, command=link_check("lens-advisor"))) == READER_ONLY
+
+
+@pytest.mark.parametrize("command", [None, 7, ["radar", "lens-link-context"], {"a": 1}, True])
+def test_a_lens_helper_s_command_that_is_no_text_is_refused(command):
+    for agent, reason in ((ADVISOR, ADVISOR_ONLY), (READER, READER_ONLY), (QUICK, READER_ONLY)):
+        assert guard.decide(event("Bash", agent, command=command)) == reason
+        assert guard.decide({"tool_name": "Bash", "agent_type": agent, "tool_input": {}}) == reason
+        assert guard.decide({"tool_name": "Bash", "agent_type": agent}) == reason
+
+
+def test_the_support_checker_and_the_helpers_with_no_commands_may_run_none_of_the_lens_commands():
+    for command in (ADVISOR_INPUT, recommendation(), LINK_CONTEXT, link_check(), link_check("lens-link-reader-quick"),
+                    link_check("support-checker")):
+        for agent in (CHECKER, "support-checker"):
+            assert guard.decide(event("Bash", agent, command=command)) == HELPER, command
+        for helper in ("source-scout", "fact-extractor", "bias-auditor"):
+            assert guard.decide(event("Bash", "strategy-radar:" + helper, command=command)) == NO_COMMANDS
+    assert guard.decide(event("Bash", CHECKER, command=GOOD_VERDICT)) is None      # and the checker keeps its own
+
+
+def test_the_advisor_may_not_record_a_link_verdict_and_a_reader_may_not_record_the_list():
+    for command in (link_check(), link_check("lens-advisor"), GOOD_VERDICT):
+        assert guard.decide(event("Bash", ADVISOR, command=command)) == ADVISOR_ONLY
+    for reader in (READER, QUICK):
+        for command in (recommendation(), GOOD_VERDICT, ADVISOR_INPUT):
+            assert guard.decide(event("Bash", reader, command=command)) == READER_ONLY
+
+
+NOT_A_LENS_HELPER = [None, "", "general-purpose", "Explore", "other-plugin:lens-advisor", "my-lens-advisor",
+                     "strategy-radar:lens-advisor-2", "Lens-Advisor", "other:lens-link-reader", "lens-link-reader-slow",
+                     "strategy-radar:lens-link-reader-quick-2", "lens-link-reader-quick ", "strategy-radar:run"]
+LINK_VERDICT_COMMANDS = [
+    link_check(), link_check("lens-link-reader-quick"),
+    "radar record-link-check --run x --lens a --fact F1 --verdict bears --by lead --note ok",
+    OWN_RADAR + " record-link-check --run x --lens a --fact F1 --verdict doubt --by lens-link-reader --note no",
+    "python3 /p/engine/start_radar.py record-link-check --run x --lens a --fact F1 --verdict bears --by me --note ok",
+    "sh -c 'radar record-link-check --run x --from-json check.json'",
+    "cd /p && radar settle --run x && radar record-link-check --run x --lens a --fact F1 --verdict bears --by x --note y",
+]
+LIST_COMMANDS = [
+    recommendation(),
+    "radar record-lens-recommendation --run x --lenses y --by lens-advisor --file list.json",
+    OWN_RADAR + " record-lens-recommendation --run x --lenses y --by lead --file -",
+    "python3 /p/engine/start_radar.py record-lens-recommendation --run x --lenses y --by me --file l.json",
+    "sh -c 'radar record-lens-recommendation --run x --from-json r.json'",
+    "cd /p && radar settle --run x && radar record-lens-recommendation --run x --lenses y --by x --file z",
+]
+
+
+@pytest.mark.parametrize("agent", NOT_A_LENS_HELPER)
+def test_a_link_verdict_or_a_recommendation_from_anyone_but_its_helper_is_refused(agent):
+    for command in LINK_VERDICT_COMMANDS:
+        assert guard.decide(lead_event(agent, command)) == LINK_VERDICT_ONLY, command
+    for command in LIST_COMMANDS:
+        assert guard.decide(lead_event(agent, command)) == LIST_ONLY, command
+    assert guard.decide(lead_event(agent, "ls")) is None
+
+
+def test_the_lead_may_still_read_what_the_lens_helpers_read_and_record_a_support_verdict_never():
+    for command in (ADVISOR_INPUT, LINK_CONTEXT, "radar lens-view --run x --lenses y", "radar list-lenses --lenses y",
+                    "radar settle --run x && ls"):
+        assert guard.decide(lead_event(None, command)) is None, command
+    # a command with more than one of the record words gets the sentence of the first, in a fixed order
+    assert guard.decide(lead_event(None, verdict() + "\n" + link_check() + "\n" + recommendation())) == VERDICT_ONLY
+    assert guard.decide(lead_event(None, recommendation() + "\n" + link_check())) == LINK_VERDICT_ONLY
+    assert guard.decide(lead_event(None, recommendation() + "\n" + verdict())) == VERDICT_ONLY
+
+
+def test_the_recorded_real_event_of_the_lead_is_refused_when_it_records_for_a_lens_helper():
+    real = recorded("lead_bash")
+    assert guard.decide({**real, "tool_input": {"command": link_check()}}) == LINK_VERDICT_ONLY
+    assert guard.decide({**real, "tool_input": {"command": recommendation()}}) == LIST_ONLY
+    result = run_guard(json.dumps({**real, "tool_input": {"command": recommendation()}}))
+    assert result.returncode == 2 and result.stderr.decode("utf-8") == LIST_ONLY + "\n"
+    result = run_guard(json.dumps({**real, "tool_input": {"command": link_check()}}))
+    assert result.returncode == 2 and result.stderr.decode("utf-8") == LINK_VERDICT_ONLY + "\n"
+
+
+@pytest.mark.parametrize("agent", ["lens-advisor", ADVISOR, "lens-link-reader", READER, "lens-link-reader-quick", QUICK])
+def test_each_lens_helper_is_known_by_its_plain_name_and_by_its_name_in_the_plugin(agent):
+    reason = ADVISOR_ONLY if agent.endswith("advisor") else READER_ONLY
+    assert guard.decide(event("Bash", agent, command="ls")) == reason
+    result = run_guard(json.dumps(event("Bash", agent, command="ls")))
+    assert (result.returncode, result.stderr.decode("utf-8")) == (2, reason + "\n")
+    allowed = run_guard(json.dumps(event("Bash", agent, command=ADVISOR_INPUT if agent.endswith("advisor") else LINK_CONTEXT)))
+    assert (allowed.returncode, allowed.stdout, allowed.stderr) == (0, b"", b"")
+
+
+def test_an_error_of_the_guard_s_own_while_judging_a_lens_helper_s_command_refuses_it(monkeypatch):
+    def broken(*args):
+        raise RuntimeError("an error of the guard's own")
+    monkeypatch.setattr(guard, "_is_a_lens_helper_command", broken)
+    for agent, command in ((ADVISOR, ADVISOR_INPUT), ("lens-advisor", recommendation()), (READER, LINK_CONTEXT),
+                           ("lens-link-reader-quick", link_check("lens-link-reader-quick"))):
+        assert guard.decide(event("Bash", agent, command=command)) == FAILED, agent
+    monkeypatch.undo()
+    monkeypatch.setattr(guard, "_fits", broken)                    # the part the checker shares with them
+    for agent, command in ((ADVISOR, recommendation()), (QUICK, LINK_CONTEXT), (CHECKER, GOOD_VERDICT)):
+        assert guard.decide(event("Bash", agent, command=command)) == FAILED, agent
+    assert guard.decide(lead_event(None, "ls")) is None
+
+
+def test_the_launcher_refuses_every_helper_when_the_guard_cannot_start():
+    text = LAUNCHER.read_text(encoding="utf-8")
+    case = text[text.index('case "$event" in'):text.index("refusal=")]
+    named = set(re.findall(r"\*'\"([a-z:-]+)\"'\*", case))
+    assert named == set(guard.HELPERS) | {guard.PLUGIN + ":" + helper for helper in guard.HELPERS}
+
+
+def lens_blocks(name):
+    text = body(ROOT / "agents" / (name + ".md"))
+    return [block.strip("\n") for block in re.findall(r"```bash\n(.*?)```", text, flags=re.S)]
+
+
+@pytest.mark.parametrize("name", LENS_HELPERS)
+def test_the_commands_exactly_as_each_lens_helper_s_file_writes_them_are_allowed(name):
+    blocks = lens_blocks(name)
+    assert len(blocks) == (3 if name == "lens-advisor" else 2)          # the advisor also reads a further part
+    assert all("<run folder>" in block for block in blocks) and "<lens folder>" in blocks[0]
+    assert "=" not in "".join(block.splitlines()[0] for block in blocks)   # the file never writes --key=value
+    for run, lenses in (("/p/radar/runs/r1", "/p/plugin/lenses"),
+                        ("/home/a b/Documents (1)/radar/runs/r1", "/home/a b/plugin (1)/lenses"),
+                        ("/Users/x/it's & more; 100%/runs/r1", "/Users/x/it's & more; 100%/lenses")):
+        for index, block in enumerate(blocks):
+            command = block.replace("<run folder>", run).replace("<lens folder>", lenses)
+            assert guard.decide(event("Bash", "strategy-radar:" + name, command=command)) is None, command
+            assert guard.decide(event("Bash", name, command=command)) is None, command
+            for other in LENS_HELPERS:
+                if other == name:
+                    continue
+                both_read = index == 0 and name != "lens-advisor" and other != "lens-advisor"
+                expected = None if both_read else (ADVISOR_ONLY if other == "lens-advisor" else READER_ONLY)
+                assert guard.decide(event("Bash", other, command=command)) == expected, (other, command)
+            assert guard.decide(event("Bash", CHECKER, command=command)) == HELPER
+
+
+@pytest.mark.parametrize("name", LENS_HELPERS)
+def test_the_one_name_each_lens_helper_records_under_is_its_own(name):
+    record = lens_blocks(name)[-1]
+    first = record.splitlines()[0]
+    assert "--by " + name + " " in first and first.count("--by") == 1
+    assert record.splitlines()[-1] == ("RADAR_LIST" if name == "lens-advisor" else "RADAR_NOTE")
+    assert first.endswith(LIST_OPEN if name == "lens-advisor" else OPEN)
+
+
+@pytest.mark.parametrize("shell", REAL_SHELLS)
+def test_an_allowed_lens_command_starts_the_program_once_and_nothing_else(tmp_path, shell):
+    cases = [(command, "lens-advisor") for command in ADVISOR_ACCEPTED if chr(0x2028) not in command]
+    cases += [(command, by) for by in LENS_HELPERS[1:] for command in reader_accepted(by)]
+    for command, by in cases:
+        done, calls, left_behind = run_in_a_real_shell(command, tmp_path, shell)
+        assert done.returncode == 0 and done.stdout == "" and done.stderr == "", command
+        assert calls.count("CALL\n") == 1 and left_behind == [], command
+        words = re.findall(r"^WORD:(.*)$", calls, flags=re.M)
+        text = calls.split("TEXT:", 1)[1][:-len("\nEND\n")]
+        if words[0] == "lens-advisor-input" and "--part" in words:
+            assert len(words) == 7 and set(words[1::2]) == {"--run", "--lenses", "--part"} and text == "", command
+            assert re.fullmatch(r"[1-9][0-9]*", words[words.index("--part") + 1]), command
+        elif words[0] in ("lens-advisor-input", "lens-link-context"):
+            assert len(words) == 5 and set(words[1::2]) == {"--run", "--lenses"} and text == "", command
+        elif words[0] == "record-lens-recommendation":
+            assert words.count("--list-stdin") == 1 and len(words) == 8, command
+            valued = [word for word in words[1:] if word != "--list-stdin"]
+            options = dict(zip(valued[0::2], valued[1::2]))
+            assert set(options) == {"--run", "--lenses", "--by"} and options["--by"] == "lens-advisor", command
+            assert text == "".join(line + "\n" for line in command.rstrip("\n").split("\n")[1:-1])   # untouched
+        else:
+            assert words[0] == "record-link-check" and words.count("--note-stdin") == 1 and len(words) == 12, command
+            valued = [word for word in words[1:] if word != "--note-stdin"]
+            options = dict(zip(valued[0::2], valued[1::2]))
+            assert set(options) == {"--run", "--lens", "--fact", "--verdict", "--by"}
+            assert options["--by"] == by and options["--verdict"] in ("bears", "doubt")
+            assert text == "".join(line + "\n" for line in command.rstrip("\n").split("\n")[1:-1])
+
+
+LENS_FRAGMENTS = FRAGMENTS + [LIST_OPEN, "RADAR_LIST", "--file -", "--list-stdin", "--lens x", "--lenses y", "--verdict bears",
+                              "--by lens-link-reader", "--by lens-link-reader-quick", "--by lens-advisor", "lens-advisor"]
+
+
+@pytest.mark.parametrize("shell", REAL_SHELLS)
+def test_a_hostile_piece_put_anywhere_into_a_good_lens_command_never_gets_more_than_the_program_started(tmp_path, shell):
+    """As for the checker: every piece between any two words, and glued to either side of each word, of one good
+    command of each kind of each lens helper. Where the guard lets one through, a real shell must start the program
+    once, with one of that helper's two subcommands, and do nothing else."""
+    good = [("lens-advisor", "radar lens-advisor-input --run " + RUN + " --lenses " + LENSES_AT),
+            ("lens-advisor", recommendation()),
+            ("lens-link-reader", "radar lens-link-context --run " + RUN + " --lenses " + LENSES_AT),
+            ("lens-link-reader", link_check("lens-link-reader")),
+            ("lens-link-reader-quick", link_check("lens-link-reader-quick"))]
+    tried = let_through = 0
+    for helper, command in good:
+        own = set(guard.LENS_COMMANDS[helper])
+        first, _, rest = command.partition("\n")
+        places = [0] + [m.start() for m in re.finditer(" ", first)] + [len(first)]
+        for place in places:
+            for piece in LENS_FRAGMENTS:
+                for glue in (piece, " " + piece, piece + " ", " " + piece + " "):
+                    changed = first[:place] + glue + first[place:] + ("\n" + rest if rest else "")
+                    tried += 1
+                    if guard.decide(event("Bash", helper, command=changed)) is not None:
+                        continue
+                    let_through += 1
+                    done, calls, left_behind = run_in_a_real_shell(changed, tmp_path, shell)
+                    assert calls.count("CALL\n") == 1 and left_behind == [] and done.stdout == "", changed
+                    words = re.findall(r"^WORD:(.*)$", calls, flags=re.M)
+                    assert words[0] in own, changed
+                    if "--by" in words:
+                        assert words[words.index("--by") + 1] == helper, changed
+    assert tried > 5000 and 0 < let_through < tried / 8      # mostly pieces inside the quoted folders, which are text
+
+
+# --- the project grouper: two commands of its own, and nobody else records the projects --------------------------------
+# It fetches its input and records its list, in the form its file shows, and nothing else, and it records only under its
+# own name. The lens table is not touched: the grouper has a table of its own.
+
+GROUPER = "strategy-radar:project-grouper"
+GROUPER_ONLY = SENDER + "This helper may only run: radar project-grouper-input and radar record-projects."
+PROJECTS_ONLY = SENDER + ("Only the project grouper records the projects. "
+                          "Ask the project grouper to group the moves.")
+GROUPER_INPUT = 'radar project-grouper-input --run "/p/radar/runs/r1"'
+PROJECTS_LINE = 'radar record-projects --run "/p/radar/runs/r1" --by project-grouper --list-stdin ' + LIST_OPEN
+PROJECTS_BODY = ("project: Competitor A, Plant North", "facts: F1, F2", "", "project: Competitor B, Plant South",
+                 "facts: F3")
+
+
+def projects_call(first_line=PROJECTS_LINE, *lines, end="RADAR_LIST"):
+    return "\n".join([first_line, *(lines or PROJECTS_BODY), end])
+
+
+GROUPER_ACCEPTED = [
+    GROUPER_INPUT,
+    GROUPER_INPUT + "\n",
+    "radar project-grouper-input --run " + RUN,                                   # a quoted folder with spaces
+    "radar project-grouper-input --run /p/radar/runs/r1",                          # a plain folder needs no quotes
+    'radar project-grouper-input --run "/p/it\'s (a) run; & 100%/r1"',
+    OWN_RADAR + " project-grouper-input --run x",
+    '"' + OWN_RADAR + '" project-grouper-input --run x',
+    GROUPER_INPUT + " --part 2",                                                   # a later part of the input
+    "radar project-grouper-input --part 12 --run " + RUN,
+    projects_call(),
+    projects_call() + "\n",
+    projects_call("radar record-projects --list-stdin --by project-grouper --run " + RUN + "  " + LIST_OPEN + " "),
+    projects_call('"' + OWN_RADAR + '" record-projects --run x --by project-grouper --list-stdin ' + LIST_OPEN),
+    projects_call(PROJECTS_LINE, "project: it's a \"name\" with $(id) and `id`", "facts: F1"),    # only text
+    projects_call(PROJECTS_LINE, " RADAR_LIST", "RADAR_LIST ", "RADAR_LISTX", "radar_list", "RADAR_NOTE"),
+    PROJECTS_LINE + "\nRADAR_LIST",                            # an empty list: the program refuses it
+]
+GROUPER_HOSTILE = [
+    "ls", "", " ", "\n", "radar", "radar settle --run x", "radar status --root x", "echo hi",
+    "radar lens-advisor-input --run x --lenses y", "radar quote-context --run x --fact F1",
+    "radar project-grouper-input", "radar record-projects",
+    # joined commands, pipes and redirects
+    GROUPER_INPUT + "; rm -rf ~", GROUPER_INPUT + " && ls", GROUPER_INPUT + " || ls", GROUPER_INPUT + " & ls",
+    GROUPER_INPUT + " | sh", GROUPER_INPUT + " > /tmp/out", GROUPER_INPUT + " < /etc/passwd",
+    GROUPER_INPUT + " `id`", GROUPER_INPUT + " $(id)", GROUPER_INPUT + "\nrm -rf ~", "ls\n" + GROUPER_INPUT,
+    "(" + GROUPER_INPUT + ")", GROUPER_INPUT + "\n\n", "X=1 " + GROUPER_INPUT, "sh -c " + GROUPER_INPUT,
+    projects_call() + "\nrm -rf ~", projects_call() + "\n" + GROUPER_INPUT, GROUPER_INPUT + "\n" + projects_call(),
+    projects_call().replace("\n", "\r\n"), projects_call() + "\r\n",
+    PROJECTS_LINE.replace(" <<", " | sh <<") + "\n" + "\n".join(PROJECTS_BODY) + "\nRADAR_LIST",
+    PROJECTS_LINE + " ; ls\n" + "\n".join(PROJECTS_BODY) + "\nRADAR_LIST",
+    projects_call() + " | sh", projects_call() + "\nls",
+    # the program by another name
+    GROUPER_INPUT.replace("radar ", "bin/radar ", 1), GROUPER_INPUT.replace("radar ", "/tmp/evil/bin/radar ", 1),
+    GROUPER_INPUT.replace("radar ", "Radar ", 1), GROUPER_INPUT.replace("radar ", "radarx ", 1),
+    # the input command: its one option, once, with a plain value
+    GROUPER_INPUT + " --from-json -", GROUPER_INPUT + " --file x", GROUPER_INPUT + " extra",
+    GROUPER_INPUT + " --run y", GROUPER_INPUT + " --lenses y", GROUPER_INPUT + " --by project-grouper",
+    GROUPER_INPUT + " --list-stdin", GROUPER_INPUT + " " + LIST_OPEN, GROUPER_INPUT.replace(' --run "/p/radar/runs/r1"', ""),
+    "radar project-grouper-input --run -x", "radar project-grouper-input --run", "radar project-grouper-input --run=x",
+    GROUPER_INPUT + " --run",
+    # a part is a positive whole number, given once
+    GROUPER_INPUT + " --part x", GROUPER_INPUT + " --part 0", GROUPER_INPUT + " --part -1", GROUPER_INPUT + " --part 02",
+    GROUPER_INPUT + ' --part "2"', GROUPER_INPUT + " --part 1.5", GROUPER_INPUT + " --part", GROUPER_INPUT + " --part=2",
+    GROUPER_INPUT + " --part 2 --part 3", GROUPER_INPUT + " --part 2;ls", GROUPER_INPUT + " --part $(id)",
+    GROUPER_INPUT + " --parts 2", GROUPER_INPUT + " --page 2", GROUPER_INPUT + " --part 2 --all",
+    projects_call(PROJECTS_LINE.replace("--list-stdin", "--part 2 --list-stdin")),
+    # the list is on standard input, never on the command line and never in a file
+    projects_call(PROJECTS_LINE.replace("--list-stdin " + LIST_OPEN, "--file projects.json")),
+    projects_call(PROJECTS_LINE.replace("--list-stdin", "--file projects.json")),
+    projects_call(PROJECTS_LINE.replace("--list-stdin", "--from-json -")),
+    projects_call(PROJECTS_LINE.replace("--list-stdin", "--list-stdin --file p.json")),
+    projects_call(PROJECTS_LINE.replace("--list-stdin", "--list-stdin --from-json p.json")),
+    projects_call(PROJECTS_LINE.replace("--list-stdin", "--list-stdin --list-stdin")),
+    projects_call(PROJECTS_LINE.replace(" --list-stdin", "")),
+    projects_call(PROJECTS_LINE.replace("--list-stdin", '"--list-stdin"')),
+    projects_call(PROJECTS_LINE.replace("--list-stdin", "--list-stdin -")),
+    projects_call(PROJECTS_LINE.replace("--list-stdin", "--note-stdin")),
+    projects_call(PROJECTS_LINE.replace("--run", "--lenses y --run")),
+    projects_call(PROJECTS_LINE + ' {"projects": []}'),                          # a curly bracket on the command line
+    projects_call(PROJECTS_LINE.replace('--run "/p/radar/runs/r1"', "--run {x}")),
+    # a curly bracket anywhere in the list: the grouper writes none, so a call with one is sent back to be corrected
+    projects_call(PROJECTS_LINE, '{"projects": []}'), projects_call(PROJECTS_LINE, "project: A {B}", "facts: F1"),
+    projects_call(PROJECTS_LINE, "project: A }", "facts: F1"), projects_call(PROJECTS_LINE, "project: { A", "facts: F1"),
+    projects_call(PROJECTS_LINE.replace('"/p/radar/runs/r1"', '"/p/{r1}"')),
+    GROUPER_INPUT.replace("r1", "{r1}"), GROUPER_INPUT + " }",
+    # it records only under its own name
+    projects_call(PROJECTS_LINE.replace("--by project-grouper", "--by lens-advisor")),
+    projects_call(PROJECTS_LINE.replace("--by project-grouper", "--by support-checker")),
+    projects_call(PROJECTS_LINE.replace("--by project-grouper", "--by lead")),
+    projects_call(PROJECTS_LINE.replace("--by project-grouper", '--by "project-grouper"')),
+    projects_call(PROJECTS_LINE.replace("--by project-grouper", "--by strategy-radar:project-grouper")),
+    projects_call(PROJECTS_LINE.replace("--by project-grouper", "--by Project-Grouper")),
+    projects_call(PROJECTS_LINE.replace("--by project-grouper", "--by project-grouper2")),
+    projects_call(PROJECTS_LINE.replace("--by project-grouper", "--by=project-grouper")),
+    projects_call(PROJECTS_LINE.replace("--by project-grouper", "--by project-grouper --by project-grouper")),
+    projects_call(PROJECTS_LINE.replace("--by project-grouper", "--by project-grouper --by lead")),
+    projects_call(PROJECTS_LINE.replace("--by project-grouper", "--by")),
+    projects_call(PROJECTS_LINE.replace(" --by project-grouper", "")),
+    projects_call(PROJECTS_LINE.replace(' --run "/p/radar/runs/r1"', "")),
+    # its own here-document, its end mark in single quotes, last on the first line
+    projects_call(PROJECTS_LINE.replace(LIST_OPEN, OPEN), end="RADAR_NOTE"),
+    projects_call(PROJECTS_LINE.replace(LIST_OPEN, OPEN)),
+    projects_call(PROJECTS_LINE.replace(LIST_OPEN, "<<RADAR_LIST")),
+    projects_call(PROJECTS_LINE.replace(LIST_OPEN, "<<-'RADAR_LIST'")),
+    projects_call(PROJECTS_LINE.replace(LIST_OPEN, "<< 'RADAR_LIST'")),
+    projects_call(PROJECTS_LINE.replace(LIST_OPEN, "<<'EOF'"), end="EOF"),
+    projects_call(PROJECTS_LINE.replace(LIST_OPEN, LIST_OPEN + " " + LIST_OPEN)),
+    projects_call(PROJECTS_LINE.replace("--by", LIST_OPEN + " --by")),
+    projects_call(end="RADAR_LIST "), projects_call(end=" RADAR_LIST"), projects_call(end="RADAR_LIST\r"),
+    projects_call(end="RADAR_LIST\n\n"), projects_call(end="radar_list"), projects_call(end="RADAR_NOTE"),
+    # a line of the text equal to the end mark would end it early, and what follows would run
+    projects_call(PROJECTS_LINE, "RADAR_LIST", "rm -rf ~"), projects_call(PROJECTS_LINE, *PROJECTS_BODY, "RADAR_LIST", "ls"),
+    projects_call(PROJECTS_LINE, "RADAR_LIST"), projects_call() + "\n" + projects_call(),
+    # the lens helpers' commands are not the grouper's
+    ADVISOR_INPUT, recommendation(), LINK_CONTEXT, link_check(), verdict(), GOOD_VERDICT,
+    projects_call(GROUPER_INPUT + " " + LIST_OPEN),
+]
+
+
+def test_the_grouper_has_its_own_two_sentences_and_a_table_of_its_own():
+    assert guard.GROUPER_REASON == GROUPER_ONLY and guard.PROJECTS_REASON == PROJECTS_ONLY
+    assert guard.GROUPER_COMMANDS == {"project-grouper": {
+        "project-grouper-input": (("--run",), None),
+        "record-projects": (("--run", "--by", "--list-stdin"), (guard.LIST_OPENER, guard.LIST_END))}}
+    assert guard.OPTIONAL == {"lens-advisor-input": ("--part",), "project-grouper-input": ("--part",)}
+    assert "project-grouper" not in guard.LENS_COMMANDS and "project-grouper" not in guard.LENS_REASONS
+    assert guard.PROJECTS_REASON in [reason for _, reason in guard.RECORD_WORDS]
+    assert ("record-projects", guard.PROJECTS_REASON) in guard.RECORD_WORDS
+    reasons = {guard.VERDICT_REASON, guard.HELPER_REASON, guard.NO_COMMANDS_REASON, guard.RECORDS_REASON,
+               guard.ADVISOR_REASON, guard.READER_REASON, guard.LINK_VERDICT_REASON, guard.LIST_REASON,
+               guard.FAILED_REASON, guard.GROUPER_REASON, guard.PROJECTS_REASON}
+    assert len(reasons) == 11                                 # every sentence is its own
+
+
+def test_eight_helpers_and_the_lens_table_is_unchanged():
+    assert set(LENS_HELPERS) <= set(guard.HELPERS) and len(set(guard.HELPERS)) == len(guard.HELPERS) == 8
+    assert "project-grouper" in guard.HELPERS
+    assert set(guard.LENS_COMMANDS) == set(LENS_HELPERS)
+    assert set(guard.LENS_COMMANDS["lens-advisor"]) == {"lens-advisor-input", "record-lens-recommendation"}
+    for reader in LENS_HELPERS[1:]:
+        assert set(guard.LENS_COMMANDS[reader]) == {"lens-link-context", "record-link-check"}
+    assert [word for word, _ in guard.RECORD_WORDS][:3] == ["record-support", "record-link-check",
+                                                           "record-lens-recommendation"]
+    assert guard._helper_name("strategy-radar:project-grouper") == "project-grouper"
+    assert guard._helper_name("project-grouper") == "project-grouper"
+    assert guard._helper_name("other-plugin:project-grouper") is None
+    assert guard._helper_name("project-grouper2") is None
+
+
+@pytest.mark.parametrize("command", GROUPER_ACCEPTED)
+def test_the_grouper_may_run_exactly_its_two_commands(command):
+    assert guard.decide(event("Bash", GROUPER, command=command)) is None
+    assert guard.decide(event("Bash", "project-grouper", command=command)) is None
+
+
+@pytest.mark.parametrize("command", GROUPER_HOSTILE)
+def test_anything_outside_the_grouper_s_two_shapes_is_refused(command):
+    assert guard.decide(event("Bash", GROUPER, command=command)) == GROUPER_ONLY
+    assert guard.decide(event("Bash", "project-grouper", command=command)) == GROUPER_ONLY
+
+
+@pytest.mark.parametrize("command", [None, 7, ["radar", "record-projects"], {"command": "record-projects"}])
+def test_a_grouper_command_that_is_no_text_is_refused(command):
+    assert guard.decide(event("Bash", GROUPER, command=command)) == GROUPER_ONLY
+    assert guard.decide({"tool_name": "Bash", "agent_type": GROUPER}) == GROUPER_ONLY
+
+
+def test_the_lead_may_not_record_the_projects():
+    for command in (projects_call(), PROJECTS_LINE, "radar record-projects --run x --by lead --file p.json",
+                    OWN_RADAR + " record-projects --run x --by project-grouper --list-stdin",
+                    "python3 /p/engine/start_radar.py record-projects --run x --by me --from-json p.json",
+                    "sh -c 'radar record-projects --run x --file p.json'",
+                    "cd /p && radar settle --run x && radar record-projects --run x --by x --file z"):
+        for agent in (None, "", "general-purpose", "Explore", "other-plugin:project-grouper", "my-project-grouper",
+                      "strategy-radar:project-grouper-2", "Project-Grouper", "strategy-radar:run"):
+            assert guard.decide(lead_event(agent, command)) == PROJECTS_ONLY, (agent, command)
+
+
+def test_the_lead_may_still_read_what_the_grouper_reads():
+    for command in (GROUPER_INPUT, "radar project-grouper-input --run x", "radar status --run x", "ls"):
+        assert guard.decide(lead_event(None, command)) is None, command
+    # a command with more than one record word gets the sentence of the first, in a fixed order
+    assert guard.decide(lead_event(None, recommendation() + "\n" + projects_call())) == LIST_ONLY
+    assert guard.decide(lead_event(None, projects_call() + "\n" + verdict())) == VERDICT_ONLY
+    assert guard.decide(lead_event(None, projects_call() + "\n" + link_check())) == LINK_VERDICT_ONLY
+
+
+def test_the_other_helpers_may_not_run_the_grouper_s_commands():
+    for command in (GROUPER_INPUT, projects_call()):
+        for helper in ("lens-advisor", "lens-link-reader", "lens-link-reader-quick"):
+            assert guard.decide(event("Bash", helper, command=command)) == guard.LENS_REASONS[helper]
+        assert guard.decide(event("Bash", "support-checker", command=command)) == HELPER
+        for helper in ("source-scout", "fact-extractor", "bias-auditor"):
+            assert guard.decide(event("Bash", "strategy-radar:" + helper, command=command)) == NO_COMMANDS
+    for command in (ADVISOR_INPUT, recommendation(), LINK_CONTEXT, link_check(), GOOD_VERDICT):
+        assert guard.decide(event("Bash", GROUPER, command=command)) == GROUPER_ONLY
+
+
+def test_the_recorded_real_event_of_the_lead_is_refused_when_it_records_the_projects():
+    real = recorded("lead_bash")
+    assert guard.decide({**real, "tool_input": {"command": projects_call()}}) == PROJECTS_ONLY
+    result = run_guard(json.dumps({**real, "tool_input": {"command": projects_call()}}))
+    assert result.returncode == 2 and result.stderr.decode("utf-8") == PROJECTS_ONLY + "\n"
+
+
+@pytest.mark.parametrize("agent", ["project-grouper", GROUPER])
+def test_the_grouper_is_known_by_its_plain_name_and_by_its_name_in_the_plugin(agent):
+    assert guard.decide(event("Bash", agent, command="ls")) == GROUPER_ONLY
+    result = run_guard(json.dumps(event("Bash", agent, command="ls")))
+    assert (result.returncode, result.stderr.decode("utf-8")) == (2, GROUPER_ONLY + "\n")
+    allowed = run_guard(json.dumps(event("Bash", agent, command=GROUPER_INPUT)))
+    assert (allowed.returncode, allowed.stdout, allowed.stderr) == (0, b"", b"")
+
+
+def test_an_error_of_the_guard_s_own_while_judging_the_grouper_refuses_it(monkeypatch):
+    def broken(*args):
+        raise RuntimeError("an error of the guard's own")
+    monkeypatch.setattr(guard, "_fits", broken)
+    for agent, command in ((GROUPER, GROUPER_INPUT), ("project-grouper", projects_call())):
+        assert guard.decide(event("Bash", agent, command=command)) == FAILED, agent
+    assert guard.decide(lead_event(None, "ls")) is None
+
+
+def test_the_commands_exactly_as_the_grouper_s_file_writes_them_are_allowed():
+    blocks = [block.strip("\n") for block in re.findall(r"```bash\n(.*?)```",
+                                                         body(ROOT / "agents" / "project-grouper.md"), flags=re.S)]
+    assert len(blocks) == 3 and all("<run folder>" in block for block in blocks)   # part 1, a further part, the record
+    assert "=" not in "".join(block.splitlines()[0] for block in blocks)         # the file never writes --key=value
+    first = blocks[-1].splitlines()[0]
+    assert "--by project-grouper " in first and first.count("--by") == 1 and first.endswith(guard.LIST_OPENER)
+    assert blocks[-1].splitlines()[-1] == "RADAR_LIST"
+    for run in ("/p/radar/runs/r1", "/home/a b/Documents (1)/radar/runs/r1", "/Users/x/it's & more; 100%/runs/r1"):
+        for block in blocks:
+            command = block.replace("<run folder>", run)
+            assert guard.decide(event("Bash", GROUPER, command=command)) is None, command
+            assert guard.decide(event("Bash", "project-grouper", command=command)) is None, command
+            for other in ("lens-advisor", "lens-link-reader", "lens-link-reader-quick"):
+                assert guard.decide(event("Bash", other, command=command)) == guard.LENS_REASONS[other]
+            assert guard.decide(event("Bash", CHECKER, command=command)) == HELPER
+
+
+@pytest.mark.parametrize("shell", REAL_SHELLS)
+def test_an_allowed_grouper_command_starts_the_program_once_and_nothing_else(tmp_path, shell):
+    for command in GROUPER_ACCEPTED:
+        done, calls, left_behind = run_in_a_real_shell(command, tmp_path, shell)
+        assert done.returncode == 0 and done.stdout == "" and done.stderr == "", command
+        assert calls.count("CALL\n") == 1 and left_behind == [], command
+        words = re.findall(r"^WORD:(.*)$", calls, flags=re.M)
+        text = calls.split("TEXT:", 1)[1][:-len("\nEND\n")]
+        if words[0] == "project-grouper-input" and "--part" in words:
+            assert len(words) == 5 and set(words[1::2]) == {"--run", "--part"} and text == "", command
+            assert re.fullmatch(r"[1-9][0-9]*", words[words.index("--part") + 1]), command
+        elif words[0] == "project-grouper-input":
+            assert len(words) == 3 and words[1] == "--run" and text == "", command
+        else:
+            assert words[0] == "record-projects" and words.count("--list-stdin") == 1 and len(words) == 6, command
+            valued = [word for word in words[1:] if word != "--list-stdin"]
+            options = dict(zip(valued[0::2], valued[1::2]))
+            assert set(options) == {"--run", "--by"} and options["--by"] == "project-grouper", command
+            assert text == "".join(line + "\n" for line in command.rstrip("\n").split("\n")[1:-1])   # untouched
+
+
+@pytest.mark.parametrize("shell", REAL_SHELLS)
+def test_a_hostile_piece_put_anywhere_into_a_good_grouper_command_never_gets_more_than_the_program_started(tmp_path, shell):
+    """As for the lens helpers: every piece between any two words, and glued to either side of each word, of one good
+    command of each kind. Where the guard lets one through, a real shell must start the program once, with one of the
+    grouper's two subcommands, and do nothing else."""
+    pieces = LENS_FRAGMENTS + ["--file -", "--file p.json", "--by project-grouper", "project-grouper", "record-projects"]
+    tried = let_through = 0
+    for command in ("radar project-grouper-input --run " + RUN, projects_call()):
+        first, _, rest = command.partition("\n")
+        places = [0] + [m.start() for m in re.finditer(" ", first)] + [len(first)]
+        for place in places:
+            for piece in pieces:
+                for glue in (piece, " " + piece, piece + " ", " " + piece + " "):
+                    changed = first[:place] + glue + first[place:] + ("\n" + rest if rest else "")
+                    tried += 1
+                    if guard.decide(event("Bash", "project-grouper", command=changed)) is not None:
+                        continue
+                    let_through += 1
+                    done, calls, left_behind = run_in_a_real_shell(changed, tmp_path, shell)
+                    assert calls.count("CALL\n") == 1 and left_behind == [] and done.stdout == "", changed
+                    words = re.findall(r"^WORD:(.*)$", calls, flags=re.M)
+                    assert words[0] in guard.GROUPER_COMMANDS["project-grouper"], changed
+                    if "--by" in words:
+                        assert words[words.index("--by") + 1] == "project-grouper", changed
+    assert tried > 1000 and 0 < let_through < tried / 8

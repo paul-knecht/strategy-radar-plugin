@@ -1,0 +1,28 @@
+{
+ "id": "staged-financing",
+ "name": "Money in rounds, with an option to stop",
+ "idea": "The work's abstract says it examines how venture investment is staged when agency and monitoring costs exist. It states that venture investors periodically gather information and keep the option to stop funding projects with little chance of going public, and that they concentrate on early-stage and high-technology firms, where information gaps are highest.",
+ "suggests": "Look at how much money a company has raised, how often investors have put in more, and what each new round would need to show for them to do so again.",
+ "limits": "The abstract states that expected agency costs rise as a firm's assets become less tangible, its growth options increase and its assets grow more specific, and that investors monitor more often in industries with fewer tangible assets, higher market-to-book ratios and more R&D. Its evidence is a random sample of 794 venture-backed firms.",
+ "competing_idea": "A study of actual contracts between venture investors and entrepreneurs states that what sets venture financings apart is that investors can allocate cash-flow, board, voting, liquidation and other control rights separately. It also traces how these rights change across financing rounds.",
+ "questions": [
+  "How often has the company gone back to investors for money, and how much did each round give it?",
+  "What would the next round have to show before investors put in more?",
+  "Are the company's assets mostly intangible, so that investors need to watch it closely?"
+ ],
+ "originals": [
+  {
+   "reference": "EconPapers (RePEc) bibliographic record of an article, \"Optimal Investment, Monitoring, and the Staging of Venture Capital\", Journal of Finance, 50(5), 1461-1489, 1995, with its abstract",
+   "level": "secondary_source_read",
+   "about": "Paul A. Gompers, \"Optimal Investment, Monitoring, and the Staging of Venture Capital\", The Journal of Finance, Vol. 50 No. 5, December 1995, pp. 1461-1489",
+   "link": "https://econpapers.repec.org/RePEc:bla:jfinan:v:50:y:1995:i:5:p:1461-89"
+  },
+  {
+   "reference": "EconPapers (RePEc) bibliographic record of an article, \"Financial Contracting Theory Meets the Real World: An Empirical Analysis of Venture Capital Contracts\", Review of Economic Studies, 70(2), 281-315, 2003, with its abstract",
+   "level": "secondary_source_read",
+   "about": "Steven N. Kaplan and Per Stromberg, \"Financial Contracting Theory Meets the Real World: An Empirical Analysis of Venture Capital Contracts\", The Review of Economic Studies, Vol. 70 No. 2, 2003, pp. 281-315",
+   "link": "https://econpapers.repec.org/RePEc:oup:restud:v:70:y:2003:i:2:p:281-315"
+  }
+ ],
+ "checked_on": "2026-11-17"
+}

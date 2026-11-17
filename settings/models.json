@@ -2,5 +2,9 @@
   "source-scout": "sonnet",
   "fact-extractor": "sonnet",
   "support-checker": "opus",
-  "bias-auditor": "opus"
+  "bias-auditor": "opus",
+  "lens-advisor": "claude-opus-5-5",
+  "lens-link-reader": "claude-opus-5-5",
+  "lens-link-reader-quick": "sonnet",
+  "project-grouper": "claude-opus-5-5"
 }

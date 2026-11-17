@@ -1,0 +1,21 @@
+{
+ "id": "default-alive",
+ "name": "Does the money last until profit?",
+ "idea": "An essay states that the question to ask a startup is whether, with expenses constant and revenue growth as it has been, it reaches profitability on the money it has left. It states that being default dead, with slow growth and not enough time to fix it, is the fatal pinch, and that hiring too quickly kills more funded startups than anything else.",
+ "suggests": "Look at a company's cash, its monthly spending and its recent revenue growth, and work out whether it reaches profit before the cash runs out without new funding.",
+ "limits": "The essay states that fundraising can never safely be treated as more than a plan A, and that the default-alive question does not make sense to ask early on. It also states that fast growth and cheap operation are far less opposed than many founders assume.",
+ "competing_idea": "The essay also states that kill-or-cure strategies are optimal for venture investors because the portfolio effect protects them, and that a founder, whose incentives differ, wants above all to survive.",
+ "questions": [
+  "Does the company reach profit on the cash it has, if spending and growth stay as they are?",
+  "How much of its plan rests on raising more money, and what is plan B?",
+  "Has spending, hiring above all, grown faster than the company's growth?"
+ ],
+ "originals": [
+  {
+   "reference": "\"Default Alive or Default Dead?\", essay, paulgraham.com, October 2015 (the page names no author)",
+   "level": "original_read",
+   "link": "https://paulgraham.com/aord.html"
+  }
+ ],
+ "checked_on": "2026-11-17"
+}

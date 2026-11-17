@@ -1,0 +1,26 @@
+{
+  "id": "bidder-hubris",
+  "name": "Bidders who overpay",
+  "idea": "The work argues that takeovers may happen even when they create no gain overall, because bidding managers trust their own valuation of a target above its market price. As valuations contain errors, it argues, the bidder with the highest estimate tends to win and so to pay too much, and the premium passes from the bidder's owners to the target's.",
+  "suggests": "Look at whether the price a company paid for a target rests on its managers' own estimate of value above the market's, and at how the deal moved the buyer's share price.",
+  "limits": "The work presents hubris as a hypothesis rather than a proven cause: it argues that the evidence it reviews is consistent with hubris, while not excluding explanations based on real gains.",
+  "competing_idea": "Another view holds that takeovers can discipline managers who would otherwise waste cash beyond what profitable projects need, and so create value.",
+  "questions": [
+    "How far above the target's market value was the price paid, and what was said to justify the gap?",
+    "Did several bidders compete, so that the winner was the one with the highest estimate?",
+    "How did the buyer's own share price react when the deal was announced?"
+  ],
+  "originals": [
+    {
+      "reference": "Richard Roll, \"The Hubris Hypothesis of Corporate Takeovers\", The Journal of Business, Vol. 59 No. 2, April 1986, pp. 197-216",
+      "level": "reference_confirmed",
+      "link": "https://ideas.repec.org/a/ucp/jnlbus/v59y1986i2p197-216.html"
+    },
+    {
+      "reference": "Michael C. Jensen, \"Agency Costs of Free Cash Flow, Corporate Finance, and Takeovers\", American Economic Review, Vol. 76 No. 2, 1986, pp. 323-329",
+      "level": "reference_confirmed",
+      "link": "https://openalex.org/W3121131820"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

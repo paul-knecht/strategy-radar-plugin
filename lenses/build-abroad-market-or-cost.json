@@ -1,0 +1,26 @@
+{
+  "id": "build-abroad-market-or-cost",
+  "name": "Building abroad: for the market or for cost",
+  "idea": "The work argues that firms weigh producing near their customers abroad against concentrating production at home to gain scale. Producing abroad rather than exporting gains ground when transport costs and trade barriers are high and when plant-level scale economies and barriers to investment are low. It finds less support for producing abroad to exploit differences in factor costs.",
+  "suggests": "Look at whether a company's new plant abroad sits near the customers it will serve or near cheaper inputs, and set its fixed cost against what exporting the same volume would cost in transport and tariffs.",
+  "limits": "The work reports that exporting and selling through plants abroad can rise together, as some conditions raise both, so a new plant abroad need not mean less trade.",
+  "competing_idea": "Another view holds that a firm operating abroad bears a liability of foreignness, costs a local firm does not face, which it must offset with advantages of its own.",
+  "questions": [
+    "Is the plant abroad there to serve buyers in that market, to make part of the product more cheaply, or both?",
+    "Would exporting the same volume cost more in transport and tariffs than setting up and running the plant abroad?",
+    "What advantage does the company bring that could offset the extra costs of operating as a foreign firm there?"
+  ],
+  "originals": [
+    {
+      "reference": "S. Lael Brainard, \"An Empirical Assessment of the Proximity-Concentration Trade-off between Multinational Sales and Trade\", American Economic Review, Vol. 87 No. 4, September 1997, pp. 520-544",
+      "level": "reference_confirmed",
+      "link": "https://ideas.repec.org/a/aea/aecrev/v87y1997i4p520-44.html"
+    },
+    {
+      "reference": "S. Zaheer, \"Overcoming the Liability of Foreignness\", Academy of Management Journal, Vol. 38 No. 2, April 1995, pp. 341-363",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.5465/256683"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

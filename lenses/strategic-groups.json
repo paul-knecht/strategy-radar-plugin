@@ -1,0 +1,28 @@
+{
+  "id": "strategic-groups",
+  "name": "Groups of rivals inside an industry",
+  "idea": "A textbook says a strategic group is a set of industry rivals with strategies and characteristics alike, unlike other groups' members in important respects, and that a group's members are usually one another's closest rivals. It adds that firms face mobility barriers that make switching groups hard or illogical over time, and an encyclopedia entry likens these to entry barriers applying to groups.",
+  "suggests": "Sort the competitors in the industry into groups by the main choices they make, ask which group the company belongs to, and check what would stop it or a rival from moving to another group.",
+  "limits": "The encyclopedia entry says how many groups an industry has, and who belongs to them, depends upon the dimensions chosen to define groups.",
+  "competing_idea": "The encyclopedia entry says the analysis of differences within an industry was first based mainly on financial and accounting data collected by others, but that studying strategic groups from a cognitive perspective has since gained prominence.",
+  "questions": [
+    "Which competitors follow strategies like the company's own, and are they its closest rivals?",
+    "What would stop the company, or a rival, from moving into another group?",
+    "Would the groups look different if the industry were split along other dimensions?"
+  ],
+  "originals": [
+    {
+      "reference": "Mastering Strategic Management, v. 1.0, Saylor Academy, 2012 (an open textbook adapted without attribution, as its original creator requested; details from the textbook's licence page, https://saylordotorg.github.io/text_mastering-strategic-management/s00-license.html), section \"Mapping Strategic Groups\"",
+      "level": "secondary_source_read",
+      "about": "The concept of strategic groups, for which the textbook cites M. S. Hunt, Competition in the major home appliance industry 1960-1970, unpublished doctoral dissertation, Harvard University, 1972",
+      "link": "https://saylordotorg.github.io/text_mastering-strategic-management/s07-04-mapping-strategic-groups.html"
+    },
+    {
+      "reference": "\"Strategic group\", Wikipedia",
+      "level": "secondary_source_read",
+      "about": "The concept of strategic groups and mobility barriers, for which the entry credits Hunt (1972) with the term and a 1980 book by Porter with the explanation in terms of mobility barriers",
+      "link": "https://en.wikipedia.org/wiki/Strategic_group"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

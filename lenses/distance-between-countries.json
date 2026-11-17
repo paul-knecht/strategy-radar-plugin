@@ -1,0 +1,22 @@
+{
+  "id": "distance-between-countries",
+  "name": "Distance between countries",
+  "idea": "An open textbook states that the work's author analyses distance between countries in four dimensions, cultural, administrative, geographic and economic, each affecting business differently. Administrative distance comes from differing laws, policies and institutions. Geographic distance most directly affects transport costs. Disposable income is the main economic attribute that creates distance.",
+  "suggests": "Look at how far a company's new market or site is from its home in culture, rules, geography and income, and which of these gaps its plan has to overcome.",
+  "limits": "The textbook notes an exception to its distance rule: industries whose advantage comes from exploiting cost and price differences between markets.",
+  "competing_idea": "Another view holds that information technologies and global communications are shrinking the world, so that distance no longer matters. The textbook calls that assumption, for business, not only incorrect but dangerous.",
+  "questions": [
+    "How far apart are the company's home country and the target country in culture, administration, geography and income?",
+    "Which kind of distance matters most for this product: transport costs, rules, preferences or buyers' income?",
+    "Does the move exploit differences between the countries, such as in labour costs, rather than suffer from them?"
+  ],
+  "originals": [
+    {
+      "reference": "Fundamentals of Global Strategy, v. 1.0, Saylor Academy, 2012, section 1.5 \"The Persistence of Distance\" (an open textbook; its original author is not named, at the licensor's request)",
+      "level": "secondary_source_read",
+      "about": "Pankaj Ghemawat, \"Distance Still Matters: The Hard Reality of Global Expansion\", Harvard Business Review, September 2001",
+      "link": "https://saylordotorg.github.io/text_fundamentals-of-global-strategy/s03-05-the-persistence-of-distance.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

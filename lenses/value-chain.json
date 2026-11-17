@@ -1,0 +1,28 @@
+{
+  "id": "value-chain",
+  "name": "The chain of activities that adds value",
+  "idea": "A web page on the idea calls the value chain a tool for breaking a company into its strategically relevant activities, to find those that bring higher prices or lower costs, and says strategy shows in how the activities are configured and linked. A textbook says the chain charts how products are created and sold, with secondary activities that support the primary ones.",
+  "suggests": "Look at which of a company's activities a planned move changes, whether those activities lower its costs or let it charge more, and how they connect with each other and with suppliers and distributors.",
+  "limits": "The textbook says a value chain covers activities within one firm, while a supply chain spans the whole process, often across several firms. The web page says a firm's chain is usually part of a larger system with suppliers upstream, distribution channels downstream, or both, and that building best practices into it is essential, yet doing things well differs from doing them differently.",
+  "competing_idea": "A wider view, which the same textbook adds to the value chain, says that competition in the twenty-first century calls for considering the supply chain together with value creation inside the firm, with chains that aim, relative to their peers, at the total value added for the customer rather than at speed or any other single measure.",
+  "questions": [
+    "Which activities does this move change, and do they lower the company's costs or let it charge a higher price?",
+    "How does the company link its activities, and would a change in one of them affect the others?",
+    "Which steps does the company leave to suppliers or distributors, and does the move change that split?"
+  ],
+  "originals": [
+    {
+      "reference": "\"The Value Chain\", web page of the Institute for Strategy and Competitiveness, Harvard Business School, no date stated",
+      "level": "secondary_source_read",
+      "about": "Michael E. Porter's value chain, set out in his book Competitive Advantage: Creating and Sustaining Superior Performance, New York: Free Press, 1985",
+      "link": "https://www.isc.hbs.edu/strategy/business-strategy/Pages/the-value-chain.aspx"
+    },
+    {
+      "reference": "Mastering Strategic Management, v. 1.0, Saylor Academy, 2012 (an open textbook adapted without attribution, as its original creator requested), section \"Value Chain\"",
+      "level": "secondary_source_read",
+      "about": "Michael E. Porter, Competitive Advantage: Creating and Sustaining Superior Performance, New York: Free Press, 1985",
+      "link": "https://saylordotorg.github.io/text_mastering-strategic-management/s08-03-value-chain.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

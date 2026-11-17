@@ -1,0 +1,26 @@
+{
+  "id": "architectural-innovation",
+  "name": "New links between known parts",
+  "idea": "The work argues that innovations that change how a product's known components are linked, while leaving the components much the same, can defeat established firms. Such firms, it argues, build their knowledge, communication channels and ways of searching around the old architecture, so they may miss the change or respond slowly.",
+  "suggests": "Look at whether a new product in a market recombines familiar parts in a new way, and at whether established firms are treating it as a minor change.",
+  "limits": "The work sets this case beside incremental change, which tends to reinforce established firms, and radical change, which overturns knowledge of both the components and how they are linked; its warning is about changes that look minor.",
+  "competing_idea": "Another view holds that what matters is whether a technological change enhances or destroys the skills and knowledge firms already have, with new entrants gaining when competence is destroyed.",
+  "questions": [
+    "Does the new product use mostly familiar components, but connected or arranged in a new way?",
+    "Are the established firms organised, in teams and channels, around the old way the parts fit together?",
+    "Have established firms dismissed the change as minor while newcomers built on it?"
+  ],
+  "originals": [
+    {
+      "reference": "Rebecca M. Henderson and Kim B. Clark, \"Architectural Innovation: The Reconfiguration of Existing Product Technologies and the Failure of Established Firms\", Administrative Science Quarterly, Vol. 35 No. 1, March 1990, pp. 9-30",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.2307/2393549"
+    },
+    {
+      "reference": "Michael L. Tushman and Philip Anderson, \"Technological Discontinuities and Organizational Environments\", Administrative Science Quarterly, Vol. 31 No. 3, September 1986, pp. 439-465",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.2307/2392832"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

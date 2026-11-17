@@ -328,7 +328,7 @@ def test_every_key_the_example_uses_is_named_in_the_prose_of_its_section():
 
 def test_every_allowed_value_the_engine_checks_is_named_in_the_format():
     text = read("analysis-format.md")
-    allowed = (store.CONFIDENCE + store.STEP_KINDS + store.FRAMING + store.SUPPORT_LEVELS + store.CALC_OPERATIONS
+    allowed = (store.CONFIDENCE + store.STEP_KINDS + store.FRAMING + store.SUPPORT_LEVELS + store.CALC_OPERATIONS + store.MEMO_PARTS
                + store.AUDIT_CHECKS)
     assert [value for value in allowed if f"`{value}`" not in text] == []
 
@@ -568,6 +568,18 @@ def test_a_flag_may_name_any_fact_that_exists_and_the_format_says_so():
     """Ruling FWA-4: the status rule is for the analysis's own texts; a flag may point at any fact of the run."""
     text = " ".join(section_texts()["audit_flags"].split())
     assert "A flag may name any fact of this run that exists, whatever its status" in text
+
+
+def test_a_flag_may_name_the_messages_it_is_about_and_the_format_says_so():
+    """Decision D10: `message_ids` is a list of message ids; an older flag without it stays valid."""
+    text = " ".join(section_texts()["audit_flags"].split())
+    assert "`message_ids` lists the ids of the key messages the flag is about" in text
+    assert "is an empty list when it is about none" in text
+    assert "A flag from an older run may have no `message_ids`, and stays valid." in text
+    analysis = fenced_json(ROOT / "references" / "analysis-format.md", "analysis-example")
+    known = {message["id"] for message in analysis["messages"]}
+    for flag in analysis["audit_flags"]:
+        assert set(flag["message_ids"]) <= known
 
 
 def test_the_confidence_wording_agrees_with_the_format_on_probability_words():

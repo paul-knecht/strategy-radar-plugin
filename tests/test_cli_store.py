@@ -424,8 +424,13 @@ def _other_options(tmp_path) -> dict[str, list]:
     text.write_text("An invented note that was saved by hand.", encoding="utf-8")
     lenses = files / "lenses"
     lenses.mkdir(exist_ok=True)
+    recommendation = files / "recommendation.json"
+    recommendation.write_text(json.dumps({"entries": [], "note": "No lens fits."}), encoding="utf-8")
+    grouping = files / "projects.json"
+    grouping.write_text(json.dumps({"projects": []}), encoding="utf-8")
     return {
         "add-fact": ["--file", one], "add-facts": ["--file", many],
+        "join-proposals": ["--sources", "S1", "--out", files / "all.json"],
         "checkpoint": ["--name", "lenses", "--answered-by", "test", "--answer", "Use both."],
         "log-search": ["--place", "Company websites", "--result", "Nothing"],
         "log-excluded": ["--what", "A forecast", "--why", "Paywall"],
@@ -439,6 +444,14 @@ def _other_options(tmp_path) -> dict[str, list]:
         "quote-context": ["--open"],
         "build-report": ["--lenses", lenses],
         "calc": ["--operation", "count", "--facts", "F1"],
+        "record-lens-recommendation": ["--lenses", lenses, "--by", "lens-advisor", "--file", recommendation],
+        "lens-advisor-input": ["--lenses", lenses],
+        "lens-link-context": ["--lenses", lenses],
+        "lens-view": ["--lenses", lenses],
+        "record-link-check": ["--lens", "firm-boundaries", "--fact", "F1", "--verdict", "bears",
+                              "--by", "lens-link-reader", "--note", ""],
+        "project-grouper-input": [],
+        "record-projects": ["--by", "project-grouper", "--file", grouping],
     }
 
 
@@ -453,9 +466,11 @@ def _snapshot(folder):
     return sorted(str(path.relative_to(folder)) for path in folder.rglob("*"))
 
 
-TAKES_RUN = ["add-fact", "add-facts", "checkpoint", "log-search", "log-excluded", "save-source", "add-copy",
-             "add-based-on", "check-data", "check-quotes", "settle", "gate", "status", "record-support",
-             "withdraw-fact", "quote-context", "build-report", "calc"]
+TAKES_RUN = ["add-fact", "add-facts", "join-proposals", "checkpoint", "log-search", "log-excluded", "save-source",
+             "add-copy", "add-based-on", "check-data", "check-quotes", "settle", "gate", "status", "record-support",
+             "withdraw-fact", "quote-context", "build-report", "calc", "record-lens-recommendation",
+             "lens-advisor-input", "lens-link-context", "lens-view", "record-link-check", "project-grouper-input",
+             "record-projects"]
 
 
 @pytest.mark.parametrize("command", TAKES_RUN)
@@ -852,3 +867,46 @@ def test_init_run_through_the_launcher_with_bytes_that_are_not_utf8_makes_nothin
                           capture_output=True, env=radar_env(tmp_path))
     assert done.returncode == 2 and b"cannot be saved" in done.stdout and done.stderr == b""
     assert not (tmp_path / "runs").exists()
+
+
+def test_init_run_with_a_pack_file_records_its_companies(tmp_path, capsys):
+    path = _pack_file(tmp_path, other_names=["Example Pharma Group"])
+    code, _ = _init(capsys, tmp_path, "--pack-file", str(path))
+    run = store.load_run(tmp_path / "runs" / "r1")
+    assert code == 0
+    assert run["companies"][0] == {"name": "Example Pharma", "other_names": ["Example Pharma Group"], "home": True}
+    assert [c["name"] for c in run["companies"]] == ["Example Pharma", "Competitor A", "Competitor B", "Competitor C",
+                                                     "Competitor D", "Drug maker B"]
+    assert run["home_company"] is None      # the run's own setting stays as it was given
+
+
+def test_init_run_on_a_shipped_pack_records_its_companies_too(tmp_path, capsys):
+    code, _ = _init(capsys, tmp_path, "--pack", "demo", "--home-company", "Example Pharma")
+    run = store.load_run(tmp_path / "runs" / "r1")
+    assert code == 0 and run["companies"][0]["name"] == "Example Pharma" and run["home_company"] == "Example Pharma"
+
+
+def test_init_run_without_a_pack_file_records_no_companies(tmp_path, capsys):
+    code, _ = _init(capsys, tmp_path, "--pack", "acme-real")      # no pack file is read: none by that name ships
+    assert code == 0 and "companies" not in store.load_run(tmp_path / "runs" / "r1")
+
+
+def test_init_run_keeps_the_companies_it_is_given_and_only_those(tmp_path):
+    companies = [{"name": "Example Pharma", "other_names": [], "home": True}]
+    run = store.load_run(store.init_run(tmp_path, "Q", "demo", run_id="a", companies=companies))
+    assert run["companies"] == companies
+    assert "companies" not in store.load_run(store.init_run(tmp_path, "Q", "demo", run_id="b"))
+
+
+
+def test_a_screening_pack_marks_the_run_and_a_company_pack_leaves_the_key_out(tmp_path, capsys):
+    startup = ROOT / "tests" / "fixtures" / "startup-pack.json"
+    code, _ = run_cli(capsys, "init-run", "--root", str(tmp_path), "--question", "Q?", "--pack-file", str(startup),
+                      "--run-id", "s1")
+    data = store.load_run(tmp_path / "s1")
+    assert code == 0 and data["screening"] is True and data["illustrative"] is True
+    code, _ = run_cli(capsys, "init-run", "--root", str(tmp_path), "--question", "Q?",
+                      "--pack-file", str(ROOT / "packs" / "demo.json"), "--run-id", "c1")
+    assert code == 0 and "screening" not in store.load_run(tmp_path / "c1")
+    code, out = run_cli(capsys, "check-data", "--run", str(tmp_path / "s1"))
+    assert code == 0 and out["problems"] == []

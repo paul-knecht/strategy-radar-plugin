@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Context, Decimal, DivisionByZero, Inexact, InvalidOperation, Overflow
 
 from . import store
-from .textnorm import normalise
 from .verify import is_early_signal, needs_settling
 
 _PLAIN_NUMBER = re.compile(r"[0-9]+(?:\.[0-9]+)?")
@@ -51,7 +50,9 @@ def _write(number: Decimal) -> str:
 
 
 def _unit_key(unit) -> str | None:
-    return normalise(unit).casefold() if isinstance(unit, str) else None
+    from .tidy import unit as tidy_unit   # tidy imports this module for parse_number
+    named = tidy_unit(unit)   # "filling lines" and "lines" are one unit; None for a blank or non-text unit
+    return named["name"].casefold() if named else None
 
 
 def _is_settled_move(fact, sources) -> bool:

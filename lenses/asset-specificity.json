@@ -1,0 +1,26 @@
+{
+  "id": "asset-specificity",
+  "name": "Investments tied to one partner",
+  "idea": "Specific assets can be moved to other uses or users only at a loss of value, so continuity matters. In some deals, many qualified suppliers at the outset become, in effect, a two-party relation once the contract runs. Left unprotected, such investments pose a hazard that far-sighted parties price in. One firm owning both sides comes in only as specificity and uncertainty rise.",
+  "suggests": "Look at what a company has built for one customer, supplier or site, ask what it would be worth anywhere else, and check what protects it if that relationship turns sour.",
+  "limits": "The work finds contracting under fully stable conditions uninteresting; on its account, the choice between market and firm becomes engaging only once unplanned adaptations are needed.",
+  "competing_idea": "Another view holds that dissimilar activities which must be co-ordinated generally fall to different firms, which then match their plans in advance by co-operating or rely on market adjustment.",
+  "questions": [
+    "What would this asset be worth if the customer, supplier or site it was built for went away?",
+    "Once the investment is made, how many other partners could the company realistically turn to?",
+    "What protects the investment if the partner turns difficult: a long contract, penalties, shared ownership, or nothing?"
+  ],
+  "originals": [
+    {
+      "reference": "Oliver E. Williamson, \"The Economics of Governance\" (Richard T. Ely Lecture), AEA Papers and Proceedings, Vol. 95 No. 2, May 2005, pp. 1-18",
+      "level": "original_read",
+      "link": null
+    },
+    {
+      "reference": "G. B. Richardson, \"The Organisation of Industry\", The Economic Journal, Vol. 82 No. 327, Sept. 1972, pp. 883-896",
+      "level": "original_read",
+      "link": null
+    }
+  ],
+  "checked_on": "2026-11-15"
+}

@@ -1,0 +1,28 @@
+{
+  "id": "sunk-costs-and-concentration",
+  "name": "Sunk costs and how concentrated a market gets",
+  "idea": "A record of a book on sunk costs and market structure says the book holds that, although many results are delicate, some theoretical predictions stay extremely robust under reasonable changes of model and deserve a place in the search for regularities across industries. A record of a 1996 article says its empirical results back most of those predictions.",
+  "suggests": "Look for the market features that matter however the model is specified, and treat any result that depends on features of this market that are hard to measure with caution.",
+  "limits": "The record of the book says many results depend on market features that are hard to measure, so that some observers argue game-theory work gives little grounds for studies across industries.",
+  "competing_idea": "The record of the book says it bridges the new generation of game-theoretic models of industrial organization and the traditional empirical agenda of the structure-conduct-performance paradigm.",
+  "questions": [
+    "Which predictions about this market hold whatever the detailed model assumes, and which depend on details that are hard to measure?",
+    "Which features of this market can be measured, and which results lean on features that cannot?",
+    "Has the claim been tested in markets like this one, and did the tests back it?"
+  ],
+  "originals": [
+    {
+      "reference": "IDEAS (RePEc) bibliographic record of the book \"Sunk Costs and Market Structure: Price Competition, Advertising, and the Evolution of Concentration\", MIT Press Books, with its description",
+      "level": "secondary_source_read",
+      "about": "John Sutton, Sunk Costs and Market Structure: Price Competition, Advertising, and the Evolution of Concentration, MIT Press, 1991 (Library of Congress record LCCN 90022722)",
+      "link": "https://ideas.repec.org/b/mtp/titles/0262693585.html"
+    },
+    {
+      "reference": "IDEAS (RePEc) bibliographic record of an article, \"Are Sutton's Predictions Robust?: Empirical Insights into Advertising, R&D, and Concentration\", Journal of Industrial Economics, 44(4), 389-408, December 1996, with its abstract",
+      "level": "secondary_source_read",
+      "about": "John Sutton, Sunk Costs and Market Structure, MIT Press, 1991, as tested by William T. Robinson and Jeongwen Chiang, Journal of Industrial Economics, 44(4), 389-408, December 1996",
+      "link": "https://ideas.repec.org/a/bla/jindec/v44y1996i4p389-408.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

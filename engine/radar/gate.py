@@ -3,18 +3,21 @@
 It trusts no stored result. Quotes are searched again in the saved copies and the settling rules are
 applied again to the checks as they stand now. The gate only reads: it never writes to the run folder,
 so the report builder and the status command can both call it. Hand-edited or broken records never make
-it raise; `check_data` names them and the gate works around them.
+it raise; `check_data` names them and the gate works around them. The lens recommendation is advice: `check_data`
+names a damaged one, but the gate leaves out every problem of that file, so it never stops a report. The same holds
+for the grouping into projects.
 """
 import re
 from pathlib import Path
 
-from . import calc, diff, store, verify
+from . import calc, diff, money, projects, recommend, store, verify
 from .schema import Problem, _walk, check_data
 from .verify import check_quote
 
 _SETTLED = store.COUNTING + ("rejected",)
 COMPARISON_FOR_ANOTHER_RUN = "the comparison was made for another run"
 COMPARISON_FROM_EARLIER_VERSION = "the comparison was made by an earlier version of the program"
+REASONS_DO_NOT_FOLLOW = "the reasons for uncertain do not follow from the checks"
 PRIVATE_NOT_PUBLISHABLE = "a publishable report may not be built from a private run"
 
 
@@ -105,6 +108,8 @@ def _checks_that_do_not_hold(run_dir: Path, facts: dict[str, dict], sources: dic
             problems.append(Problem(file, "status", "status does not follow from the checks"))
         elif reason != fact.get("status_reason"):
             problems.append(Problem(file, "status_reason", "reason does not follow from the checks"))
+        if "uncertain_reasons" in fact and fact["uncertain_reasons"] != verify.uncertain_reasons(fresh, sources, texts):
+            problems.append(Problem(file, "uncertain_reasons", REASONS_DO_NOT_FOLLOW))   # old runs have no key: no check
     return problems
 
 
@@ -133,18 +138,21 @@ _FACT_ID_IN_TEXT = re.compile(r"(?<![A-Za-z0-9_])F[0-9]+(?![A-Za-z0-9_])")   # F
 
 
 def _texts(analysis: dict):
-    """(path, text) for every text of the analysis, in lists too, in the order the file holds them, except the lists
-    of fact ids, which the rule above judges. Without recursion, so a deeply nested hand edit never makes it raise."""
-    todo = [(analysis, "")]
+    """(path, text, cited) for every text of the analysis, in lists too, in the order the file holds them, except the
+    lists of fact ids, which the rule above judges; `cited` holds the fact ids the text's own item lists (a chain step's,
+    a point for or against). Without recursion, so a deeply nested hand edit never makes it raise."""
+    todo = [(analysis, "", set())]
     while todo:
-        node, where = todo.pop()
+        node, where, cited = todo.pop()
         if isinstance(node, str):
-            yield where, node
+            yield where, node, cited
         elif isinstance(node, dict):
-            todo.extend(reversed([(value, f"{where}.{key}" if where else str(key)) for key, value in node.items()
+            own = {fact_id for key, value in node.items() if isinstance(key, str) and key.endswith("fact_ids")
+                   and isinstance(value, list) for fact_id in value if isinstance(fact_id, str)}
+            todo.extend(reversed([(value, f"{where}.{key}" if where else str(key), own) for key, value in node.items()
                                   if not (isinstance(key, str) and key.endswith("fact_ids"))]))
         elif isinstance(node, list):
-            todo.extend(reversed([(value, f"{where}[{index}]") for index, value in enumerate(node)]))
+            todo.extend(reversed([(value, f"{where}[{index}]", set()) for index, value in enumerate(node)]))
 
 
 def _facts_named_in_texts(run_dir: Path, facts: dict[str, dict]) -> list[Problem]:
@@ -161,7 +169,7 @@ def _facts_named_in_texts(run_dir: Path, facts: dict[str, dict]) -> list[Problem
     if not isinstance(analysis, dict):
         return []
     problems = []
-    for where, text in _texts(analysis):
+    for where, text, _ in _texts(analysis):
         if where.startswith("audit_flags["):     # the flags themselves, not a key that merely begins so
             continue
         named = []
@@ -174,6 +182,53 @@ def _facts_named_in_texts(run_dir: Path, facts: dict[str, dict]) -> list[Problem
                       else fact.get("status"))
             if status not in store.COUNTING:
                 problems.append(Problem("analysis.json", where, f"a text names fact {fact_id} with status {status}"))
+    return problems
+
+
+# shortcut: a fixed list of English phrases that say something is missing; a claim worded otherwise slips through,
+# upgrade to a reviewed list when a run shows one
+_ABSENT = re.compile(r"\b(no source|none of the sources|not stated|not given|not found|not disclosed|undisclosed|"
+                     r"unknown|does not say|do not say|no figure|no price|no amount)\b", re.IGNORECASE)
+_SENTENCE_END = re.compile(r"(?<=[.!?;])\s+")   # the missing claim and the money word must share a sentence
+_NOT_MONEY_IN_REASONING = frozenset({"value", "financial"})   # "value proposition", "financial backers"
+
+
+def _not_found_ignoring_money(run_dir: Path, facts: dict[str, dict]) -> list[Problem]:
+    """Every "not found" entry about money (a price, a cost) that names none of the confirmed facts that state an amount
+    in their statements, while there are such facts: the entry must say why those amounts do not answer it, naming at
+    least one of them by its id (another fact, or a withdrawn one, does not count).
+    The problem lists at most ten of those facts, in fact-number order."""
+    try:
+        analysis = store.read_analysis(run_dir)
+    except (ValueError, OSError, RecursionError):  # check_data names it
+        return []
+    if not isinstance(analysis, dict):
+        return []
+    entries = analysis.get("not_found") if isinstance(analysis.get("not_found"), list) else []
+    amounts = sorted((fact_id for fact_id, fact in facts.items()
+                      if fact.get("status") == "confirmed" and not verify.is_withdrawn(fact)
+                      and isinstance(fact.get("statement"), str) and money.states_money(fact["statement"])),
+                     key=lambda fact_id: (len(fact_id), fact_id))   # F9 before F10
+    if not amounts:
+        return []
+    named = ", ".join(amounts[:10])
+
+    def names_none(text: str, cited=frozenset()) -> bool:
+        return not any(fact_id in amounts for fact_id in [*_FACT_ID_IN_TEXT.findall(text), *cited])
+
+    problems = [Problem("analysis.json", f"not_found[{index}]",
+                        f"a not-found entry about money names none of the confirmed facts that state an amount: {named}")
+                for index, entry in enumerate(entries)
+                if isinstance(entry, str) and money.speaks_of_money(entry) and names_none(entry)]
+    # fix list item 14: any other text of the analysis that says an amount is missing faces the same facts; a fact id
+    # in the text's own item (a chain step's fact_ids) names it as well
+    problems += [Problem("analysis.json", where,
+                         f"a text that says an amount is missing names none of the confirmed facts that state an amount: "
+                         f"{named}")
+                 for where, text, cited in _texts(analysis)
+                 if not where.startswith(("not_found[", "audit_flags[")) and names_none(text, cited)
+                 and any(_ABSENT.search(sentence) and money.speaks_of_money(sentence, _NOT_MONEY_IN_REASONING)
+                         for sentence in _SENTENCE_END.split(text))]
     return problems
 
 
@@ -262,12 +317,14 @@ def gate(run_dir: Path, lenses_dir: Path | None = None, publishable: bool = Fals
     """Every reason the report may not be built yet. An empty list means it may."""
     run_dir = Path(run_dir)
     sources, facts = store.read_sources(run_dir), store.read_facts(run_dir)
-    problems = list(check_data(run_dir, lenses_dir))
+    problems = [problem for problem in check_data(run_dir, lenses_dir)
+                if problem.file not in (recommend.RECORD, projects.RECORD)]   # advice and a help: never a stop
     problems += _missing_analysis(run_dir)
     problems += _missing_checkpoints(run_dir)
     problems += _checks_that_do_not_hold(run_dir, facts, sources)
     problems += _facts_that_do_not_count(run_dir, facts)
     problems += _facts_named_in_texts(run_dir, facts)
+    problems += _not_found_ignoring_money(run_dir, facts)
     problems += [Problem(f"facts/{fact_id}.json", "status", "fact was never settled")
                  for fact_id, fact in facts.items() if fact.get("status") == "proposed"]
     problems += _totals_that_do_not_match(facts, sources, run_dir)

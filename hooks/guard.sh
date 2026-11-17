@@ -16,8 +16,11 @@ not_started() {
   while IFS= read -r line || [ -n "$line" ]; do event="$event$line"; done
   case "$event" in
     *'"support-checker"'*|*'"source-scout"'*|*'"fact-extractor"'*|*'"bias-auditor"'*|\
+    *'"lens-advisor"'*|*'"lens-link-reader"'*|*'"lens-link-reader-quick"'*|*'"project-grouper"'*|\
     *'"strategy-radar:support-checker"'*|*'"strategy-radar:source-scout"'*|\
-    *'"strategy-radar:fact-extractor"'*|*'"strategy-radar:bias-auditor"'*)
+    *'"strategy-radar:fact-extractor"'*|*'"strategy-radar:bias-auditor"'*|\
+    *'"strategy-radar:lens-advisor"'*|*'"strategy-radar:lens-link-reader"'*|\
+    *'"strategy-radar:lens-link-reader-quick"'*|*'"strategy-radar:project-grouper"'*)
       refusal="Strategy Radar's guard: The guard cannot start on this computer, so the helpers of Strategy Radar may not use this tool now. Install Python from python.org, or install the plugin again."
       printf '%s\n' "$refusal" >&2
       exit 2 ;;

@@ -1,0 +1,22 @@
+{
+  "id": "who-owns-the-asset",
+  "name": "Who should own the asset",
+  "idea": "A popular account states that a contract which cannot say what the parties must do later must instead say who decides if they disagree; that right strengthens the holder's incentive to invest and weakens the other's. In its example, the innovator, who makes the greater investments that cannot be contracted on, has greater need of the bargaining power property rights bring.",
+  "suggests": "Look at who owns the machines, sites or sales channels in a deal, who has to make the investments that a contract cannot pin down, and whether ownership sits with that party.",
+  "limits": "The account states that contract theory does not necessarily give definitive or unique answers to its example questions on public services and pay, as the best contract typically depends on the situation. Where managers would own the firm they run, the account notes the limit that they may at times lack the money to buy it, so outside investors must finance the purchase.",
+  "competing_idea": "The account states that in complex contracting situations, giving decision rights becomes an alternative to paying for performance.",
+  "questions": [
+    "Which investments in this deal are hardest to write into a contract, and who has to make them?",
+    "Who has the right to decide over the key assets when the parties disagree, and how does that shape each side's incentive to invest?",
+    "Would buying or selling an asset move ownership to the party that makes the investments a contract cannot pin down?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Popular information: The Prize in Economic Sciences 2016\", NobelPrize.org (Nobel Prize Outreach), 2016",
+      "level": "secondary_source_read",
+      "about": "Contract theory as presented for the 2016 prize, in particular Sanford J. Grossman and Oliver D. Hart, \"The Costs and Benefits of Ownership: A Theory of Vertical and Lateral Integration\", Journal of Political Economy, Vol. 94 No. 4, 1986, pp. 691-719; and Oliver Hart and John Moore, \"Property Rights and the Nature of the Firm\", Journal of Political Economy, Vol. 98 No. 6, 1990, pp. 1119-1158",
+      "link": "https://www.nobelprize.org/prizes/economic-sciences/2016/popular-information/"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

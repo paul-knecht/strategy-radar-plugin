@@ -1,0 +1,21 @@
+{
+  "id": "inside-and-outside-view",
+  "name": "Inside view and outside view in forecasts",
+  "idea": "The work argues that decision makers tend to treat each problem as unique. It argues that an inside view, which builds forecasts from the plans and scenarios of the case at hand, yields overly optimistic forecasts. An outside view, as the work describes it, instead places the case among similar cases and asks how those turned out.",
+  "suggests": "Look at whether a company's forecast for a new plant or project is built from its own plan alone, and compare it with how comparable projects turned out.",
+  "limits": "The work argues that two biases pull against each other: bold forecasts encourage risk taking, while isolating each choice from the others makes attitudes to risk overly cautious, so the net effect on risk taking can go either way.",
+  "competing_idea": "Another view explains managers' caution by their incentives as agents rather than by how they frame decisions; the work offers its cognitive account of risk taking alongside that view.",
+  "questions": [
+    "Does the company's forecast for this project rest on its own plan and scenarios, or on how similar projects actually turned out?",
+    "What is the class of comparable projects, and how did projects in it fare against their plans?",
+    "Is each risky decision judged alone, or as one of many similar decisions whose risks pool?"
+  ],
+  "originals": [
+    {
+      "reference": "Daniel Kahneman and Dan Lovallo, \"Timid Choices and Bold Forecasts: A Cognitive Perspective on Risk Taking\", Management Science, Vol. 39 No. 1, January 1993, pp. 17-31",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.1287/mnsc.39.1.17"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

@@ -1,0 +1,25 @@
+{
+  "id": "startup-pack",
+  "illustrative": true,
+  "screening": true,
+  "company": "Example Robotics",
+  "industry": "Robots for warehouse work (invented)",
+  "strategic_questions": [
+    {
+      "text": "What would have to be true to invest in Example Robotics?",
+      "framing": "user",
+      "framed_by": "The practice material (invented)"
+    }
+  ],
+  "competitors": [
+    {"name": "Competitor R", "status": "candidate", "suggested_by": "user"}
+  ],
+  "watch": [],
+  "places": [
+    {"kind": "press_room", "name": "Example Robotics news page (invented)", "url": "https://www.example-robotics.example/news"}
+  ],
+  "units": ["EUR", "employees"],
+  "demand_drivers": [],
+  "languages": ["en"],
+  "time_window_months": 120
+}

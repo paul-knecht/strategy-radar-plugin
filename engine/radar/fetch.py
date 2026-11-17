@@ -9,6 +9,7 @@ import ipaddress
 import json
 import re
 import socket
+import ssl
 import string
 import time
 import unicodedata
@@ -19,16 +20,21 @@ from pathlib import Path
 from urllib.parse import quote, urldefrag, urljoin, urlsplit
 from urllib.robotparser import RobotFileParser
 
-from . import store
+from . import __version__, store
 from .extract_text import NoTextLayer, PdfAddOnMissing, decode_bytes, html_to_text, pdf_to_text, sniff_kind
 
-USER_AGENT = "strategy-radar/0.1"
+USER_AGENT = f"strategy-radar/{__version__}"
 MIN_DELAY_SECONDS = 2.0
 MAX_BYTES = 50_000_000
 TIMEOUT_SECONDS = 30
+ROBOTS_TIMEOUT_SECONDS = 10   # the site's robots.txt gets a shorter wait of its own: a site that hangs costs less
 MAX_REDIRECTS = 5
 
 _MIN_TEXT_CHARS = 200
+# A web page whose saved text holds fewer characters than this in lines of eight or more words (running text, as
+# opposed to menu entries, headings and links) is saved with a note: its article may be built by a script in a browser.
+_MIN_PROSE_CHARS = 800
+_PROSE_LINE_WORDS = 8
 PDF_ADD_ON_MISSING = ("The PDF add-on is not installed, so a PDF cannot be read and nothing was saved. "
                       "Run: radar setup, then try again.")
 TOO_LITTLE_TEXT = ("The page shows a reader too little text to quote from (too_little_text), so it was not saved. "
@@ -69,9 +75,17 @@ class _StopAtRedirects(urllib.request.HTTPRedirectHandler):
     http_error_301 = http_error_303 = http_error_307 = http_error_308 = http_error_302
 
 
+def ssl_context(system_file: str = "/etc/ssl/cert.pem") -> ssl.SSLContext:
+    """Python's default certificate checking; a Python with an empty store (python.org on a Mac) borrows the system file."""
+    context = ssl.create_default_context()
+    if context.cert_store_stats()["x509_ca"] == 0 and Path(system_file).is_file():
+        context.load_verify_locations(cafile=system_file)
+    return context
+
+
 def _opener() -> urllib.request.OpenerDirector:
     # No cookie processor and no auth handlers: nothing is remembered or sent besides the agent.
-    opener = urllib.request.build_opener(_StopAtRedirects)
+    opener = urllib.request.build_opener(_StopAtRedirects, urllib.request.HTTPSHandler(context=ssl_context()))
     opener.addheaders = [("User-Agent", USER_AGENT)]
     return opener
 
@@ -299,10 +313,18 @@ def _spelling(url: str) -> tuple:
     return scheme, (parts.hostname or "").rstrip("."), port, parts.path or "/", parts.query
 
 
+def _is_timeout(exc: BaseException) -> bool:
+    """Whether a failed request failed because the site did not answer in time (raised as such, or inside a URLError)."""
+    return isinstance(exc, TimeoutError) or (isinstance(exc, urllib.error.URLError)
+                                             and isinstance(exc.reason, TimeoutError))
+
+
 def _read_robots(opener, url: str, address_allowed) -> RobotFileParser | None:
     """The robots rules of the site `url` is on, or None when the file cannot be read (which allows fetching).
 
-    It is fetched one hop at a time, and a hop to a host that does not pass the address check is not requested."""
+    It is fetched one hop at a time, with its own limit (ROBOTS_TIMEOUT_SECONDS), and a hop to a host that does not pass
+    the address check is not requested. A robots.txt that does not answer within its limit ends the save as `timeout`
+    (raised as _Refused): the page is then not asked for."""
     parts = urlsplit(url)
     robots_url = f"{parts.scheme}://{parts.netloc}/robots.txt"
     try:
@@ -310,7 +332,7 @@ def _read_robots(opener, url: str, address_allowed) -> RobotFileParser | None:
             if _state(address_allowed(urlsplit(robots_url).hostname)) != PUBLIC:
                 return None
             try:
-                status, _, raw = _open_once(opener, robots_url, _MAX_ROBOTS_BYTES)
+                status, _, raw = _open_once(opener, robots_url, _MAX_ROBOTS_BYTES, ROBOTS_TIMEOUT_SECONDS)
             except _Redirect as hop:
                 robots_url = _next_address(robots_url, hop.location)
                 continue
@@ -319,7 +341,9 @@ def _read_robots(opener, url: str, address_allowed) -> RobotFileParser | None:
             break
         else:
             return None
-    except (OSError, http.client.HTTPException, ValueError):
+    except (OSError, http.client.HTTPException, ValueError) as exc:
+        if _is_timeout(exc):
+            raise _Refused("timeout") from exc   # a site that does not answer is not asked for the page either
         return None   # no usable robots.txt: fetching is allowed
     parser = RobotFileParser()
     parser.parse(raw[:_MAX_ROBOTS_BYTES].decode("utf-8", errors="replace").splitlines())
@@ -351,25 +375,23 @@ def _wait_for_turn(run_dir: Path, host: str, sleep, clock) -> None:
         path.write_text(json.dumps(last), encoding="utf-8")
 
 
-def _open_once(opener, url: str, limit: int) -> tuple[int, str | None, bytes]:
+def _open_once(opener, url: str, limit: int, timeout: float) -> tuple[int, str | None, bytes]:
     """One request, no redirect followed: (status, content type, up to limit + 1 bytes). A redirect raises _Redirect."""
-    with opener.open(url, timeout=TIMEOUT_SECONDS) as response:
+    with opener.open(url, timeout=timeout) as response:
         return response.status, response.headers.get("Content-Type"), response.read(limit + 1)
 
 
 def _download(opener, url: str, max_bytes: int) -> tuple[bytes, str | None]:
     try:
-        _, content_type, data = _open_once(opener, url, max_bytes)
+        _, content_type, data = _open_once(opener, url, max_bytes, TIMEOUT_SECONDS)
     except _Redirect:
         raise
     except urllib.error.HTTPError as exc:
         raise _Refused(f"http_{exc.code}") from exc
-    except urllib.error.URLError as exc:
-        raise _Refused("timeout" if isinstance(exc.reason, TimeoutError) else "network_error") from exc
-    except TimeoutError as exc:
-        raise _Refused("timeout") from exc
-    except (OSError, http.client.HTTPException, ValueError) as exc:
-        raise _Refused("network_error") from exc
+    except (OSError, http.client.HTTPException, ValueError) as exc:   # a URLError and a TimeoutError are OSErrors
+        cause = exc.reason if isinstance(exc, urllib.error.URLError) else exc
+        raise _Refused("certificate_failed" if isinstance(cause, ssl.SSLCertVerificationError)
+                       else "timeout" if _is_timeout(exc) else "network_error") from exc
     if len(data) > max_bytes:
         raise _Refused("too_large")
     return data, content_type
@@ -403,6 +425,18 @@ def _text_from_download(data: bytes, content_type: str | None, same_host: bool) 
     return text, extension
 
 
+def prose_chars(text: str) -> int:
+    """The characters of running text in `text`: the length of every line (stripped) that holds eight or more words,
+    added up. Menu entries, headings and footer links are shorter lines, so they do not count."""
+    lines = (raw.strip() for raw in text.splitlines())
+    return sum(len(line) for line in lines if len(line.split()) >= _PROSE_LINE_WORDS)
+
+
+def _web_page_note(text: str) -> str | None:
+    """The note for the saved text of a web page that holds little running text, else None. The page is saved anyway."""
+    return store.LITTLE_RUNNING_TEXT if prose_chars(text) < _MIN_PROSE_CHARS else None
+
+
 def _encode(text: str) -> bytes:
     try:
         return text.encode("utf-8")
@@ -430,7 +464,7 @@ def _write_copies(run_dir: Path, source_id: str, extension: str, original: bytes
 def _record(run_dir: Path, url: str, meta: dict, based_on: list, *, data_class: str, saved_by: str,
             now: datetime | None, provenance: dict | None, access_reason: str | None = None,
             extension: str | None = None, original: bytes | None = None, text: bytes | None = None,
-            final_url: str | None = None) -> dict:
+            final_url: str | None = None, text_note: str | None = None) -> dict:
     source_id = store.reserve_id(run_dir, "S")   # claimed before any copy is written under its name
     orig_file = copy_file = copy_sha256 = None
     if access_reason is None:
@@ -456,6 +490,8 @@ def _record(run_dir: Path, url: str, meta: dict, based_on: list, *, data_class: 
         "based_on": based_on,
         "provenance": provenance,
     }
+    if text_note is not None:   # only a saved web page that holds little running text has the key
+        record["text_note"] = text_note
     try:
         store.write_source(run_dir, record)
     except BaseException:   # no empty record and no copy stays under the id
@@ -478,7 +514,8 @@ def save_source(run_dir: Path, url: str, meta: dict, *, sleep=time.sleep, clock=
     True or False, or one of "public", "private", "unresolved"), then the robots rules of that host (read once
     per save), then the wait for that host. Nothing is requested from a host that fails. `final_url` of the
     record is the address the copy came from when that is a different address than the one asked for (the
-    same page under another spelling of the address does not count), else None.
+    same page under another spelling of the address does not count), else None. A web page whose saved text holds
+    little running text is saved all the same, with `text_note` set (the key is left out otherwise).
     """
     run_dir = Path(run_dir)
     store.require_run(run_dir)   # before anything else: nothing is asked for, and no lock or note is made elsewhere
@@ -522,7 +559,7 @@ def save_source(run_dir: Path, url: str, meta: dict, *, sleep=time.sleep, clock=
     except PdfAddOnMissing:   # not a fault of the page: nothing is recorded, and the person is told what to do
         raise ValueError(PDF_ADD_ON_MISSING) from None
     return _record(run_dir, url, meta, based_on, extension=extension, original=data, text=encoded,
-                   final_url=final_url, **common)
+                   final_url=final_url, text_note=_web_page_note(text) if extension == "html" else None, **common)
 
 
 def add_copy(run_dir: Path, file: Path, url: str, meta: dict, *, data_class: str,
@@ -555,6 +592,7 @@ def add_copy(run_dir: Path, file: Path, url: str, meta: dict, *, data_class: str
     if extension not in _HAND_EXTENSIONS:
         raise ValueError("the file must be one of: " + ", ".join(_HAND_EXTENSIONS))
     data = file.read_bytes()
+    note = None
     if extension == ".pdf":
         try:
             text = pdf_to_text(data)
@@ -566,6 +604,7 @@ def add_copy(run_dir: Path, file: Path, url: str, meta: dict, *, data_class: str
         text = html_to_text(decode_bytes(data, None))
         if len(text.strip()) < _MIN_TEXT_CHARS:   # the rule save-source uses: a page a reader sees almost nothing of
             raise ValueError(TOO_LITTLE_TEXT)
+        note = _web_page_note(text)   # the note save-source gives a page, by the same rule
     else:  # .txt, and .csv kept as text
         text = decode_bytes(data, None)
     try:
@@ -573,4 +612,4 @@ def add_copy(run_dir: Path, file: Path, url: str, meta: dict, *, data_class: str
     except _Refused as exc:
         raise ValueError("the text of the file cannot be saved as UTF-8") from exc
     return _record(run_dir, url, meta, based_on, data_class=data_class, saved_by="hand", now=now,
-                   provenance=provenance, extension=extension[1:], original=data, text=encoded)
+                   provenance=provenance, extension=extension[1:], original=data, text=encoded, text_note=note)

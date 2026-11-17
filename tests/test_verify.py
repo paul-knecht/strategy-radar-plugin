@@ -1196,3 +1196,133 @@ def test_changing_a_supporting_translation_after_the_verdict_makes_the_verdict_o
     store.write_fact(run, fact)
     verify.settle(run)
     assert store.read_facts(run)["F1"]["status_reason"] == "support_check_outdated"
+
+
+# --- why a fact is uncertain: the codes -----------------------------------------------------------------------------
+
+def _supported(tmp_path, **fact_over):
+    """A run with one fact (F1) whose quote check and support check are done, not yet settled."""
+    run = setup(tmp_path, **fact_over)
+    verify.check_quotes(run)
+    verify.record_support(run, "F1", True, "support-checker", "direct")
+    return run
+
+
+def _codes(run, fact_id="F1"):
+    sources = store.read_sources(run)
+    return verify.uncertain_reasons(store.read_facts(run)[fact_id], sources, verify.copy_texts(run, sources))
+
+
+def test_a_fact_from_one_source_that_is_not_the_party_has_one_code(tmp_path):
+    run = _supported(tmp_path, primary_source=False)
+    assert verify.expected_status(store.read_facts(run)["F1"], store.read_sources(run))[0] == "uncertain"
+    assert _codes(run) == ["single_source"]
+
+
+def test_a_tentative_fact_from_one_source_has_both_codes(tmp_path):
+    run = _supported(tmp_path, primary_source=False, certainty="tentative", tentative_reason="one unnamed source")
+    assert _codes(run) == ["tentative", "single_source"]
+
+
+def test_a_tentative_fact_from_the_party_itself_has_only_the_tentative_code(tmp_path):
+    run = _supported(tmp_path, primary_source=True, certainty="tentative", tentative_reason="the company may change it")
+    assert _codes(run) == ["tentative"]
+
+
+def test_an_early_signal_from_the_party_itself_has_its_two_codes(tmp_path):
+    run = make_run(tmp_path)
+    add_source(run, PERMIT_TEXT, type="permit", publisher="Planning Office")
+    store.new_fact(run, early_signal_proposal())
+    verify.check_quotes(run)
+    verify.record_support(run, "F1", True, "support-checker", "direct")
+    assert _codes(run) == ["tentative", "early_signal"]
+
+
+def test_a_fact_a_second_source_confirms_has_no_code_and_the_codes_follow_the_status(tmp_path):
+    run = _supported(tmp_path, primary_source=False,
+                     supporting=[{"source_id": "S2", "quote": "two new syringe lines will open in 2028"}])
+    verify.check_quotes(run)
+    verify.record_support(run, "F1", True, "support-checker", "direct")
+    assert verify.expected_status(store.read_facts(run)["F1"], store.read_sources(run))[0] == "confirmed"
+    assert _codes(run) == []
+
+
+def test_confirmed_rejected_and_proposed_facts_have_no_codes(tmp_path):
+    run = _supported(tmp_path, primary_source=True)
+    assert _codes(run) == []   # confirmed
+    _edit_fact(run, quote="adds nine high-speed syringe lines for customers")
+    verify.check_quotes(run)
+    assert _codes(run) == []   # rejected: the quote is not found
+    run = setup(tmp_path / "unchecked", primary_source=False)
+    assert verify.expected_status(store.read_facts(run)["F1"], store.read_sources(run))[0] == "proposed"
+    assert _codes(run) == []   # proposed: nothing is checked yet
+
+
+def test_a_withdrawn_fact_has_no_codes(tmp_path):
+    run = _supported(tmp_path, primary_source=False)
+    verify.withdraw_fact(run, "F1", "a duplicate")
+    assert _codes(run) == []
+
+
+def test_settle_writes_the_codes_and_changes_no_status(tmp_path):
+    run = make_run(tmp_path)
+    add_source(run, TEXT_A, publisher="Competitor A")
+    add_source(run, TEXT_B, publisher="Trade Paper")
+    add_source(run, PERMIT_TEXT, type="permit", publisher="Planning Office")
+    quote = "adds two high-speed syringe lines for customers"
+    add_fact(run, source_id="S1", quote=quote, primary_source=True)                                  # F1 confirmed
+    add_fact(run, source_id="S1", quote=quote, primary_source=False)                                 # F2 one source
+    add_fact(run, source_id="S1", quote=quote, primary_source=False, certainty="tentative",
+             tentative_reason="one unnamed source")                                                  # F3 both codes
+    store.new_fact(run, early_signal_proposal(source_id="S3"))                                       # F4 early signal
+    add_fact(run, source_id="S1", quote="adds nine high-speed syringe lines for customers")          # F5 rejected
+    verify.check_quotes(run)
+    for fact_id in ("F1", "F2", "F3", "F4"):
+        verify.record_support(run, fact_id, True, "support-checker", "direct")
+    digests = {fid: verify.content_digest(fact) for fid, fact in store.read_facts(run).items()}
+    sources = store.read_sources(run)
+    texts = verify.copy_texts(run, sources)
+    before = {fid: verify.expected_status(fact, sources, texts) for fid, fact in store.read_facts(run).items()}
+    verify.settle(run)
+    facts = store.read_facts(run)
+    assert {fid: (f["status"], f["status_reason"]) for fid, f in facts.items()} == before
+    assert {fid: f["uncertain_reasons"] for fid, f in facts.items()} == {
+        "F1": [], "F2": ["single_source"], "F3": ["tentative", "single_source"],
+        "F4": ["tentative", "early_signal"], "F5": []}
+    assert {fid: verify.content_digest(f) for fid, f in facts.items()} == digests
+    assert not any(verify.needs_settling(f, sources, texts) for f in facts.values())
+
+
+def test_a_settled_fact_without_codes_never_needs_settling(tmp_path):
+    run = _supported(tmp_path, primary_source=False)
+    verify.settle(run)
+    fact = store.read_facts(run)["F1"]
+    fact.pop("uncertain_reasons")
+    store.write_fact(run, fact)
+    sources = store.read_sources(run)
+    assert verify.needs_settling(store.read_facts(run)["F1"], sources, verify.copy_texts(run, sources)) is False
+
+
+# --- the company a fact is about and its connections are not part of what is checked ----------------------------------
+
+def test_the_new_keys_leave_the_digest_and_the_status_alone(tmp_path):
+    from radar import context, diff
+    run = _checked_and_supported(tmp_path)
+    verify.settle(run)
+    without_keys = store.read_facts(run)["F1"]
+    without_keys.pop("about_company"), without_keys.pop("connections")
+    store.write_fact(run, without_keys)
+    packet = context.packet(run, "F1")
+    digest = diff.facts_digest(store.read_facts(run))
+    with_keys = {**without_keys, "about_company": None,
+                 "connections": [{"party": "Drug maker B", "tie": "customer", "description": None}]}
+    assert verify.content_digest(with_keys) == verify.content_digest(without_keys)
+    store.write_fact(run, with_keys)
+    assert context.packet(run, "F1") == packet
+    assert diff.facts_digest(store.read_facts(run)) == digest
+    sources = store.read_sources(run)
+    assert verify.needs_settling(store.read_facts(run)["F1"], sources, verify.copy_texts(run, sources)) is False
+    verify.settle(run)
+    after = store.read_facts(run)["F1"]
+    assert (after["status"], after["status_reason"]) == (without_keys["status"], without_keys["status_reason"])
+    assert after["connections"] == with_keys["connections"]

@@ -2,7 +2,7 @@ Send this as text now, before the step's first command: "Step 2 of 10: Plan the 
 
 # Step 2: Plan the search
 
-Read the pack file and rules 3 to 6 of `<plugin folder>/references/capacity-moves-playbook.md`.
+Read the pack file and rules 3 to 6 of `<plugin folder>/references/capacity-moves-playbook.md`; when `<run>/run.json` says `screening: true`, read rules 2 to 7 of `<plugin folder>/references/screening-playbook.md` instead.
 
 Everything the pack lists (companies, places, demand drivers, vocabulary, industry text) is hints for the search. They are never facts, and nothing from the pack is ever quoted.
 

@@ -1,0 +1,21 @@
+{
+  "id": "absorptive-capacity",
+  "name": "Whether a firm can take in outside knowledge",
+  "idea": "The work argues that a firm's ability to recognise the value of new outside information, absorb it and use it commercially, which it calls absorptive capacity, depends largely on its prior related knowledge. It argues that this capacity is cumulative, and that a firm's own research and development, besides creating new knowledge, adds to its absorptive capacity.",
+  "suggests": "Look at whether a company moving into a new technology or market already holds related know-how and does its own research there, rather than relying only on bought-in expertise.",
+  "limits": "The work argues that this capacity is built mainly in fields close to what a firm already knows, so a firm that has not invested in a field may fail to see the value of new knowledge there and find it hard to catch up.",
+  "competing_idea": "The work sets its account against the view that outside knowledge, such as what spills over from rivals, can be taken in at little cost without the firm's own investment.",
+  "questions": [
+    "How much related knowledge does the company already have in the field it wants to enter or learn from?",
+    "Does the company do its own research and development in the area, or does it rely only on buying knowledge from outside?",
+    "How well does knowledge flow from outside partners into the company and between its units?"
+  ],
+  "originals": [
+    {
+      "reference": "Wesley M. Cohen and Daniel A. Levinthal, \"Absorptive Capacity: A New Perspective on Learning and Innovation\", Administrative Science Quarterly, Vol. 35 No. 1, March 1990, from p. 128",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.2307/2393553"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

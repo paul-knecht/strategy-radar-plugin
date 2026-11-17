@@ -1,0 +1,22 @@
+{
+  "id": "modularity",
+  "name": "Modularity and design rules",
+  "idea": "The article quotes the authors: the parts of a computer could be designed by different specialist groups, each working alone; joined, they would in theory at least work together if they kept to rules set in advance. The authors say a disk drive's designers can vary hidden parameters within the rules; alternatives can be mixed and matched; and options on modules are like financial options.",
+  "suggests": "Look at whether a company's product is built from parts with fixed interfaces, who sets those rules, and which parts outside firms could design or make to the same rules.",
+  "limits": "The authors stress that modularity never arises by chance but must be built into the system, with investment in the architecture and interfaces and tests at the level of each module. They call it a danger for a system's designer that anyone who knows the design rules can make a module that works in the system.",
+  "competing_idea": "The article quotes the authors as saying that each new computer system had to be built from the ground up, that only new systems could use new technologies, and that supporting older applications and systems had become a problem of nightmarish scale.",
+  "questions": [
+    "Which parts of the product could be changed or bought from outside without redesigning the rest?",
+    "Who sets and controls the interfaces between the parts, and who else can build to them?",
+    "Does the company gain from rivals' modules plugging into its system, or lose ground to them?"
+  ],
+  "originals": [
+    {
+      "reference": "\"More Than the Sum of Its Parts: The Impact of Modularity on the Computer Industry\", featuring Carliss Y. Baldwin, Harvard Business School Working Knowledge, 25 September 2000",
+      "level": "secondary_source_read",
+      "about": "Carliss Y. Baldwin and Kim B. Clark, Design Rules, Volume 1: The Power of Modularity, The MIT Press, 2000",
+      "link": "https://www.library.hbs.edu/working-knowledge/more-than-the-sum-of-its-parts-the-impact-of-modularity-on-the-computer-industry"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

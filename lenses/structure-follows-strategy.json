@@ -1,0 +1,28 @@
+{
+  "id": "structure-follows-strategy",
+  "name": "Structure follows strategy",
+  "idea": "A research summary states that the work uses four historical case studies to argue that a company's structure follows its strategy. In its account, many companies adopted the multi-divisional form independently because the strategy they had taken up required it; the firms studied created that form to run large diversified companies more efficiently than a simple holding company.",
+  "suggests": "Look at whether a company's organisation changed when its strategy did, for example whether a move into new products or markets came with new divisions, and whether its present structure would hold back its next strategic move.",
+  "limits": "The summary states that the work presents the forms as a product of a particular strategic context, tied to technological and market changes such as the growth of transport and communication networks.",
+  "competing_idea": "An open textbook adds that the influence also runs the other way: the structure a firm chooses will shape its strategy later on, and once in place, a structure limits the strategic moves the firm can make next.",
+  "questions": [
+    "Has the company's strategy changed lately, for example by moving into new products or markets, and has its organisation changed with it?",
+    "Does its structure, such as divisions each run on their own results, fit the strategy it now pursues?",
+    "Would the present structure make the next strategic move slow or hard?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Strategy and structure: Chapters in the history of the American industrial enterprise\", a community-written research summary on AcaWiki (page last edited on 4 July 2010)",
+      "level": "secondary_source_read",
+      "about": "Alfred D. Chandler, \"Strategy and structure: chapters in the history of the industrial enterprise\", M.I.T. Press, Cambridge, 1962",
+      "link": "https://acawiki.org/Strategy_and_structure:_Chapters_in_the_history_of_the_American_industrial_enterprise"
+    },
+    {
+      "reference": "Mastering Strategic Management, Saylor Academy, section 9.2 \"Creating an Organizational Structure\" (an open textbook)",
+      "level": "secondary_source_read",
+      "about": "how a firm's organizational structure and its strategy shape each other",
+      "link": "https://saylordotorg.github.io/text_mastering-strategic-management/s13-02-creating-an-organizational-str.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

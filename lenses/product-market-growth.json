@@ -1,0 +1,21 @@
+{
+  "id": "product-market-growth",
+  "name": "Growing with new products or new markets",
+  "idea": "The work sets out growth strategies along two dimensions, products and markets: market penetration with present products in present markets, market development taking present products to new markets, product development offering new products to present markets, and diversification into new products for new markets, which departs from both at once.",
+  "suggests": "Look at whether a company's announced growth comes from selling more of its present products, taking them to new markets, offering new products to present customers, or moving into new products and new markets at once.",
+  "limits": "The work argues that diversification usually calls for capabilities and resources the firm does not yet have, and so makes greater demands on it than growth within its present products and markets.",
+  "competing_idea": "The work sets against diversification the alternative of growing by expansion within the present product and market line, which builds on the firm's existing skills and facilities.",
+  "questions": [
+    "Does the company's growth plan rely on present products in present markets, take them to new markets, bring new products to present customers, or move into both at once?",
+    "What new skills, techniques or facilities does the move require that the company does not yet have?",
+    "If the company is moving into new products or new markets, why has it chosen that path rather than growing within its present ones?"
+  ],
+  "originals": [
+    {
+      "reference": "H. Igor Ansoff, \"Strategies for diversification\", Harvard Business Review, Vol. 35 (1957), No. 5, pp. 113-124",
+      "level": "reference_confirmed",
+      "link": "https://www.econbiz.de/Record/strategies-for-diversification-ansoff-igor/10001836084"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

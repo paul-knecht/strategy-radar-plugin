@@ -1,0 +1,26 @@
+{
+  "id": "corporate-parenting",
+  "name": "What the corporate parent adds",
+  "idea": "The work argues that owning several businesses is justified only if the corporate centre, the parent, adds more value to them than it costs, and more than another owner could. It argues that many parents destroy value, and that a parent adds value only where its skills and resources fit what its businesses need.",
+  "suggests": "Look at what a company's head office does for each of its businesses, and ask whether another owner, or none, would do better for that business.",
+  "limits": "The work argues that the fit can erode as a business's needs change, so that a parent that once added value to it may come to destroy value.",
+  "competing_idea": "Another view holds that a firm should span several businesses when they share know-how or other inputs that cannot be sold or contracted for efficiently between separate firms.",
+  "questions": [
+    "What does the head office give each business that it could not get on its own?",
+    "Do the head office's skills fit what each business needs to succeed, or do some businesses lie outside what it understands?",
+    "Would another owner create more value from one of these businesses than this company does?"
+  ],
+  "originals": [
+    {
+      "reference": "Michael Goold, Andrew Campbell and Marcus Alexander, Corporate-level strategy: creating value in the multibusiness company, New York: J. Wiley, 1994, xiv, 450 p.",
+      "level": "reference_confirmed",
+      "link": "https://lccn.loc.gov/94006805"
+    },
+    {
+      "reference": "David J. Teece, \"Economies of scope and the scope of the enterprise\", Journal of Economic Behavior & Organization, Vol. 1 No. 3, September 1980, pp. 223-247",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.1016/0167-2681(80)90002-5"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

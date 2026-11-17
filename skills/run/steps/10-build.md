@@ -21,7 +21,7 @@ In every other case:
 
 Every doubt ends in asking again.
 
-The lenses are checked here too. Collect every lens the analysis names: each `lens_id` on a step of a chain and in `lens_notes`. Compare them with the last recorded decision on the lenses, read as step 7 says. When the analysis names a lens that decision does not hold, go back to step 7, then step 8, then step 9. When the decision cannot be settled, the question of step 6 comes first, as step 7 says. Only then go on with part 2.
+The lenses are checked here too. Collect every lens the analysis names: each `lens_id` on a step of a chain and in `lens_notes`. Compare them with the last recorded decision on the lenses, read as step 7 says. When the analysis names a lens that decision does not hold, go back to step 7, then step 8, then step 9. When the decision cannot be settled, the question of step 6 comes first, as step 7 says. Then ask `radar status --run "<run>"`. When it prints `grouping` as anything but `grouped`, do part 8 of `steps/05-verify.md` once, whatever its outcome and without a question to the person: a fact that changed after step 5 leaves the report ungrouped otherwise. Only then go on with part 2.
 
 ## 2. Is there an earlier run to compare with?
 
@@ -54,7 +54,7 @@ radar build-report --run "<run>" --lenses "<lens folder>"
 ```
 
 - **Exit code 0.** `built` lists the files the program wrote. Go on with part 5.
-- **Exit code 1.** The program refused, and nothing was built. Show the person each different entry of `explained` once: its `what`, `why` and `do`, word for word. Then follow each `do` by the means the steps allow: a comparison that is out of date is made again as in part 3; the analysis is changed as step 9 says; a fact is handled as step 5 and step 9 say. When this changed `analysis.json` or a fact, the person's decision was about an earlier state: do step 8 again, show the view of step 9 and ask its question again, before you build. Then build again.
+- **Exit code 1.** The program refused, and nothing was built. Show the person each different entry of `explained` once: its `what`, `why` and `do`, word for word. Then follow each `do` by the means the steps allow: a comparison that is out of date is made again as in part 3; the analysis is changed as step 9 says; a fact is handled as step 5 and step 9 say, and the moves are grouped again, as part 8 of `steps/05-verify.md` says. When this changed `analysis.json` or a fact, the person's decision was about an earlier state: do step 8 again, show the view of step 9 and ask its question again, before you build. Then build again.
 - **After three refusals, stop.** Tell the person plainly what is still open, entry by entry. Build nothing in any other way.
 
 ## 5. Tell the person what they have
@@ -63,6 +63,7 @@ radar build-report --run "<run>" --lenses "<lens folder>"
 - **What it rests on.** Read it from the names `built` lists. When they hold the word `confidential`, the report holds a source that is not public, or it compares with an earlier run that does: it is marked confidential and is not to be shared or published. Otherwise the report rests on public sources only.
 - **The date.** Up to which date the sources were read. The report says it near the top of `report/report.md`, in the line that holds the words "Sources read up to".
 - **An invented pack.** When the names hold the word `illustrative`, say what the report's banner at its top says: the report was made with an invented company pack as practice material, and nothing in it is a finding about a real company.
+- **What the report opens on.** The report opens on the answer to the question the run was asked, with the key messages under it. Its projects are a model's judgement: the program checks the rules a grouping must keep, and nobody has checked which reports belong together. Where the moves could not be grouped, the report shows each move on its own and says why.
 - **The comparison.** Whether the report compares with an earlier run, and if it was refused, why.
 
 ## 6. A version to publish

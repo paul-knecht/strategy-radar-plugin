@@ -22,6 +22,7 @@ The file is one object with the 13 sections below, in this order. Only `messages
 - the fact counts (confirmed or uncertain): only `radar gate` names this, not `radar check-data`;
 - a fact id written in a text, such as "as F2 shows", names a fact that counts: only `radar gate` names this, not `radar check-data`;
 - a flag of the bias audit names only facts that exist, whatever their status;
+- a flag of the bias audit names only messages of this analysis in `message_ids`;
 - every lens id is a lens file that exists;
 - a prediction has a real date and a whole-number probability from 1 to 99;
 - every calculation result equals the one the program computes again: only `radar gate` names this, not `radar check-data`.
@@ -42,6 +43,7 @@ The key messages of the report. Each is one claim the evidence supports, and eac
 - `id`: unique, such as `M1`. Predictions point to it.
 - `text`: the claim in one or two sentences.
 - `confidence`: exactly one of `high`, `medium` or `low`, chosen as `confidence-wording.md` says.
+- `memo_part`: only in a screening run, the part of the memo the message belongs to: one of `company`, `market`, `competition`, `team`, `traction` or `risks` (see `screening-memo.md`). Other runs leave it out.
 - `chain`: the steps from the facts to the claim, in order. It has at least one fact step and exactly one conclusion step, and the conclusion is last. Each step has:
   - `kind`: `fact`, `reasoning` or `conclusion`.
   - `text`: what the step says.
@@ -125,13 +127,15 @@ Two facts that cannot both hold unchanged. Each has `text` and `fact_ids` naming
 
 A list of plain sentences, each saying what was looked for and not found. It has no keys. The report shows gaps as findings, so do not hide them.
 
+Any text of the analysis, here or elsewhere, that says an amount is missing must name a confirmed fact that states an amount, in the text or in its item's fact ids, and say why it does not answer; the gate refuses it otherwise.
+
 ## `lens_notes`
 
 What a lens shows about this run. Each has `lens_id`, a lens the person chose, and `here`: what the lens makes visible in these facts.
 
 ## `audit_flags`
 
-The bias auditor's flags, copied word for word. The lead model adds none and removes none. A flag may name any fact of this run that exists, whatever its status: it may point at a fact the analysis should not lean on. Each has `text` and `check`, one of `framing`, `outside_view`, `uncertainty`, `competitor_response`, `evidence_symmetry`, `missing_information`, `success_stories`, `causality`, `disconfirmation` or `independence`.
+The bias auditor's flags, copied word for word. The lead model adds none and removes none. A flag may name any fact of this run that exists, whatever its status: it may point at a fact the analysis should not lean on. Each has `text`, `message_ids` and `check`. `message_ids` lists the ids of the key messages the flag is about, such as `["M2"]`, and is an empty list when it is about none; only ids of messages in this analysis are allowed. A flag from an older run may have no `message_ids`, and stays valid. `check` is one of `framing`, `outside_view`, `uncertainty`, `competitor_response`, `evidence_symmetry`, `missing_information`, `success_stories`, `causality`, `disconfirmation` or `independence`.
 
 ## Example
 
@@ -301,11 +305,13 @@ One complete analysis for the invented demo run (Example Pharma). It uses the de
   "audit_flags": [
     {
       "check": "independence",
-      "text": "The report that Competitor C may open a line to outside customers rests on one unnamed source. It is marked uncertain and no message depends on it."
+      "text": "The report that Competitor C may open a line to outside customers rests on one unnamed source. It is marked uncertain and no message depends on it.",
+      "message_ids": []
     },
     {
       "check": "evidence_symmetry",
-      "text": "Every message rests on what companies chose to publish: their own releases, a filing, an annual report and trade reports of them. What companies do not announce is not seen in this run. The evidence for open capacity here is one company's filing and one unnamed report."
+      "text": "Every message rests on what companies chose to publish: their own releases, a filing, an annual report and trade reports of them. What companies do not announce is not seen in this run. The evidence for open capacity here is one company's filing and one unnamed report.",
+      "message_ids": ["M1", "M2", "M3"]
     }
   ]
 }

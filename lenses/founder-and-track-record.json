@@ -1,0 +1,33 @@
+{
+ "id": "founder-and-track-record",
+ "name": "What the founders have done before",
+ "idea": "A review of a working paper says entrepreneurs who had succeeded before succeeded again 30 percent of the time, against 18 percent for first-timers, and calls previous performance the best predictor. An essay, quoting another person, says a good founder can anticipate which turns lead to treasure, and says many good founders work out the idea maze from direct experience, often at work.",
+ "suggests": "Look at what the founders have built before, whether it succeeded or failed, and how long they have worked in this market.",
+ "limits": "The review says entrepreneurs who had been involved in a failed startup succeeded 20 percent of the time, roughly like the 18 percent of first-timers, that success meant a public offering or filing for one, and that the research does not explore the specific traits successful serial founders share. The essay says the idea maze cannot be completely mapped at the start.",
+ "competing_idea": "An article on a study of firms states that after a firm's assets other than people are in place, finding other people to run it seems both possible and not unusual.",
+ "questions": [
+  "What have the founders built before, and did it succeed?",
+  "How long have they worked in this market, and in what role?",
+  "If the founders left, would the company's assets and customers remain?"
+ ],
+ "originals": [
+  {
+   "reference": "Chris Dixon, \"The idea maze\", cdixon.org, 4 August 2013",
+   "level": "original_read",
+   "link": "https://cdixon.org/2013/08/04/the-idea-maze"
+  },
+  {
+   "reference": "strategy+business, \"Success Breeds Success in Startups\", 23 April 2009",
+   "about": "Paul A. Gompers, Anna Kovner, Josh Lerner and David S. Scharfstein, \"Performance Persistence in Entrepreneurship\", Harvard Business School Working Paper No. 09-028, December 2008",
+   "level": "secondary_source_read",
+   "link": "https://www.strategy-business.com/article/re00068"
+  },
+  {
+   "reference": "Chicago Booth Review, \"Bet on the Horse\", 1 December 2005",
+   "about": "Steven N. Kaplan, Berk A. Sensoy and Per Stromberg, \"What Are Firms? Evolution from Birth to Public Companies\", NBER Working Paper 11581, August 2005",
+   "level": "secondary_source_read",
+   "link": "https://www.chicagobooth.edu/review/bet-horse"
+  }
+ ],
+ "checked_on": "2026-11-17"
+}

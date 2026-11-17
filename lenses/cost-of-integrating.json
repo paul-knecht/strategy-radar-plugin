@@ -1,0 +1,26 @@
+{
+  "id": "cost-of-integrating",
+  "name": "Running it inside or buying it",
+  "idea": "Setting up a firm would seem to pay mainly because using the market has a cost. A firm tends to grow until organising one more transaction inside costs as much as doing it on the open market or having another firm organise it. Most inventions change both costs; whether an invention tends to enlarge or shrink firms then depends on its effect on one cost relative to the other.",
+  "suggests": "Look at a step a company has recently brought in-house or handed out, and ask what changed: did buying it get dearer, or did running it inside get cheaper?",
+  "limits": "The work itself says no hard and fast line marks off a firm; there can be more or less direction. A later work grants in a note that it sounds plausible but says the price-discovery cost this view places on the market does not survive comparing the alternatives.",
+  "competing_idea": "Another view holds that one firm owning both sides comes in only as assets become more specific and uncertainty grows, so that co-ordinated adaptation takes priority.",
+  "questions": [
+    "What would it cost the company to buy this step on the market, compared with running it itself?",
+    "Has a new technology or rule recently made buying cheaper, or running the step inside cheaper?",
+    "Could another firm organise this step at lower cost than the company can?"
+  ],
+  "originals": [
+    {
+      "reference": "R. H. Coase, \"The Nature of the Firm\", Economica, November 1937, pp. 386-405",
+      "level": "original_read",
+      "link": null
+    },
+    {
+      "reference": "Oliver E. Williamson, \"The Economics of Governance\" (Richard T. Ely Lecture), AEA Papers and Proceedings, Vol. 95 No. 2, May 2005, pp. 1-18",
+      "level": "original_read",
+      "link": null
+    }
+  ],
+  "checked_on": "2026-11-15"
+}

@@ -1,0 +1,22 @@
+{
+  "id": "cultural-dimensions",
+  "name": "Cultural dimensions of nations",
+  "idea": "A textbook states that the scholar this lens is about compared nations by statistical analysis of two databases, the largest of employee answers from forty countries, and found five value dimensions of national culture. It defines power distance as how openly differences between people are accepted, as in hierarchies, uncertainty avoidance as how much uncertainty is accepted; a fifth came later.",
+  "suggests": "Look at how a company's home country and a target country differ in how they treat hierarchy and uncertainty, and whether the company's way of managing, deciding and selling there takes those differences into account.",
+  "limits": "The textbook states that, in practice, the five dimensions are not separate single values but are woven together and depend on each other, and that they keep shifting rather than staying fixed.",
+  "competing_idea": "Another approach in the same textbook describes how communication and interaction between cultures differ through three categories, context, space and time; in high-context cultures, the physical context of a message carries a great deal of importance.",
+  "questions": [
+    "How far apart are the company's home culture and the target culture in accepting hierarchy and uncertainty?",
+    "Does the company's way of managing and deciding, for example how much staff are expected to speak up, fit the local culture?",
+    "Are messages to local customers and staff read mainly from their words or from their context?"
+  ],
+  "originals": [
+    {
+      "reference": "International Business, Saylor Academy, section 3.2 \"What Are the Key Methods Used to Describe Cultures?\" (an open textbook)",
+      "level": "secondary_source_read",
+      "about": "the framework of cultural dimensions that the textbook section attributes to Hofstede; the textbook names no single work for it",
+      "link": "https://saylordotorg.github.io/text_international-business/s07-02-what-are-the-key-methods-used-.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

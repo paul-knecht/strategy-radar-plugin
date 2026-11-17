@@ -1,0 +1,21 @@
+{
+  "id": "assets-built-over-time",
+  "name": "Assets built up over time",
+  "idea": "The work argues that a lasting advantage rests on stocks of assets, such as a reputation or know-how, that cannot be bought on a market and must be built up over time through steady spending. How hard a stock is to copy depends on how it accumulates: rushing costs more, an existing stock eases growth, stocks depend on each other, they decay without upkeep, and the path to them can be unclear.",
+  "suggests": "Look at which of a company's strengths were built slowly through years of steady investment, such as a reputation, a dealer network or know-how, and how fast a rival could build the same.",
+  "limits": "The work's argument applies where the asset cannot be traded: an asset that can be bought or rented on an open market offers no lasting edge from this source. The work notes that a stock that cannot be copied can still lose its value if a rival builds a different stock that serves the same end.",
+  "competing_idea": "The view the work starts from and extends: assets bought on open markets at a price that reflects their value bring no lasting edge by themselves. The work adds that the assets that matter often cannot be bought and must be built.",
+  "questions": [
+    "Which of the company's key assets took years to build, and could a rival simply buy them instead?",
+    "How much faster could a rival build the same asset by spending more, and at what extra cost?",
+    "Which of the company's asset stocks are wearing away for lack of upkeep?"
+  ],
+  "originals": [
+    {
+      "reference": "Ingemar Dierickx and Karel Cool, \"Asset Stock Accumulation and Sustainability of Competitive Advantage\", Management Science, Vol. 35 No. 12, 1989, pp. 1504-1511",
+      "level": "reference_confirmed",
+      "link": "https://econpapers.repec.org/RePEc:inm:ormnsc:v:35:y:1989:i:12:p:1504-1511"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

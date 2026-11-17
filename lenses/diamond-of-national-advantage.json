@@ -1,0 +1,28 @@
+{
+  "id": "diamond-of-national-advantage",
+  "name": "What a home country gives its firms abroad",
+  "idea": "A textbook says that, according to the model, how well an industry's firms from one country do abroad is shaped by four home conditions: demand, factor conditions, related and supporting industries, and strategy, structure and domestic rivalry. It says firms gain when home customers expect a lot, and that light rivalry at home will likely hold back their innovation and weaken them abroad.",
+  "suggests": "Look at what a company's home base offers it: how demanding its home customers are, which skills, inputs and suppliers it finds nearby, and how hard its domestic rivals push it, and whether a planned move abroad relies on these.",
+  "limits": "An encyclopedia entry cites criticism of the model's assumptions: sustained prosperity may be reached without a nation becoming innovation-driven, and many internationally successful industries lack a strong diamond at home. It says the model was generalized from North American, European and Japanese experience and may need rethinking for countries developing once these regions are developed.",
+  "competing_idea": "Another view, which the textbook sets out and rejects, holds that technology and interconnection are levelling the field between developed and emerging countries, so where a firm is based is ceasing to help or hurt it. The textbook says this does not match reality: research since 2005 finds that country of origin helps some firms and hurts others.",
+  "questions": [
+    "How demanding are the customers in the company's home market, and has that pushed it to improve?",
+    "Which skilled workers, inputs and supporting industries does the company draw on at home, and would it keep them after the move?",
+    "How strong is rivalry in the company's home market, and has it sharpened the company enough to compete abroad?"
+  ],
+  "originals": [
+    {
+      "reference": "Mastering Strategic Management, v. 1.0, Saylor Academy, 2012 (an open textbook adapted without attribution, as its original creator requested), section \"Drivers of Success and Failure When Competing in International Markets\"",
+      "level": "secondary_source_read",
+      "about": "Michael E. Porter, The Competitive Advantage of Nations, New York: Free Press, 1990",
+      "link": "https://saylordotorg.github.io/text_mastering-strategic-management/s11-02-drivers-of-success-and-failure.html"
+    },
+    {
+      "reference": "\"Diamond model\", Wikipedia, revision 1346166484 of 30 March 2026",
+      "level": "secondary_source_read",
+      "about": "Michael E. Porter's diamond model of national competitive advantage, set out in The Competitive Advantage of Nations, New York: Free Press, 1990",
+      "link": "https://en.wikipedia.org/w/index.php?title=Diamond_model&oldid=1346166484"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

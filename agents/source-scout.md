@@ -2,6 +2,7 @@
 name: source-scout
 description: Finds candidate public sources for one search task of a Strategy Radar run and hands back a list of links with who published each. Used by the strategy-radar run skill; it never judges what a source means.
 model: sonnet
+effort: medium
 tools: WebSearch, WebFetch
 ---
 

@@ -1,0 +1,26 @@
+{
+  "id": "absorbing-growth",
+  "name": "How fast a firm can absorb growth",
+  "idea": "Existing managers cap how far a firm can expand in any given period, because such managers cannot be hired from the market. What its inherited managers can provide governs how many new managers the firm can absorb. Within the pace at which its administrative structure can be adapted to ever larger operations, nothing in the nature of a firm stops it from expanding without end.",
+  "suggests": "Look at how much growth a company has announced against the experienced management it already has, and at how quickly it can bring new managers into that team.",
+  "limits": "The argument is first built for growth from within, without mergers or acquisitions. A note to the managerial limit adds that it concerns only the scale of the firm's organization, not necessarily that of its production measured by capital invested.",
+  "competing_idea": "Another view holds that as a firm gets larger, the cost of organising extra transactions inside it may rise, until organising one more costs as much as leaving it to the open market or to another entrepreneur.",
+  "questions": [
+    "How large is the planned expansion compared with the experienced managers who would have to plan and run it?",
+    "How fast can the company absorb new managers alongside its existing team, and does the growth plan allow for that?",
+    "Is the growth built from within or bought through acquisitions, and does it add mainly organization and people or mainly equipment?"
+  ],
+  "originals": [
+    {
+      "reference": "Edith Penrose, The Theory of the Growth of the Firm (OUP 3rd edn., 1995), extracts reprinted in Nicolai J. Foss (ed.), Resources, Firms, and Strategies: A Reader in the Resource-Based Perspective, Oxford Management Readers, Oxford University Press, Oxford, 1997; the copy was read from a scan by text recognition",
+      "level": "original_read",
+      "link": null
+    },
+    {
+      "reference": "R. H. Coase, \"The Nature of the Firm\", Economica, November 1937, pp. 386-405",
+      "level": "original_read",
+      "link": null
+    }
+  ],
+  "checked_on": "2026-11-15"
+}

@@ -4,7 +4,7 @@ from pathlib import Path
 from radar.schema import check_data, Problem
 from radar import store
 from radar.cli import main
-from helpers import make_run, add_source, add_fact, minimal_analysis, unreadable_file
+from helpers import lens_folder_with_level, make_run, add_source, add_fact, minimal_analysis, unreadable_file
 
 
 def clean_run(tmp_path):
@@ -343,10 +343,12 @@ def test_decision_framing_must_be_allowed(tmp_path):
 
 
 def write_lens(lenses, lens_id, questions=("a", "b", "c"), levels=("original_read",)):
+    """A lens that the lens check passes, unless `questions` or `levels` are changed."""
     lenses.mkdir(exist_ok=True)
     (lenses / f"{lens_id}.json").write_text(json.dumps({
-        "id": lens_id, "name": "n", "questions": list(questions),
-        "originals": [{"reference": "r", "level": level, "link": "l"} for level in levels]}), encoding="utf-8")
+        "id": lens_id, "name": "n", "idea": "i", "suggests": "s", "limits": "l", "competing_idea": "c",
+        "questions": list(questions),
+        "originals": [{"reference": "r", "level": level, "link": None} for level in levels]}), encoding="utf-8")
 
 
 def test_lenses_are_only_checked_when_a_lens_dir_is_given(tmp_path):
@@ -374,9 +376,17 @@ def test_lens_files_are_checked(tmp_path):
     problems = check_data(run, lenses)
     assert not any(p.file == "lenses/good.json" for p in problems)
     assert Problem("lenses/bad.json", "questions", "lens must have exactly 3 questions") in problems
-    assert Problem("lenses/bad.json", "originals[1].level", "not an allowed value") in problems
-    assert Problem("lenses/broken.json", None, "not valid JSON") in problems
+    assert Problem("lenses/bad.json", "originals[1].level",
+                   "a lens level must be original_read, course_slides, secondary_source_read or reference_confirmed") in problems
+    assert Problem("lenses/broken.json", None, "a lens cannot be read") in problems
     assert Problem("analysis.json", "lens_notes[2].lens_id", "lens ../escape does not exist") in problems
+
+
+def test_a_lens_that_rests_on_course_slides_passes_the_lens_check(tmp_path):
+    run = clean_run(tmp_path)
+    store.write_analysis(run, minimal_analysis(["F1"], lens_id="firm-boundaries"))
+    lenses = lens_folder_with_level(tmp_path / "lenses", "course_slides")
+    assert check_data(run, lenses) == []
 
 
 def test_empty_lens_note_id_is_a_problem(tmp_path):
@@ -1144,6 +1154,54 @@ def test_a_good_audit_flag_passes(tmp_path):
     assert check_data(run) == []
 
 
+# --- a flag names the messages it is about (decision D10) -----------------------------------------------------------
+
+def _run_with_flag(tmp_path, flag):
+    run = clean_run(tmp_path)
+    analysis = minimal_analysis(["F1"])
+    analysis["audit_flags"] = [flag]
+    store.write_analysis(run, analysis)
+    return run
+
+
+def test_a_flag_may_name_the_messages_it_is_about(tmp_path):
+    run = _run_with_flag(tmp_path, {"check": "framing", "text": "The question is the company's own.",
+                                    "message_ids": ["M1"]})
+    assert check_data(run) == []
+
+
+def test_a_flag_about_no_message_has_an_empty_list(tmp_path):
+    run = _run_with_flag(tmp_path, {"check": "framing", "text": "The question is the company's own.",
+                                    "message_ids": []})
+    assert check_data(run) == []
+
+
+def test_a_flag_that_names_a_message_that_does_not_exist_is_named(tmp_path):
+    run = _run_with_flag(tmp_path, {"check": "framing", "text": "The question is the company's own.",
+                                    "message_ids": ["M1", "M9"]})
+    problem = Problem("analysis.json", "audit_flags[0].message_ids", "a flag names message M9, which does not exist")
+    assert problem in check_data(run)
+    assert problem in gate(run)
+
+
+def test_message_ids_must_be_a_list(tmp_path):
+    run = _run_with_flag(tmp_path, {"check": "framing", "text": "The question is the company's own.",
+                                    "message_ids": "M1"})
+    assert Problem("analysis.json", "audit_flags[0].message_ids", MUST_BE_LIST) in check_data(run)
+
+
+def test_each_message_id_must_be_text(tmp_path):
+    run = _run_with_flag(tmp_path, {"check": "framing", "text": "The question is the company's own.",
+                                    "message_ids": [1]})
+    assert Problem("analysis.json", "audit_flags[0].message_ids[0]", MUST_BE_TEXT) in check_data(run)
+
+
+def test_a_flag_without_message_ids_is_still_accepted(tmp_path):
+    run = _run_with_flag(tmp_path, {"check": "framing", "text": "The question is the company's own."})
+    assert check_data(run) == []
+    assert not [p for p in gate(run) if p.field.startswith("audit_flags")]
+
+
 # --- fix wave A23.9: a source, fact, analysis or copy this user may not open is named as such ------------------------
 
 from helpers import unreadable_file   # noqa: E402
@@ -1164,3 +1222,266 @@ def test_an_item_this_user_may_not_open_is_named_so_and_not_as_damaged_or_missin
     assert all(p.message not in ("not valid JSON", "saved copy is missing") for p in problems if p.file == named)
     explained = explain(Problem(named, field, LOCKED))
     assert explained["known"] is True and "may not open" in explained["what"]
+
+
+# --- Plan 2b, Task 10, change F: the note on a web page that holds little running text ------------------------------
+
+def flagged_run(tmp_path, orig="copies/S1.orig.html"):
+    """A clean run whose S1 is a saved web page with the note, as save-source writes it (the page itself invented)."""
+    run = clean_run(tmp_path)
+    (run / orig).write_text("<html><body><p>Home</p></body></html>", encoding="utf-8")
+    edit_source(run, orig_file=orig, text_note="little_running_text")
+    return run
+
+
+def test_the_data_check_and_the_gate_accept_a_saved_web_page_with_the_note(tmp_path):
+    from radar.gate import gate
+    for orig in ("copies/S1.orig.html", "copies/S1.orig.htm"):
+        run = flagged_run(tmp_path / orig[-4:], orig)
+        assert check_data(run) == [], orig
+        assert not [p for p in gate(run) if p.file.startswith("sources/")], orig
+    assert store.TEXT_NOTES == ("little_running_text",)
+
+
+def test_a_record_without_the_note_stays_valid(tmp_path):
+    run = clean_run(tmp_path)
+    assert "text_note" not in store.read_sources(run)["S1"] and check_data(run) == []
+
+
+def test_the_note_holds_its_one_value_or_is_left_out(tmp_path):
+    run = flagged_run(tmp_path)
+    for value in ("mostly_menu_text", "", None, True, ["little_running_text"], {"note": "little_running_text"}):
+        edit_source(run, text_note=value)
+        assert check_data(run) == [Problem("sources/S1.json", "text_note", "not an allowed value")], value
+
+
+NOTE_ON_A_PAGE_ONLY = "only a saved web page can have the note little_running_text"
+
+
+def test_the_note_on_anything_but_a_saved_web_page_is_a_problem(tmp_path):
+    from radar.gate import gate
+    run = flagged_run(tmp_path)
+    for changes in ({"orig_file": "copies/S1.orig.pdf"}, {"orig_file": "copies/S1.orig.txt"},
+                    {"orig_file": "copies/S1.orig.csv"}, {"orig_file": None}):
+        edit_source(run, **changes)
+        assert check_data(run) == [Problem("sources/S1.json", "text_note", NOTE_ON_A_PAGE_ONLY)], changes
+        assert Problem("sources/S1.json", "text_note", NOTE_ON_A_PAGE_ONLY) in gate(run), changes
+    edit_source(run, orig_file=None, access="not_accessible", access_reason="timeout", copy_file=None,
+                copy_sha256=None)
+    assert check_data(run) == [Problem("sources/S1.json", "text_note", NOTE_ON_A_PAGE_ONLY)]
+
+
+def test_the_note_problem_is_explained_in_plain_words():
+    from radar.explain import explain
+    explained = explain(Problem("sources/S4.json", "text_note", NOTE_ON_A_PAGE_ONLY))
+    assert explained["known"] is True and "S4" in explained["what"]
+    assert "little running text" in explained["what"] and "by hand" in explained["why"]
+    assert "menu" not in " ".join(explained[part] for part in ("what", "why", "do"))   # fix round 1: as measured
+    assert explain(Problem("sources/S4.json", "text_note", "not an allowed value"))["known"] is True
+
+
+# --- why a fact is uncertain: the codes -----------------------------------------------------------------------------
+
+def test_a_proposal_may_not_set_the_codes(tmp_path):
+    run = strict_run(tmp_path)
+    problems = check_proposal(run, proposal(uncertain_reasons=["single_source"]))
+    assert Problem("proposal", "uncertain_reasons",
+                   "the key uncertain_reasons is set by the program, not by a proposal") in problems
+
+
+def test_stored_codes_must_be_known(tmp_path):
+    run = clean_run(tmp_path)
+    for bad in (["unclear"], "single_source", ["single_source", 3], None):
+        fact = store.read_facts(run)["F1"]
+        fact["uncertain_reasons"] = bad
+        store.write_fact(run, fact)
+        assert Problem("facts/F1.json", "uncertain_reasons", "not an allowed value") in check_data(run), bad
+    for good in ([], ["single_source"], ["tentative", "early_signal"]):
+        fact = store.read_facts(run)["F1"]
+        fact["uncertain_reasons"] = good
+        store.write_fact(run, fact)
+        assert check_data(run) == [], good
+
+
+def _problems_of_companies(tmp_path, companies):
+    run = clean_run(tmp_path)
+    data = store.load_run(run)
+    data["companies"] = companies
+    store.save_run(run, data)
+    return [p for p in check_data(run) if p.file == "run.json"]
+
+
+def test_a_run_may_hold_companies_in_the_recorded_shape(tmp_path):
+    good = [{"name": "Example Pharma", "other_names": ["Example Pharma Group"], "home": True},
+            {"name": "Competitor A", "other_names": [], "home": False}]
+    assert _problems_of_companies(tmp_path, good) == []
+    assert _problems_of_companies(tmp_path / "b", []) == []
+    from radar import schema
+    assert schema.COMPANY_KEYS == ("name", "other_names", "home")
+
+
+def test_a_run_names_companies_of_the_wrong_shape(tmp_path):
+    def one(companies, sub):
+        return _problems_of_companies(tmp_path / sub, companies)
+    home = {"name": "A", "other_names": [], "home": False}
+    assert one("x", "a") == [Problem("run.json", "companies", "not an allowed value")]
+    assert one(["x"], "b") == [Problem("run.json", "companies[0]", "not an allowed value")]
+    assert one([{**home, "size": 1}], "c") == [Problem("run.json", "companies[0].size", "not an allowed value")]
+    assert one([{"name": "A", "other_names": []}], "d") == [Problem("run.json", "companies[0].home", "not an allowed value")]
+    assert one([{**home, "name": " "}], "e") == [Problem("run.json", "companies[0].name", "must not be empty")]
+    assert one([{**home, "other_names": "x"}], "f") == [Problem("run.json", "companies[0].other_names", "not an allowed value")]
+    assert one([{**home, "other_names": ["ok", "", 3]}], "g") == [
+        Problem("run.json", "companies[0].other_names[1]", "must not be empty"),
+        Problem("run.json", "companies[0].other_names[2]", "must not be empty")]
+    assert one([{**home, "home": "yes"}], "h") == [Problem("run.json", "companies[0].home", "not an allowed value")]
+
+
+def test_a_run_may_have_at_most_one_own_company(tmp_path):
+    two = [{"name": "A", "other_names": [], "home": True}, {"name": "B", "other_names": [], "home": True}]
+    problems = _problems_of_companies(tmp_path, two)
+    assert problems == [Problem("run.json", "companies", "at most one company of a run is its own company")]
+
+
+def test_the_message_about_two_own_companies_is_explained():
+    from radar.explain import explain
+    told = explain(Problem("run.json", "companies", "at most one company of a run is its own company"))
+    assert told["known"] is True and told["what"] and told["why"] and told["do"]
+
+
+
+# --- the company a fact is about, and its connections ---------------------------------------------------------------
+
+def _general(**over):
+    from helpers import proposal
+    result = proposal(kind="general", fields=None, statement="Competitor A sells syringes to Drug maker B.",
+                      quote="The expansion adds two high-speed syringe lines for customers")
+    result.update(over)
+    return result
+
+
+def test_a_general_fact_may_name_the_company_it_is_about(tmp_path):
+    from radar.schema import check_proposal
+    run = strict_run(tmp_path)
+    connection = {"party": "Drug maker B", "tie": "customer", "description": None}
+    assert check_proposal(run, _general(about_company="Competitor A", connections=[connection])) == []
+    assert check_proposal(run, _general(about_company=None, connections=None)) == []
+    assert check_proposal(run, _general()) == []   # both keys left out
+    assert Problem("proposal", "about_company", "must be text") in check_proposal(run, _general(about_company=5))
+    assert Problem("proposal", "about_company", "must not be empty") in check_proposal(run, _general(about_company=""))
+
+
+def test_a_capacity_move_takes_no_about_company(tmp_path):
+    from radar.schema import ABOUT_ON_A_MOVE, check_proposal
+    from helpers import proposal
+    run = strict_run(tmp_path)
+    assert ABOUT_ON_A_MOVE == "a capacity move names its company in fields.company"
+    assert check_proposal(run, proposal(about_company="Competitor A")) == [
+        Problem("proposal", "about_company", ABOUT_ON_A_MOVE)]
+    assert check_proposal(run, proposal(about_company=None)) == []
+    connection = {"party": "Drug maker B", "tie": "buyer", "description": None}
+    assert check_proposal(run, proposal(connections=[connection])) == []   # a move may name its connections
+
+
+def test_a_connection_has_a_known_tie_and_a_party_or_a_description(tmp_path):
+    from radar.schema import NOT_ALLOWED, UNNAMED_PARTY, UNNAMED_PROPOSED_PARTY, check_proposal
+    run = strict_run(tmp_path)
+    assert UNNAMED_PROPOSED_PARTY == ("a connection names its other party; leave out a tie whose party the source "
+                                      "does not name")
+    assert UNNAMED_PARTY == "a connection that names no party must describe it"
+    assert store.CONNECTION_TIES == ("buyer", "seller", "customer", "partner")
+
+    def problems(*connections):
+        return check_proposal(run, _general(about_company="Competitor A", connections=list(connections)))
+
+    for tie in store.CONNECTION_TIES:
+        assert problems({"party": "Drug maker B", "tie": tie, "description": None}) == [], tie
+    assert problems({"party": None, "tie": "seller", "description": "a large drug maker"}) == [
+        Problem("proposal", "connections[0].party", UNNAMED_PROPOSED_PARTY)]
+    assert problems({"party": "Drug maker B", "tie": "supplier", "description": None}) == [
+        Problem("proposal", "connections[0].tie", NOT_ALLOWED)]
+    assert problems({"party": None, "tie": "buyer", "description": None}) == [
+        Problem("proposal", "connections[0].party", UNNAMED_PROPOSED_PARTY)]
+    assert problems({"tie": "buyer", "description": " "}) == [
+        Problem("proposal", "connections[0].party", UNNAMED_PROPOSED_PARTY)]
+    assert problems({"party": "Drug maker B", "tie": "buyer", "description": None, "share": "40%"}) == [
+        Problem("proposal", "connections[0].share", "the key share is not known")]
+    assert problems({"party": 5, "tie": "buyer", "description": None}) == [
+        Problem("proposal", "connections[0].party", "must be text")]
+    assert problems({"party": " ", "tie": "buyer", "description": None}) == [
+        Problem("proposal", "connections[0].party", "must not be empty")]
+    assert problems({"party": "Drug maker B", "tie": "buyer", "description": 5}) == [
+        Problem("proposal", "connections[0].description", "must be text")]
+    assert problems("Drug maker B") == [Problem("proposal", "connections[0]", NOT_ALLOWED)]
+    assert check_proposal(run, _general(connections="Drug maker B")) == [
+        Problem("proposal", "connections", NOT_ALLOWED)]
+
+
+def test_a_stored_fact_with_an_unnamed_party_still_passes_the_data_check(tmp_path):
+    from radar.schema import UNNAMED_PARTY
+    run = clean_run(tmp_path)
+    fact = store.read_facts(run)["F1"]
+    fact["connections"] = [{"party": None, "tie": "buyer", "description": "a buyer it did not name"}]
+    store.write_fact(run, fact)
+    assert check_data(run) == []
+    fact["connections"] = [{"party": None, "tie": "buyer", "description": None}]
+    store.write_fact(run, fact)
+    assert [p.message for p in check_data(run)] == [UNNAMED_PARTY]
+
+
+def test_a_stored_fact_without_the_new_keys_is_fine(tmp_path):
+    run = clean_run(tmp_path)
+    fact = store.read_facts(run)["F1"]
+    assert fact["about_company"] is None and fact["connections"] == []
+    del fact["about_company"], fact["connections"]
+    store.write_fact(run, fact)
+    assert check_data(run) == []
+
+
+def test_the_messages_about_a_fact_s_company_and_connections_are_explained():
+    from radar.explain import explain
+    from radar.schema import ABOUT_ON_A_MOVE, UNNAMED_PARTY, UNNAMED_PROPOSED_PARTY
+    for field, message in (("about_company", ABOUT_ON_A_MOVE), ("connections[0].description", UNNAMED_PARTY),
+                           ("connections[0].party", UNNAMED_PROPOSED_PARTY)):
+        told = explain(Problem("facts/F1.json", field, message))
+        assert told["known"] is True and told["what"] and told["why"] and told["do"], message
+
+
+# --- whether a move falls inside the question -----------------------------------------------------------------------
+
+def test_a_proposed_move_must_say_whether_it_falls_inside_the_question(tmp_path):
+    run = strict_run(tmp_path)
+    assert store.IN_QUESTION == ("yes", "no")
+    assert check_proposal(run, proposal(fields={"in_question": "no"})) == []
+    assert Problem("proposal", "fields.in_question", "not an allowed value") in \
+        check_proposal(run, proposal(fields={"in_question": "maybe"}))
+    missing = proposal()
+    del missing["fields"]["in_question"]
+    [problem] = [p for p in check_proposal(run, missing) if p.field == "fields.in_question"]
+    assert problem == Problem("proposal", "fields.in_question",
+                              "in_question is missing; it must be yes or no, set by the extractor")
+    from radar.explain import explain
+    assert "extractor" in explain(problem)["do"] and explain(problem)["known"] is True
+
+
+def test_a_move_stored_before_the_field_existed_still_passes_the_data_check(tmp_path):
+    run = clean_run(tmp_path)
+    fact = store.read_facts(run)["F1"]
+    del fact["fields"]["in_question"]
+    store.write_fact(run, fact)
+    assert check_data(run) == []
+    fact["fields"]["in_question"] = "maybe"
+    store.write_fact(run, fact)
+    assert Problem("facts/F1.json", "fields.in_question", "not an allowed value") in check_data(run)
+
+
+def test_a_message_may_name_its_memo_part_and_only_an_allowed_one(tmp_path):
+    """A screening run's messages say which part of the memo they belong to (design 2026-11-17); other runs leave it out."""
+    run = clean_run(tmp_path)
+    for value, problems in (("team", []), ("people", ["not an allowed value"]), (3, ["not an allowed value"])):
+        analysis = minimal_analysis(["F1"])
+        analysis["messages"][0]["memo_part"] = value
+        store.write_analysis(run, analysis)
+        found = [p.message for p in check_data(run) if p.field == "messages[0].memo_part"]
+        assert found == problems, value
+    store.write_analysis(run, minimal_analysis(["F1"]))
+    assert [p for p in check_data(run) if "memo_part" in (p.field or "")] == []

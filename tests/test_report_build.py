@@ -1,13 +1,16 @@
 import json
 import re
+from datetime import datetime, timezone
 import pytest
+from html import escape as html_escape
 from pathlib import Path
 from radar.report.build import build_report, GateRefused
-from radar.report.markdown import render_markdown
+from radar.report.markdown import esc, render_markdown
 from radar.report.model import build_model, load_labels, probability_word
 from radar import demo, verify, store
 from radar.cli import main
-from helpers import PERMIT_TEXT, add_early_signal, make_run, add_source, add_fact, finish_run, minimal_analysis
+from helpers import (PERMIT_TEXT, add_early_signal, find, lens_folder_with_level, make_run, add_source, add_fact,
+                     finish_run, minimal_analysis)
 
 LENSES = demo.LENSES
 TEXT = "The expansion adds two high-speed syringe lines for customers, starting in 2028."
@@ -65,7 +68,7 @@ def test_build_writes_markdown_with_required_parts(tmp_path):
     assert "adds nine high-speed" in md.split("## What we could not confirm")[1]
     assert "Where firms draw their boundaries" in md.split("## Thinking behind this analysis")[1]
     assert "Recorded test answer" in md.split("## How this report was made")[1]
-    assert md.index("## Summary") < md.index("## What the sources say") < md.index("## Sources")
+    assert md.index("## Key messages") < md.index("## What the sources say") < md.index("## Sources")
 
 def test_build_refuses_when_gate_is_closed(tmp_path):
     run = ready_run(tmp_path, analysis=minimal_analysis(fact_ids=["F1", "F2"]))
@@ -120,7 +123,7 @@ def test_judgement_sections_and_totals_appear(tmp_path):
     assert "Tight market" in scen and "Lead times rise" in scen and "Weakly supported" in scen
     pred = md.split("## Predictions")[1].split("\n## ")[0]
     assert "Competitor A starts both lines, by 2028-12-31: 65% (likely)" in pred
-    assert "Moves announced: 1" in md.split("## Competitors")[1].split("\n## ")[0]
+    assert "Moves announced: 1" in md.split("## Projects")[1].split("\n## ")[0]
     how = md.split("## How this report was made")[1]
     assert "All sources in this report are publicly available." in how and "very likely" in how
 
@@ -200,7 +203,7 @@ def test_markdown_lists_what_each_fact_and_move_says(tmp_path):
     md = (run / "report" / "report.md").read_text(encoding="utf-8")
     facts = md.split("## What the sources say")[1].split("\n## ")[0]
     assert "S1, Confirmed" in facts and "Source S1" in facts and "Competitor A" in facts
-    comp = md.split("## Competitors")[1].split("\n## ")[0]
+    comp = md.split("## Projects")[1].split("\n## ")[0]
     assert "Competitor A (own company)" in comp and "Announced" in comp
 
 def test_build_report_command_prints_json(tmp_path, capsys):
@@ -235,10 +238,10 @@ def test_uncertain_and_non_public_material_is_named(tmp_path):
     for name in store.CHECKPOINTS: store.record_checkpoint(run, name, "test", "again")
     build_report(run, LENSES)
     md = (run / "report" / "report.md").read_text(encoding="utf-8")
-    assert "1 marked uncertain" in md and "2 facts, all quotes checked" in md
+    assert "1 from one source only · 0 marked uncertain" in md and "2 facts, all quotes checked" in md
     facts = md.split("## What the sources say")[1].split("\n## ")[0]
-    line = next(l for l in facts.splitlines() if l.startswith("- The line runs two shifts."))
-    assert "(Internal document)" in line and "S2, Uncertain" in line
+    line = next(l for l in facts.splitlines() if l.startswith("- Own plant: The line runs two shifts."))
+    assert "(Internal document)" in line and "S2, One source only" in line
     sources = md.split("## Sources")[1]
     assert "Saved by hand" in sources and "Supplied by: the tester" in sources
     assert "Basis for use: own company document" in sources
@@ -255,6 +258,46 @@ def test_watch_items_and_lens_details_are_shown(tmp_path):
     assert "Here the firm builds its own lines." in thinking
     assert "Has the company recently moved a step across that line?" in thinking
     assert "Illustrative reference, not a real work, Reference confirmed" in thinking
+
+
+def test_every_lens_level_has_a_report_label():
+    labels = load_labels()
+    for level in store.LENS_LEVELS:
+        assert f"level_{level}" in labels, f"no report label for the lens level {level}"
+
+
+def test_the_report_names_the_course_slides_level(tmp_path):
+    lenses = lens_folder_with_level(tmp_path / "lenses", "course_slides")
+    analysis = minimal_analysis(["F1"], lens_id="firm-boundaries")
+    analysis["lens_notes"] = [{"lens_id": "firm-boundaries", "here": "Here the firm builds its own lines."}]
+    run = ready_run(tmp_path, analysis=analysis)
+    build_report(run, lenses)
+    md = (run / "report" / "report.md").read_text(encoding="utf-8")
+    thinking = md.split("## Thinking behind this analysis")[1].split("\n## ")[0]
+    assert "Illustrative reference, not a real work, Course slides" in thinking
+    assert "Reference confirmed" not in thinking
+    html = (run / "report" / "report.html").read_text(encoding="utf-8")
+    card = find(html, "article", **{"class": "lens-card"})[0]
+    assert "Course slides" in card["text"] and "Reference confirmed" not in card["text"]
+
+
+def test_the_report_names_the_secondary_source_level_and_what_the_source_is_about(tmp_path):
+    folder = lens_folder_with_level(tmp_path / "lenses", "secondary_source_read")
+    path = folder / "firm-boundaries.json"
+    lens = json.loads(path.read_text(encoding="utf-8"))
+    lens["originals"][0].update({"about": "An invented work on where firms stop", "link": "https://www.example.com/a-survey"})
+    path.write_text(json.dumps(lens), encoding="utf-8")
+    analysis = minimal_analysis(["F1"], lens_id="firm-boundaries")
+    analysis["lens_notes"] = [{"lens_id": "firm-boundaries", "here": "Here the firm builds its own lines."}]
+    run = ready_run(tmp_path, analysis=analysis)
+    build_report(run, folder)
+    md = (run / "report" / "report.md").read_text(encoding="utf-8")
+    thinking = md.split("## Thinking behind this analysis")[1].split("\n## ")[0]
+    assert "Illustrative reference, not a real work, about An invented work on where firms stop, Secondary source read" in thinking
+    html = (run / "report" / "report.html").read_text(encoding="utf-8")
+    card = find(html, "article", **{"class": "lens-card"})[0]
+    assert "Secondary source read" in card["text"] and "An invented work on where firms stop" in card["text"]
+    assert "Reference confirmed" not in card["text"]
 
 
 # --- final fix C1: an invented supporting quote never reaches a report as a quote from its source ---
@@ -327,7 +370,7 @@ def test_an_uncertain_reason_is_shown_as_written_and_escaped(tmp_path):
     md, html = built(run)
     facts = section(md, "What the sources say")
     assert "Uncertain, one \\<b\\>unnamed\\</b\\> source" in facts
-    assert "Uncertain, single source that is not a primary source" in facts
+    assert "One source only, single source that is not a primary source" in facts
     assert "one &lt;b&gt;unnamed&lt;/b&gt; source" in html and "<b>unnamed" not in html
 
 
@@ -362,6 +405,41 @@ def test_access_reasons_are_labels(tmp_path):
     assert "Not accessible: The site refused the request (403)." in sources
     assert "Not accessible: The site did not answer in time." in sources
     assert "http_403" not in md and "http_403" not in html.split("<body>")[1]
+
+
+# Fix round 1 (finding 1): the words say what the program measures, not what the page holds; and a PDF is never judged
+# by this rule, so the advice cannot send a page added by hand round again.
+LITTLE_RUNNING_TEXT = ("The saved copy holds little running text, so the page's article may be missing. Save the page "
+                       "as a PDF and add it as a file.")
+
+
+def flagged_report_run(tmp_path):
+    """ready_run plus S2, an invented web page saved with the note that it holds little running text."""
+    run = ready_run(tmp_path)
+    add_source(run, "Home\nAbout us\nNews\n", title="Competitor D news page", orig_file="copies/S2.orig.html",
+               text_note="little_running_text")
+    (run / "copies" / "S2.orig.html").write_text("<html><body><p>Home</p></body></html>", encoding="utf-8")
+    return run
+
+
+def test_a_page_with_little_running_text_carries_the_plain_sentence_in_both_reports(tmp_path):
+    """Plan 2b, Task 10, change F: the flagged source is named with the sources that need attention, but it is saved,
+    so it is not shown or counted as not accessible."""
+    labels = load_labels()
+    assert labels["text_note_little_running_text"] == LITTLE_RUNNING_TEXT
+    assert labels["little_running_text"] == "Little running text" and "mostly_menu_text" not in labels
+    md, html = built(flagged_report_run(tmp_path))
+    s2 = section(md, "Sources").split("### S2: Competitor D news page")[1].split("\n### ")[0]
+    assert f"- Little running text: {LITTLE_RUNNING_TEXT}" in s2 and "Not accessible" not in s2
+    page = html.split('<article class="source" id="S2"')[1].split("</article>")[0]
+    assert '<span class="pill little-running-text">Little running text</span>' in page
+    assert ".pill.not-accessible, .pill.little-running-text {" in html.split("<body>")[0]   # styled as a warning
+    assert f"<dt>Little running text</dt><dd>{html_escape(LITTLE_RUNNING_TEXT)}</dd>" in page
+    assert "Not accessible" not in page and "menu" not in (s2 + page).lower()
+    for text in (md, html):
+        assert "Not accessible:" not in text and "little_running_text" not in text.split("<body>")[-1]
+    s1 = html.split('<article class="source" id="S1"')[1].split("</article>")[0]
+    assert "Little running text" not in s1 and LITTLE_RUNNING_TEXT.count(".") == 2   # two plain sentences
 
 
 def test_field_labels_come_from_an_explicit_map_per_field():
@@ -403,10 +481,10 @@ def test_every_reference_to_an_uncertain_non_public_fact_carries_both_labels(tmp
     references = re.findall(r"\bF2\b.{0,40}", md)
     assert len(references) >= 11, references
     for reference in references:
-        assert reference.startswith("F2 (Uncertain, Internal document)"), reference
-    for heading in ("Competitors", "Demand signals", "Decision options", "Scenarios and assumptions",
+        assert reference.startswith("F2 (One source only, Internal document)"), reference
+    for heading in ("Projects", "Demand signals", "Decision options", "Scenarios and assumptions",
                     "What we could not confirm", "Thinking behind this analysis", "Sources"):
-        assert "F2 (Uncertain, Internal document)" in section(md, heading), heading
+        assert "F2 (One source only, Internal document)" in section(md, heading), heading
 
 
 # --- early signals and baselines in the plain-text report -----------------------------------------
@@ -451,15 +529,14 @@ def test_a_run_with_only_early_signals_does_not_say_that_no_fact_was_confirmed(t
 
 def test_the_baseline_is_shown_under_its_company(tmp_path):
     md, _ = built(early_signal_run(tmp_path))
-    competitors = section(md, "Competitors")
-    a = competitors.split("### Competitor A")[1].split("\n### ")[0]
-    assert "#### Baseline: size, sites and investment" in a
-    assert a.split("#### Baseline: size, sites and investment")[1].strip().startswith(
-        "- Competitor A runs two plants with about 400 staff. (F4)")     # the fact's own checked statement
+    projects = section(md, "Projects")
+    heading = "— Baseline: size, sites and investment"
+    a = projects.split("### Competitor A " + heading)[1].split("\n### ")[0]
+    assert a.strip().startswith("- Competitor A runs two plants with about 400 staff. (F4)")   # the fact's own statement
     # the baseline of a company without a move still gets its own heading
-    c = competitors.split("### Competitor C")[1].split("\n### ")[0]
+    c = projects.split("### Competitor C " + heading)[1].split("\n### ")[0]
     assert "- Competitor C runs one plant and invested 12 million last year. (F5)" in c
-    assert "Moves by type" in competitors                    # the counting tables are unchanged
+    assert "Moves by type" in projects                       # the counting tables are unchanged
 
 
 def test_a_baseline_with_two_facts_shows_both_statements_with_their_references(tmp_path):
@@ -469,7 +546,7 @@ def test_a_baseline_with_two_facts_shows_both_statements_with_their_references(t
                              {"company": "competitor a", "fact_ids": ["F1"]}]    # a repeated fact is shown once
     store.write_analysis(run, analysis)
     md, _ = built(run)
-    block = section(md, "Competitors").split("#### Baseline: size, sites and investment")[1].split("\n###")[0]
+    block = section(md, "Projects").split("### Competitor A — Baseline: size, sites and investment")[1].split("\n###")[0]
     assert block.strip().splitlines() == ["- Competitor A runs two plants with about 400 staff. (F4)",
                                           "- Competitor A will add a second filling line at Plant North. (F1)"]
 
@@ -484,7 +561,7 @@ def test_a_baseline_resting_on_an_uncertain_fact_says_so(tmp_path):
     analysis["baselines"] = [{"company": "Competitor C", "fact_ids": ["F6"]}]   # an early signal may not be one (M8)
     store.write_analysis(run, analysis)
     md, _ = built(run)
-    assert "(F6 (Uncertain))" in section(md, "Competitors")
+    assert "(F6 (One source only))" in section(md, "Projects")
 
 
 def test_a_baseline_resting_on_a_non_public_fact_says_so(tmp_path):
@@ -498,7 +575,7 @@ def test_a_baseline_resting_on_a_non_public_fact_says_so(tmp_path):
     analysis["baselines"] = [{"company": "Competitor C", "fact_ids": ["F6"]}]
     store.write_analysis(run, analysis)
     md, _ = built(run)
-    assert "- The plant employs about 90 people. (F6 (Internal document))" in section(md, "Competitors")
+    assert "- The plant employs about 90 people. (F6 (Internal document))" in section(md, "Projects")
 
 
 def test_a_run_without_early_signals_or_baselines_shows_neither_block(tmp_path):
@@ -642,10 +719,10 @@ def test_a_supporting_quote_s_translation_is_shown_on_the_fact_card_and_on_the_s
     build_report(run, LENSES)
     labels = load_labels()
     html = (run / "report" / "report.html").read_text(encoding="utf-8")
-    card = html.split('<details class="fact" id="F1">')[1].split("</details>")[0]
+    card = html.split('<details class="fact" id="F1"')[1].split("</details>")[0]
     assert f'<blockquote lang="de">{GERMAN_SUPPORT}</blockquote>' in card
     assert f'{labels["translation"]}: {ENGLISH_SUPPORT}' in card
-    page = html.split('<article class="source" id="S2">')[1].split("</article>")[0]
+    page = html.split('<article class="source" id="S2"')[1].split("</article>")[0]
     assert f'{labels["translation"]}: {ENGLISH_SUPPORT}' in page
     md = (run / "report" / "report.md").read_text(encoding="utf-8")
     source = md.split("### S2:")[1].split("\n### ")[0]
@@ -702,3 +779,422 @@ def test_a_size_of_one_reads_with_its_unit_in_the_singular(tmp_path):
 def test_the_unit_after_exactly_one_is_made_singular_only_where_that_is_safe(value, unit, read):
     from radar.report.model import unit_for
     assert unit_for(value, unit) == read
+
+
+# --- task 9: what a lens rests on, and the recommendation as unchecked advice ---------------------------------------
+
+from radar import recommend   # noqa: E402
+
+LABEL = "The recommender's suggestion, not checked"
+NO_RECOMMENDATION = ("No recommendation was made: the advisor did not run, or its list was refused twice by the "
+                     "program's form check.")
+READER_ONE, READER_TWO = recommend.READERS
+SURVEY = "Smith, A. (2000). A survey of firms."
+
+
+def real_lens_folder(folder, level):
+    """A lens folder whose firm-boundaries names a real-looking work at `level` (the demo lens names an invented one)."""
+    folder = lens_folder_with_level(folder, level)
+    path = folder / "firm-boundaries.json"
+    lens = json.loads(path.read_text(encoding="utf-8"))
+    lens["originals"][0].update({"reference": SURVEY if level == "secondary_source_read" else "Coase, R. (1937). Firms."})
+    if level == "secondary_source_read":
+        lens["originals"][0].update({"about": "Coase, R. (1937). The nature of the firm.",
+                                     "link": "https://www.example.com/a-survey"})
+    path.write_text(json.dumps(lens), encoding="utf-8")
+    return folder
+
+
+def recommendation(why="Two lines were built for one customer.", **over):
+    entry = {"lens": "firm-boundaries", "question_part": "adds capacity", "why": why, "facts": ["F1"],
+             "missing": "Nothing found on what protects the plant."}
+    entry.update(over)
+    return entry
+
+
+def recommended_run(tmp_path, entries=None, note=None, **run_over):
+    run = ready_run(tmp_path, **run_over)
+    recommend.record_recommendation(run, LENSES, [recommendation()] if entries is None else entries, note,
+                                    recommend.ADVISOR)
+    return run
+
+
+def how_made_md(run):
+    md = (run / "report" / "report.md").read_text(encoding="utf-8")
+    return md.split("## How this report was made")[1].split("\n## ")[0]
+
+
+def test_the_report_says_what_a_secondary_source_lens_rests_on_in_both_formats(tmp_path):
+    folder = real_lens_folder(tmp_path / "lenses", "secondary_source_read")
+    run = ready_run(tmp_path)
+    build_report(run, folder)
+    sentence = ("Rests on: Smith, A. (2000). A survey of firms, a source about Coase, R. (1937). The nature of the "
+                "firm, read; the original itself was not read")
+    md = (run / "report" / "report.md").read_text(encoding="utf-8")
+    thinking = md.split("## Thinking behind this analysis")[1].split("\n## ")[0]
+    assert esc(sentence) in thinking
+    html = (run / "report" / "report.html").read_text(encoding="utf-8")
+    card = find(html, "article", **{"class": "lens-card"})[0]
+    assert "the original itself was not read" in card["text"] and "Rests on: Smith, A. (2000)" in card["text"]
+
+
+def test_the_report_says_an_original_read_lens_rests_on_the_original(tmp_path):
+    folder = real_lens_folder(tmp_path / "lenses", "original_read")
+    run = ready_run(tmp_path)
+    build_report(run, folder)
+    md = (run / "report" / "report.md").read_text(encoding="utf-8")
+    assert "Rests on: the original, read" in md.split("## Thinking behind this analysis")[1].split("\n## ")[0]
+    html = (run / "report" / "report.html").read_text(encoding="utf-8")
+    assert "Rests on: the original, read" in find(html, "article", **{"class": "lens-card"})[0]["text"]
+
+
+def test_an_invented_lens_says_it_rests_on_no_real_work_as_the_first_stop_does(tmp_path):
+    run = ready_run(tmp_path)
+    build_report(run, LENSES)
+    sentence = load_labels()["rests_on_invented"]
+    assert sentence in (run / "report" / "report.md").read_text(encoding="utf-8")
+    assert "Rests on: the original, read" not in (run / "report" / "report.md").read_text(encoding="utf-8")
+    html = (run / "report" / "report.html").read_text(encoding="utf-8")
+    assert sentence in find(html, "article", **{"class": "lens-card"})[0]["text"]
+
+
+def test_a_lens_file_that_cannot_be_read_never_breaks_the_report_or_says_what_it_rests_on(tmp_path):
+    model = build_model(ready_run(tmp_path), LENSES)
+    lens = {"id": "x", "name": "x"}
+    from radar.report import model as report_model
+    assert report_model.lens_rests_on(lens, load_labels()) is None
+    assert model["lenses"][0]["rests_on"]
+
+
+def test_with_a_recommendation_the_report_shows_it_as_unchecked_advice_in_both_formats(tmp_path):
+    run = recommended_run(tmp_path)
+    recommend.record_link_check(run, "firm-boundaries", "F1", "doubt", READER_ONE, "The fact is about a plant.")
+    recommend.record_link_check(run, "firm-boundaries", "F1", "bears", READER_TWO, "")
+    build_report(run, LENSES)
+    labels = load_labels()
+    how = how_made_md(run)
+    assert labels["rec_label"] == LABEL and LABEL in how
+    assert how.index(labels["checkpoint_lenses"]) < how.index(LABEL)          # after the recorded lens decision
+    for part in ("Where firms draw their boundaries", "adds capacity", "Two lines were built for one customer.",
+                 "F1", "Nothing found on what protects the plant."):
+        assert part in how, part
+    assert "The first reader doubts that this fact bears on the lens: The fact is about a plant." in how
+    assert "The second reader found that this fact bears on the lens." in how
+    assert ("Helpers set to: the lens advisor: " in how
+            and "; a setting on the computer of the person who ran it can override a helper's model" in how)
+    assert NO_RECOMMENDATION not in how and "lens-link-reader" not in how and "lens-advisor" not in how
+    html = (run / "report" / "report.html").read_text(encoding="utf-8")
+    view = find(html, "section", id="view-how")[0]["text"]
+    for part in (LABEL, "The first reader doubts that this fact bears on the lens: The fact is about a plant.",
+                 "The second reader found that this fact bears on the lens.", "Helpers set to: the lens advisor: ",
+                 "Two lines were built for one customer."):
+        assert part in view, part
+    assert NO_RECOMMENDATION not in view and "lens-link-reader" not in view
+
+
+def test_a_reader_that_recorded_nothing_is_said_so_and_never_counts_as_agreement(tmp_path):
+    run = recommended_run(tmp_path)
+    recommend.record_link_check(run, "firm-boundaries", "F1", "bears", READER_ONE, "")
+    build_report(run, LENSES)
+    how = how_made_md(run)
+    assert "The first reader found that this fact bears on the lens." in how
+    assert "The second reader recorded nothing on this link." in how
+
+
+def test_a_recommendation_with_no_lens_shows_its_note_under_the_label_and_no_models_line(tmp_path):
+    run = recommended_run(tmp_path, entries=[], note="No lens fits a question about prices.")
+    build_report(run, LENSES)
+    how = how_made_md(run)
+    assert LABEL in how and "No lens fits a question about prices." in how
+    assert NO_RECOMMENDATION not in how and "Helpers set to" not in how
+    html = find((run / "report" / "report.html").read_text(encoding="utf-8"), "section", id="view-how")[0]["text"]
+    assert LABEL in html and "No lens fits a question about prices." in html and NO_RECOMMENDATION not in html
+
+
+def test_without_a_record_the_report_says_no_recommendation_was_made(tmp_path):
+    run = ready_run(tmp_path)
+    build_report(run, LENSES)
+    assert NO_RECOMMENDATION in how_made_md(run) and LABEL not in how_made_md(run)
+    html = find((run / "report" / "report.html").read_text(encoding="utf-8"), "section", id="view-how")[0]["text"]
+    assert NO_RECOMMENDATION in html and LABEL not in html
+
+
+DAMAGED = ("No recommendation can be shown: the lens recommendation file of this run is damaged, so it can no "
+           "longer be read as it was made.")
+STALE = ("This list was made before the facts changed: it was made for other facts than the ones this report rests "
+         "on, so it was not the current list at the final decision. It is shown as it was made.")
+GONE = "This fact no longer counts."
+
+
+def how_made_html(run):
+    return find((run / "report" / "report.html").read_text(encoding="utf-8"), "section", id="view-how")[0]["text"]
+
+
+@pytest.mark.parametrize("damage", ["not json", "no entry can be read", "a folder"])
+def test_a_damaged_record_is_said_to_be_damaged_in_the_report_and_never_raises(tmp_path, damage):
+    """Final review I3: a damaged record is not shown, and the reason says the file is damaged; "the advisor did not
+    run" would be untrue, because it did."""
+    run = recommended_run(tmp_path)
+    if damage == "not json":
+        (run / recommend.RECORD).write_text("{", encoding="utf-8")
+    elif damage == "a folder":
+        (run / recommend.RECORD).unlink()
+        (run / recommend.RECORD).mkdir()
+    else:
+        record = json.loads((run / recommend.RECORD).read_text(encoding="utf-8"))
+        record["entries"][0] = 5
+        (run / recommend.RECORD).write_text(json.dumps(record), encoding="utf-8")
+    build_report(run, LENSES)
+    labels = load_labels()
+    assert labels["rec_damaged"] == DAMAGED
+    for how in (how_made_md(run), how_made_html(run)):
+        assert DAMAGED in how and NO_RECOMMENDATION not in how and LABEL not in how
+        assert "Two lines were built for one customer." not in how and "Helpers set to" not in how
+
+
+DAMAGED_PARTS = ("Parts of this list were changed after the program wrote it, so they are not as the advisor made "
+                 "them. Each such part is marked where it stands; the rest is shown as it was made.")
+
+
+def test_a_partly_damaged_record_is_shown_with_each_damaged_part_marked_in_both_formats(tmp_path):
+    """Paul's decision 18: the report keeps what can be read and marks exactly where it was changed."""
+    run = recommended_run(tmp_path)
+    record = json.loads((run / recommend.RECORD).read_text(encoding="utf-8"))
+    record["entries"][0]["why"] = 5
+    record["by"] = 3
+    (run / recommend.RECORD).write_text(json.dumps(record), encoding="utf-8")
+    build_report(run, LENSES)
+    for how in (how_made_md(run), how_made_html(run)):
+        assert LABEL in how and DAMAGED_PARTS in how and DAMAGED not in how and NO_RECOMMENDATION not in how
+        assert "The reason given cannot be read: it was changed after the program wrote it." in how
+        assert "The name of who made it cannot be read: it was changed after the program wrote it." in how
+        assert "Why: " not in how
+
+
+def test_a_reader_s_verdict_that_cannot_be_read_is_said_next_to_its_link(tmp_path):
+    run = recommended_run(tmp_path)
+    record = json.loads((run / recommend.RECORD).read_text(encoding="utf-8"))
+    record["link_checks"] = [{"lens": "firm-boundaries", "fact": "F1", "by": recommend.READERS[0], "verdict": "maybe",
+                              "note": "", "at": "t"}]
+    (run / recommend.RECORD).write_text(json.dumps(record), encoding="utf-8")
+    build_report(run, LENSES)
+    for how in (how_made_md(run), how_made_html(run)):
+        assert DAMAGED_PARTS in how
+        assert "A reader's verdict on this link cannot be read: it was changed after the program wrote it." in how
+
+
+def stale_run(tmp_path):
+    """A run where F1 and F3 count and the recommendation links both; then F3 is withdrawn and settled, so the record
+    is stale and one of its links names a fact that no longer counts. The analysis names only F1."""
+    run = ready_run(tmp_path)
+    add_fact(run, source_id="S1", primary_source=True, quote="The expansion adds two high-speed syringe lines",
+             statement="The expansion is confirmed.")
+    verify.check_quotes(run)
+    verify.record_support(run, "F3", True, "support-checker", "")
+    verify.settle(run)
+    recommend.record_recommendation(run, LENSES, [recommendation(facts=["F1", "F3"])], None, recommend.ADVISOR)
+    recommend.record_link_check(run, "firm-boundaries", "F3", "bears", READER_ONE, "")
+    verify.withdraw_fact(run, "F3", "A duplicate of F1.")
+    verify.settle(run)
+    return run
+
+
+def test_a_stale_record_is_shown_as_made_with_a_plain_sentence_of_its_state_in_both_formats(tmp_path):
+    """Final review I3 (ruling: the record as it was made, plus a plain sentence of its state)."""
+    run = stale_run(tmp_path)
+    build_report(run, LENSES)
+    labels = load_labels()
+    assert (labels["rec_stale"], labels["rec_fact_gone"]) == (STALE, GONE)
+    for how in (how_made_md(run), how_made_html(run)):
+        assert LABEL in how and STALE in how and how.index(LABEL) < how.index(STALE)
+        assert "Two lines were built for one customer." in how                # the list as it was made
+        assert how.count(GONE) == 1, how                                       # next to F3 only, not next to F1
+        assert NO_RECOMMENDATION not in how and DAMAGED not in how
+    md = how_made_md(run)
+    gone_line = next(line for line in md.splitlines() if GONE in line)
+    assert "F3" in gone_line and "F1" not in gone_line
+    assert gone_line.index(GONE) < gone_line.index("The first reader found that this fact bears on the lens.")
+
+
+def test_a_current_record_has_no_state_sentence_and_no_fact_marked_as_gone(tmp_path):
+    run = recommended_run(tmp_path)
+    build_report(run, LENSES)
+    for how in (how_made_md(run), how_made_html(run)):
+        assert LABEL in how and STALE not in how and GONE not in how and DAMAGED not in how
+
+
+def test_the_text_of_a_recommendation_is_escaped_in_both_formats(tmp_path):
+    run = recommended_run(tmp_path, entries=[recommendation(why='It <b>bears</b> & "fits"')])
+    recommend.record_link_check(run, "firm-boundaries", "F1", "doubt", READER_ONE, "<script>x</script>")
+    build_report(run, LENSES)
+    assert "\\<b\\>bears\\</b\\>" in how_made_md(run) and "\\<script\\>x\\</script\\>" in how_made_md(run)
+    html = (run / "report" / "report.html").read_text(encoding="utf-8")
+    assert "<b>bears</b>" not in html and "<script>x</script>" not in html
+    assert "It &lt;b&gt;bears&lt;/b&gt; &amp; &quot;fits&quot;" in html
+
+
+def test_a_private_run_with_a_recommendation_still_refuses_a_publishable_build(tmp_path):
+    run = recommended_run(tmp_path, mode="private", acknowledged=True)
+    add_source(run, "Internal capacity review. " * 20, data_class="internal", url="internal capacity review")
+    with pytest.raises(GateRefused) as err:
+        build_report(run, LENSES, publishable=True)
+    assert any(p.message == "a publishable report may not be built from a private run" for p in err.value.problems)
+    assert not (run / "report" / "report.md").exists()
+    build_report(run, LENSES)   # the confidential report is built, and is marked so
+    assert LABEL in how_made_md(run) and "Confidential" in (run / "report" / "report.md").read_text(encoding="utf-8")
+
+
+def test_the_tables_are_the_same_with_and_without_a_recommendation(tmp_path):
+    without = ready_run(tmp_path / "a")
+    with_record = recommended_run(tmp_path / "b")
+    recommend.record_link_check(with_record, "firm-boundaries", "F1", "doubt", READER_ONE, "A doubt.")
+    for run in (without, with_record):
+        build_report(run, LENSES, now=datetime(2026, 11, 16, tzinfo=timezone.utc))
+    for name in ("facts.csv", "sources.csv"):
+        assert (without / "report" / name).read_bytes() == (with_record / "report" / name).read_bytes()
+    assert "A doubt." not in (with_record / "report" / "facts.csv").read_text(encoding="utf-8-sig")
+
+
+# --- Task 12: the Markdown report carries the answer, the companies, the projects and the connections -----------------
+
+ANSWER_NOTE = ("Counted by project. The grouping into projects is a model's judgement; the program checked only that "
+               "each move sits in one project, and that a project holds one company and one country.")
+
+
+def grouped_markdown(tmp_path, analysis=None, group_them=True):
+    from test_report_projects import group, moves_run   # here and not at the top: that file imports this one
+    run = moves_run(tmp_path, analysis)
+    if group_them:
+        group(run)
+    return run, render_markdown(build_model(run, LENSES))
+
+
+def test_the_markdown_opens_on_the_answer_then_companies_then_messages(tmp_path):
+    _, md = grouped_markdown(tmp_path)
+    headings = ["Who is the new capacity for?", "Look at one company", "Key messages", "What the sources say",
+                "Projects", "Connections", "Sources", "How this report was made"]
+    places = [md.index(f"\n## {heading}\n") for heading in headings]
+    assert places == sorted(places) and "## Summary" not in md and "## Competitors" not in md
+    answer = section(md, "Who is the new capacity for?")
+    for line in ("- Open to customers: 1", "- For own use: 1", "- Reports disagree: 0", "- Not stated: 0", "2 projects",
+                 ANSWER_NOTE, "A project counts as open to customers when at least one of its reports says so"):
+        assert line in answer, line
+    assert answer.index("- Open to customers: 1") < answer.index("- Not stated: 0") < answer.index(ANSWER_NOTE)
+    companies = section(md, "Look at one company")
+    assert "- **Example Pharma** (own company): 0 facts, no project" in companies
+    assert ("- **Competitor A**: 1 project; Open to customers: 1, For own use: 0, Reports disagree: 0, Not stated: 0"
+            in companies)
+    assert "- **Competitor B**: 1 project; Open to customers: 0, For own use: 1" in companies
+    assert "Competitor A is adding capacity." in section(md, "Key messages")
+
+
+def test_the_markdown_shows_the_facts_of_an_entry_without_projects_not_a_count_of_zero(tmp_path):
+    run = make_run(tmp_path)
+    add_source(run, "Drug maker X reports a fire. Drug maker Y reports a flood.")
+    add_fact(run, kind="general", fields=None, source_id="S1", primary_source=True,
+             statement="A fire was reported.", quote="Drug maker X reports a fire")
+    add_fact(run, kind="general", fields=None, source_id="S1", primary_source=True,
+             statement="A flood was reported.", quote="Drug maker Y reports a flood")
+    finish_run(run, ["F1"])
+    companies = section(render_markdown(build_model(run, LENSES)), "Look at one company")
+    assert "- **Not about one company**: 2 facts, no project" in companies
+    assert "0 projects" not in companies and "Open to customers" not in companies
+
+
+def test_the_markdown_without_a_grouping_says_why_each_move_counts_alone(tmp_path):
+    _, md = grouped_markdown(tmp_path, group_them=False)
+    answer = section(md, "Who is the new capacity for?")
+    assert "4 projects" in answer and ANSWER_NOTE not in answer
+    assert load_labels()["answer_ungrouped_none"] in answer
+    assert load_labels()["answer_ungrouped_none"] in section(md, "Projects")
+
+
+def test_the_markdown_lists_projects_with_their_reports_and_connections(tmp_path):
+    _, md = grouped_markdown(tmp_path)
+    projects = section(md, "Projects")
+    assert projects.index("### Competitor A, Plant North") < projects.index("### Competitor B, Exampleland")
+    block = projects.split("### Competitor A, Plant North")[1].split("\n### ")[0]
+    assert "Competitor A · Open to customers · 3 confirmed" in block
+    for part in ("Stage: Announced (2), Operating (1)", "Site: Plant North (2)", "Country: Exampleland (3)",
+                 "Planned start: 2028 (3)", "What was added: a second filling line (3)"):
+        assert part in block, part
+    reports = [line for line in block.splitlines() if line.startswith("- ")]
+    assert len(reports) == 3 and [line.split("(")[-1][:2] for line in reports] == ["F3", "F1", "F2"]   # newest first
+    assert all("(2 lines)" in line and "Competitor A" in line for line in reports) and "2026-09-01" in reports[0]
+    single = projects.split("### Competitor B, Exampleland")[1].split("\n### ")[0]
+    assert "For own use · 1 from one source only" in single and "(1)" not in single
+    assert "F4 (One source only)" in single and "Trade Journal" in single
+    connections = section(md, "Connections")
+    assert "| Company | Tie | Party | Status | Fact |" in connections
+    assert "| Competitor A | Customer | Drug maker B | Confirmed | F5 |" in connections
+    assert "### Moves by type" in projects and "| Competitor A |" in projects
+
+
+def test_a_party_that_is_not_named_shows_its_description_in_the_markdown(tmp_path):
+    run = make_run(tmp_path, companies=[{"name": "Competitor A", "other_names": [], "home": False}])
+    add_source(run, "Competitor A sold its plant to a major biopharma partner.")
+    add_fact(run, kind="general", fields=None, source_id="S1", primary_source=True, about_company="Competitor A",
+             statement="Competitor A sold a plant.", quote="Competitor A sold its plant to a major biopharma partner",
+             connections=[{"party": None, "tie": "buyer", "description": "a major biopharma partner"}])
+    finish_run(run, ["F1"])
+    assert "| Competitor A | Buyer | Not named: a major biopharma partner | Confirmed | F1 |" in \
+        section(render_markdown(build_model(run, LENSES)), "Connections")
+
+
+def test_a_markdown_message_lists_its_checks_underneath(tmp_path):
+    from test_report_projects import analysis_with_flags
+    _, md = grouped_markdown(tmp_path, analysis_with_flags())
+    message = section(md, "Key messages")
+    assert message.index("Competitor A is adding capacity.") < message.index("**Sources**") < message.index("**Checks on this message**")
+    assert "**Sources**: Competitor A (S1, the company's own statement), Trade Journal (S2), Competitor A (S3, the company's own statement)" in message
+    checks = message.split("**Checks on this message**")[1]
+    assert "- Framing: The message leans on Competitor A's own words." in checks
+    assert "No base rate was looked for." not in message            # it names no message: the checks section only
+    assert "No base rate was looked for." in section(md, "Checks on this analysis")
+
+
+def test_a_message_without_checks_has_no_checks_list_in_the_markdown(tmp_path):
+    _, md = grouped_markdown(tmp_path)
+    assert "Checks on this message" not in md
+
+
+def test_the_facts_are_listed_by_company_newest_first_with_the_status_shown(tmp_path):
+    _, md = grouped_markdown(tmp_path)
+    facts = section(md, "What the sources say")
+    assert "### Example Pharma" not in facts                                     # it has no fact
+    assert facts.index("### Competitor A") < facts.index("### Competitor B")
+    first = facts.split("### Competitor A")[1].split("\n### ")[0]
+    ids = re.findall(r"— (S\d), ", first)
+    assert ids == ["S3", "S1", "S1", "S1"]                                       # 2026-09-01 first, then 2026-05-14
+    assert "— S2, One source only" in facts.split("### Competitor B")[1]
+    assert "— S1, Confirmed" in first
+
+
+def test_the_markdown_how_made_says_how_the_projects_were_counted_and_which_names_were_dropped(tmp_path):
+    _, md = grouped_markdown(tmp_path)
+    how = section(md, "How this report was made")
+    assert "### How the projects and the answer were counted" in how and ANSWER_NOTE in how
+    assert "were not found in their quotes" not in how
+    run, _ = grouped_markdown(tmp_path / "second")
+    add_fact(run, kind="general", fields=None, source_id="S1", primary_source=True, about_company="Competitor C",
+             statement="A filling line is planned.", quote="Competitor A will add a filling line at Plant North")
+    verify.check_quotes(run)
+    verify.record_support(run, "F6", True, "support-checker", "")
+    verify.settle(run)
+    how = section(render_markdown(build_model(run, LENSES)), "How this report was made")
+    assert "1 company names and 0 names of other parties were not found in their quotes, so they are not shown." in how
+
+
+def test_a_markdown_status_line_says_how_many_rest_on_one_source(tmp_path):
+    _, md = grouped_markdown(tmp_path)
+    assert "1 from one source only · 0 marked uncertain" in md.splitlines()[2]
+
+
+def test_the_new_markdown_text_cannot_form_markup(tmp_path):
+    run, _ = grouped_markdown(tmp_path)
+    from radar import projects
+    projects.record_projects(run, [{"name": "<b>Big</b> [link](http://x.example) plan", "fact_ids": ["F4"]},
+                                   {"name": "Competitor A, Plant North", "fact_ids": ["F1", "F2", "F3"]}],
+                             projects.GROUPER)
+    md = render_markdown(build_model(run, LENSES))
+    assert "<b>" not in md and "[link](" not in md and "\\<b\\>Big\\</b\\> \\[link\\]" in md

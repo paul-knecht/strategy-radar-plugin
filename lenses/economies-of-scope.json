@@ -1,0 +1,26 @@
+{
+  "id": "economies-of-scope",
+  "name": "Shared inputs and the multiproduct firm",
+  "idea": "The work argues that economies of scope, savings from making several products with shared inputs, do not by themselves explain why one firm makes them all, since shared inputs could be sold or contracted for. A multiproduct firm is needed, it argues, when an input such as know-how cannot be traded efficiently between firms.",
+  "suggests": "Look at what a company's businesses share, and ask whether that could be bought, sold or licensed between separate firms instead.",
+  "limits": "The work argues that where a shared input, such as equipment, can be rented or sold to others at low cost, separate firms can capture the same savings without one firm owning both activities.",
+  "competing_idea": "Another view holds that how far a firm can diversify depends on whether its top managers' way of thinking, formed in the core business, fits the new businesses.",
+  "questions": [
+    "Which inputs, such as know-how, equipment or a brand, do the company's products share?",
+    "Could those shared inputs be sold, leased or licensed to another firm instead?",
+    "Is the shared know-how held in people and teams in a way that a contract could not transfer?"
+  ],
+  "originals": [
+    {
+      "reference": "David J. Teece, \"Economies of scope and the scope of the enterprise\", Journal of Economic Behavior & Organization, Vol. 1 No. 3, September 1980, pp. 223-247",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.1016/0167-2681(80)90002-5"
+    },
+    {
+      "reference": "C. K. Prahalad and Richard A. Bettis, \"The dominant logic: A new linkage between diversity and performance\", Strategic Management Journal, Vol. 7 No. 6, November 1986, pp. 485-501",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.1002/smj.4250070602"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

@@ -5,7 +5,7 @@ in the folder, so the answer is always current. The build step asks the gate, wh
 """
 from pathlib import Path
 
-from . import store, verify
+from . import projects, recommend, store, verify
 from .gate import gate
 
 STEPS = ("collect", "extract", "verify", "checkpoint_lenses", "interpret", "checkpoint_final", "build")
@@ -68,7 +68,8 @@ def _verify_step(facts: dict, sources: dict, texts: dict, extract_done: bool) ->
     open_facts = len(facts) - sum(counts.values())   # anything not settled still has to be checked
     detail = (f"{counts['confirmed']} confirmed, {counts['uncertain']} uncertain, "
               f"{counts['rejected']} rejected, {open_facts} still to check")
-    again = sum(1 for fact in facts.values() if verify.needs_settling(fact, sources, texts))
+    again = sum(1 for fact in facts.values()
+                if verify.needs_settling(fact, sources, texts) or verify.codes_need_settling(fact, sources, texts))
     if again:
         detail += f"; {again} fact must be settled again" if again == 1 else f"; {again} facts must be settled again"
         return _step("verify", "in_progress", detail)
@@ -85,13 +86,14 @@ def _checkpoint_step(name: str, recorded: set) -> dict:
 
 
 def _report_is_current(run_dir: Path) -> bool:
-    """True when report.html is not older than anything it was built from: run.json, analysis.json, changes.json
-    and every record under sources/ and facts/. A saved copy that changed is caught by the gate instead."""
+    """True when report.html is not older than anything it was built from: run.json, analysis.json, changes.json,
+    the lens recommendation, the grouping into projects and every record under sources/ and facts/. A saved copy that changed is caught by the gate instead."""
     try:
         built = (run_dir / "report" / "report.html").stat().st_mtime_ns
     except OSError:   # no report yet
         return False
-    inputs = [run_dir / "run.json", run_dir / "analysis.json", run_dir / "changes.json"]
+    inputs = [run_dir / "run.json", run_dir / "analysis.json", run_dir / "changes.json", run_dir / recommend.RECORD,
+              run_dir / projects.RECORD]
     for folder in ("sources", "facts"):
         # a file whose name starts with a dot is not a record: a temporary file left by a killed write, or a folder's
         # own bookkeeping file
@@ -117,7 +119,8 @@ def _build_step(run_dir: Path, earlier_done: bool, lenses_dir: Path | None) -> d
 
 
 def run_status(run_dir: Path, lenses_dir: Path | None = None) -> dict:
-    """The seven steps of a run with their state, the next step and whether it waits for the person."""
+    """The seven steps of a run with their state, the next step, whether it waits for the person and whether the
+    grouping into projects fits the facts (`projects.current`: grouped, none, damaged or outdated)."""
     run_dir = Path(run_dir)
     run = store.load_run(run_dir)
     if not isinstance(run, dict):
@@ -127,12 +130,16 @@ def run_status(run_dir: Path, lenses_dir: Path | None = None) -> dict:
 
     saved = sum(1 for source in sources.values() if source.get("access") == "ok")
     refused = sum(1 for source in sources.values() if source.get("access") == "not_accessible")
+    noted = sum(1 for source in sources.values()
+                if source.get("access") == "ok" and source.get("text_note") == store.LITTLE_RUNNING_TEXT)
+    collected = f"{_counted(saved, 'source', 'sources')} saved, {refused} not accessible"
+    if noted:   # saved pages that may lack their article; a run without one keeps the words above exactly
+        collected += f", {noted} with little running text"
     written = (run_dir / "analysis.json").exists()
     to_read = _sources_to_read(run, sources, facts)
     extract = _extract_step(saved, facts, to_read)
     steps = [
-        _step("collect", "done" if saved else "pending",
-              f"{_counted(saved, 'source', 'sources')} saved, {refused} not accessible"),
+        _step("collect", "done" if saved else "pending", collected),
         extract,
         _verify_step(facts, sources, verify.copy_texts(run_dir, sources), extract["state"] == "done"),
         _checkpoint_step("checkpoint_lenses", recorded),
@@ -144,7 +151,7 @@ def run_status(run_dir: Path, lenses_dir: Path | None = None) -> dict:
     following = next((step["name"] for step in steps if step["state"] != "done"), None)
     return {"run_id": run.get("run_id"), "question": run.get("question"), "mode": run.get("mode"),
             "steps": steps, "sources_to_read": to_read, "next": following,
-            "waiting_for_person": following in _CHECKPOINT_STEPS}
+            "waiting_for_person": following in _CHECKPOINT_STEPS, "grouping": projects.current(run_dir)[1]}
 
 
 def list_runs(root: Path) -> list[dict]:

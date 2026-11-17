@@ -1,0 +1,26 @@
+{
+  "id": "capacity-to-deter-entry",
+  "name": "Capacity as a threat to would-be entrants",
+  "idea": "The work argues that an established firm can deter entry by committing in advance to investment, such as capacity, that changes how it would compete if a rival entered, so that entry looks unprofitable. It argues that only commitments that cannot easily be reversed make the threat to fight entry credible.",
+  "suggests": "Look at whether a competitor has committed to capacity or other investment it could not easily reverse, and whether that commitment would make entry by others look unprofitable.",
+  "limits": "The work argues that, in its model, the established firm does not hold capacity idle to deter entry, so on its account spare capacity that would stay unused is not what deters a rival.",
+  "competing_idea": "Another view holds that established firms may hold excess capacity, ready to raise output and cut prices if a rival entered, so that the spare capacity itself deters entry.",
+  "questions": [
+    "Has a rival committed to capacity or other investment it could not easily reverse, and could that be meant to discourage others from entering?",
+    "Would that commitment change how the rival would compete if a newcomer came in, enough to make entry unprofitable?",
+    "Is any of the rival's capacity standing idle, and if so, is it a credible threat to newcomers or simply spare capacity?"
+  ],
+  "originals": [
+    {
+      "reference": "Avinash Dixit, \"The Role of Investment in Entry-Deterrence\", The Economic Journal, Vol. 90 No. 357, March 1980, pp. 95-106",
+      "level": "reference_confirmed",
+      "link": "https://ideas.repec.org/a/ecj/econjl/v90y1980i357p95-106.html"
+    },
+    {
+      "reference": "A. Michael Spence, \"Entry, Capacity, Investment and Oligopolistic Pricing\", The Bell Journal of Economics, Vol. 8 No. 2, 1977, pp. 534-544",
+      "level": "reference_confirmed",
+      "link": "https://ideas.repec.org/a/rje/bellje/v8y1977iautumnp534-544.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

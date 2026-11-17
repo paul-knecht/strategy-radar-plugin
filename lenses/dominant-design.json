@@ -1,0 +1,22 @@
+{
+  "id": "dominant-design",
+  "name": "When a market settles on one design",
+  "idea": "An encyclopedia entry dates the idea of a dominant design to 1975. It defines one as the design that wins the market's allegiance, to which rivals must adhere to win a following. It states that the idea's originators saw its emergence as a milestone changing how firms compete. Later work, it states, argues that scale economies become important for competition only after such a design emerges.",
+  "suggests": "Look at whether the products in a market now share a common set of key features, and if so whether rivals compete more on cost and scale than on new features.",
+  "limits": "The entry notes that the 1975 work never uses the term dominant design. It states that a dominant design may not be better than other designs. Such designs, it adds, are often identified only after they emerge.",
+  "competing_idea": "The entry states that two other works consider a disruption that enters a mature industry and starts a new cycle. In each cycle, it states, the number of firms rises, peaks with the dominant design and then falls.",
+  "questions": [
+    "Have the products in this market settled on a common set of key features that buyers now expect?",
+    "Since then, has competition shifted toward cost and scale, and has the number of rivals fallen?",
+    "Is a new technology appearing that could start a fresh round of competing designs?"
+  ],
+  "originals": [
+    {
+      "reference": "Wikipedia contributors, \"Dominant design\", Wikipedia, The Free Encyclopedia, revision 1296408217 of 19 June 2025",
+      "about": "James M. Utterback and William J. Abernathy, \"A dynamic model of process and product innovation\", Omega, Vol. 3 No. 6, December 1975, pp. 639-656",
+      "level": "secondary_source_read",
+      "link": "https://en.wikipedia.org/w/index.php?title=Dominant_design&oldid=1296408217"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

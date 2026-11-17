@@ -1,0 +1,22 @@
+{
+  "id": "product-cycle-abroad",
+  "name": "A product's life cycle and where it is made",
+  "idea": "An open textbook states that the work's theory gives a product life cycle three stages: new, maturing and standardized. It states that the theory assumed a new product is made entirely in the home country where it was invented. As an example of the last stage, it names a product that is now standardized and mostly made in low-cost countries.",
+  "suggests": "Look at how mature a company's product is and where it is made: whether production stays near where the product was invented, or has begun to move to lower-cost countries as the product became standard.",
+  "limits": "The textbook states that the theory explains today's trade patterns, in which innovation and manufacturing occur around the world, less well; global companies even locate research and development work in developing markets, where highly skilled staff and facilities usually cost less.",
+  "competing_idea": "The same textbook describes another theory, which focuses on multinational firms and their efforts to win a competitive advantage over other global firms in their industry, and says that what it calls the barriers to entry are the critical ways for firms to gain a lasting competitive advantage.",
+  "questions": [
+    "Is the product new, maturing or standardized, and has the way it is made settled?",
+    "Has production moved, or begun to move, from the country where the product was invented to lower-cost countries?",
+    "Does the company also do research and development abroad, where skilled staff and facilities may cost less?"
+  ],
+  "originals": [
+    {
+      "reference": "International Business, Saylor Academy, section 2.1 \"What Is International Trade Theory?\" (an open textbook)",
+      "level": "secondary_source_read",
+      "about": "Raymond Vernon, \"International Investment and International Trade in the Product Cycle\", The Quarterly Journal of Economics, vol. 80, issue 2, 1966, pp. 190-207",
+      "link": "https://saylordotorg.github.io/text_international-business/s06-01-what-is-international-trade-th.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

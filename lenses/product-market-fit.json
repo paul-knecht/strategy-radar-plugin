@@ -1,0 +1,27 @@
+{
+ "id": "product-market-fit",
+ "name": "Whether the market pulls the product",
+ "idea": "A 2007 blog post says that, of team, product and market, market matters most: a great market draws the product out of the startup, and no team or product saves a bad market. It defines product/market fit as a good market plus a product that satisfies it, and holds that many startups that fail do so because they never reach it.",
+ "suggests": "Look first at how large the market is and whether customers are seeking the product out, before weighing the team.",
+ "limits": "The post assumes that winning a customer costs no more than the customer brings in, that the team is at least competent and the product acceptable, and it says, from what its author has seen in successful startups, that one can ignore almost everything else, though it does not suggest doing so. It adds that short of a profoundly transformative product it would not count on creating a market.",
+ "competing_idea": "The post notes that many entrepreneurs or investors asked which of team, product or market matters most will say team. The abstract of a published survey of venture investors states that they rate the management team somewhat above product or technology, with meaningful variation by company stage and industry.",
+ "questions": [
+  "Are customers actively seeking out this product?",
+  "How large and fast-growing is the market, apart from how good the team is?",
+  "Does what a customer brings in exceed what it costs to win that customer?"
+ ],
+ "originals": [
+  {
+   "reference": "Marc Andreessen, \"The only thing that matters\" (The Pmarca Guide to Startups, Part 4), blog post of 25 June 2007, as archived at Pmarchive",
+   "level": "original_read",
+   "link": "https://pmarchive.com/guide_to_startups_part4.html"
+  },
+  {
+   "reference": "EconPapers (RePEc) bibliographic record of an article, \"How do venture capitalists make decisions?\", Journal of Financial Economics, 135(1), 169-190, 2020, with its abstract",
+   "level": "secondary_source_read",
+   "about": "Paul Gompers, Will Gornall, Steven N. Kaplan and Ilya A. Strebulaev, \"How do venture capitalists make decisions?\", Journal of Financial Economics, Vol. 135 No. 1, 2020, pp. 169-190",
+   "link": "https://econpapers.repec.org/RePEc:eee:jfinec:v:135:y:2020:i:1:p:169-190"
+  }
+ ],
+ "checked_on": "2026-11-17"
+}

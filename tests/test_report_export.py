@@ -12,6 +12,9 @@ from helpers import make_run, add_source, add_fact, finish_run, find, minimal_an
 
 def rows(text): return list(csv.DictReader(io.StringIO(text)))
 
+NEW_COLUMNS = ["about_company", "report_company", "status_shown", "uncertain_reasons", "project_id", "project_name",
+               "connections", "countries", "size_shown", "size_converted"]
+
 def test_csv_safe_defuses_formulas():
     assert csv_safe("=SUM(A1:A9)") == "'=SUM(A1:A9)" and csv_safe("@cmd") == "'@cmd"
     assert csv_safe("+49 751") == "'+49 751" and csv_safe("-2 lines") == "'-2 lines"
@@ -62,7 +65,7 @@ def test_facts_table_columns_are_exactly_the_agreed_ones(tmp_path):
         "company", "home_company", "move_type", "stage", "site", "country", "what_added", "size_value", "size_unit",
         "announced", "planned_start", "access", "delivery", "statement", "quote", "quote_language", "quote_translation",
         "supporting_quotes", "supporting_sources", "supporting_translations", "source_id", "source_title",
-        "source_publisher", "source_date", "source_url"]
+        "source_publisher", "source_date", "source_url", *NEW_COLUMNS]
 
 def test_facts_are_in_numeric_id_order_and_mark_the_home_company(tmp_path):
     run = make_run(tmp_path, home_company="Competitor A")
@@ -347,3 +350,98 @@ def test_the_raw_value_not_stated_stays_in_the_facts_table(tmp_path):
     run = build_demo_run(tmp_path)
     data = rows(facts_csv(build_model(run, DEMO_LENSES)))
     assert any(row["announced"] == "not_stated" for row in data)
+
+
+# --- Task 12: the facts table carries the company, the shown status, the project, the connections and the tidy forms ---
+
+OLD_COLUMNS = ["fact_id", "illustrative", "status", "status_reason", "data_class", "kind", "early_signal", "company",
+               "home_company", "move_type", "stage", "site", "country", "what_added", "size_value", "size_unit",
+               "announced", "planned_start", "access", "delivery", "statement", "quote", "quote_language",
+               "quote_translation", "supporting_quotes", "supporting_sources", "supporting_translations", "source_id",
+               "source_title", "source_publisher", "source_date", "source_url"]
+
+
+def grouped_rows(tmp_path):
+    from test_report_projects import group, moves_run
+    run = moves_run(tmp_path)
+    group(run)
+    return run, {row["fact_id"]: row for row in rows(facts_csv(build_model(run, LENSES)))}
+
+
+def test_the_facts_table_gains_the_new_columns_at_the_end(tmp_path):
+    first = rows(facts_csv(build_model(ready_run(tmp_path), LENSES)))[0]
+    assert list(first)[:len(OLD_COLUMNS)] == OLD_COLUMNS and list(first)[len(OLD_COLUMNS):] == NEW_COLUMNS
+
+
+def test_each_fact_row_names_its_company_status_project_and_connections(tmp_path):
+    _, by_id = grouped_rows(tmp_path)
+    f1, f4, f5 = by_id["F1"], by_id["F4"], by_id["F5"]
+    assert (f1["report_company"], f1["status_shown"], f1["uncertain_reasons"]) == ("Competitor A", "confirmed", "")
+    assert (f1["project_id"], f1["project_name"]) == ("P2", "Competitor A, Plant North")
+    assert (by_id["F3"]["project_id"], f4["project_id"], f4["project_name"]) == ("P2", "P1", "Competitor B, Exampleland")
+    assert (f4["status"], f4["status_shown"], f4["uncertain_reasons"]) == ("uncertain", "single_source", "single_source")
+    assert f4["connections"] == "" and f4["about_company"] == "" and f4["report_company"] == "Competitor B"
+    assert (f5["about_company"], f5["report_company"], f5["connections"]) == \
+        ("Competitor A", "Competitor A", "customer: Drug maker B")
+    assert f5["project_id"] == "" and f5["project_name"] == "" and f5["countries"] == ""   # a general fact is in none
+
+
+def test_without_a_grouping_the_table_names_each_move_s_own_project(tmp_path):
+    from test_report_projects import moves_run
+    by_id = {row["fact_id"]: row for row in rows(facts_csv(build_model(moves_run(tmp_path), LENSES)))}
+    assert (by_id["F1"]["project_id"], by_id["F1"]["project_name"]) == \
+        ("project-F1", "Competitor A: a second filling line, Plant North")
+
+
+def test_a_rejected_fact_keeps_its_stored_columns_and_has_no_project_or_company(tmp_path):
+    data = rows(facts_csv(build_model(ready_run(tmp_path), LENSES)))
+    rejected = data[1]
+    assert (rejected["status"], rejected["status_shown"], rejected["report_company"]) == ("rejected", "rejected", "")
+    assert rejected["project_id"] == "" and rejected["connections"] == "" and rejected["company"] == "Competitor A"
+
+
+def test_a_stored_unit_and_country_stay_as_stored_next_to_their_tidy_forms(tmp_path):
+    run = make_run(tmp_path, companies=[{"name": "Competitor A", "other_names": [], "home": False}])
+    add_source(run, "Competitor A adds two filling lines in the U.S. and in Canada, on 500 sqft of floor.")
+    add_fact(run, source_id="S1", primary_source=True, quote="adds two filling lines in the U.S. and in Canada",
+             fields={"country": "U.S. and Canada", "size_value": "160000", "size_unit": "ft2"})
+    add_fact(run, source_id="S1", primary_source=True, quote="adds two filling lines in the U.S. and in Canada",
+             fields={"country": None, "size_value": "1", "size_unit": "lines"})
+    finish_run(run, ["F1"])
+    first, second = rows(facts_csv(build_model(run, LENSES)))
+    assert (first["country"], first["size_value"], first["size_unit"]) == ("U.S. and Canada", "160000", "ft2")
+    assert first["countries"] == "United States | Canada"
+    assert first["size_shown"] == "160000 ft²" and first["size_converted"] == "about 14900 m²"   # plain digits, no separators
+    assert (second["countries"], second["size_shown"], second["size_converted"]) == ("", "1 line", "")
+
+
+def test_new_cells_are_safe_from_formulas(tmp_path):
+    from radar import projects
+    run = make_run(tmp_path, companies=[{"name": "Competitor A", "other_names": [], "home": False}])
+    add_source(run, "=Evil Corp sold its plant to =1+1 Holdings and to a partner. It adds a line in =Exampleland.")
+    add_fact(run, kind="general", fields=None, source_id="S1", primary_source=True, about_company="=Evil Corp",
+             statement="A plant was sold.", quote="=Evil Corp sold its plant to =1+1 Holdings and to a partner",
+             connections=[{"party": "=1+1 Holdings", "tie": "buyer", "description": None},
+                          {"party": None, "tie": "partner", "description": "=a partner"}])
+    add_fact(run, source_id="S1", primary_source=True, quote="It adds a line in =Exampleland",
+             fields={"country": "Canada and =Exampleland", "size_value": "-2", "size_unit": "lines"})
+    finish_run(run, ["F1"])
+    projects.record_projects(run, [{"name": "=SUM(A1) plan", "fact_ids": ["F2"]}], projects.GROUPER)
+    first, second = rows(facts_csv(build_model(run, LENSES)))
+    assert first["about_company"] == "'=Evil Corp"              # as stored, defused at the start of its cell
+    assert first["connections"] == "buyer: 1+1 Holdings | partner: not named (=a partner)"   # no entry starts with a sign
+    assert (second["project_name"], second["countries"], second["size_shown"]) == \
+        ("'=SUM(A1) plan", "Canada | '=Exampleland", "'-2 lines")
+
+
+def test_a_company_the_name_check_dropped_leaves_the_about_company_cell_empty(tmp_path):
+    run = make_run(tmp_path, companies=[{"name": "Competitor A", "other_names": [], "home": False}])
+    add_source(run, "Competitor A sold its plant to a partner. Competitor B opened a site.")
+    add_fact(run, kind="general", fields=None, source_id="S1", primary_source=True, about_company="Competitor B",
+             statement="A plant was sold.", quote="Competitor A sold its plant to a partner")
+    add_fact(run, kind="general", fields=None, source_id="S1", primary_source=True, about_company="Competitor A",
+             statement="A plant was sold.", quote="Competitor A sold its plant to a partner")
+    finish_run(run, ["F1"])
+    dropped, kept = rows(facts_csv(build_model(run, LENSES)))
+    assert (dropped["about_company"], dropped["report_company"]) == ("", "")   # the quote never names Competitor B
+    assert (kept["about_company"], kept["report_company"]) == ("Competitor A", "Competitor A")

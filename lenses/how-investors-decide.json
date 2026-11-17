@@ -1,0 +1,34 @@
+{
+ "id": "how-investors-decide",
+ "name": "What investors say decides a deal",
+ "idea": "A summary by one of the authors, posted while the paper was forthcoming, reports a survey of almost nine hundred venture investors who place the greatest importance on the management and founding team. The published paper's abstract reports 885 investors, who rate the team somewhat above business-related traits such as product or technology, and who credit success or failure more to the team.",
+ "suggests": "Look at what the evidence says about the team, the business model, the product and the market, and note which of these the evidence covers least.",
+ "limits": "The results are what investors report, and the summary says academics and practitioners debate which selection factors matter most. It adds that these investors did not cite their own contribution to success or failure.",
+ "competing_idea": "An article on a study of firms states that its authors read the results as favouring the product and market over the management team.",
+ "questions": [
+  "What does the evidence say about the founders and management team?",
+  "What does it say about the business model, the product and the market?",
+  "Which of these factors has the evidence not covered at all?"
+ ],
+ "originals": [
+  {
+   "reference": "Will Gornall, \"How Do Venture Capitalists Make Decisions?\", Harvard Law School Forum on Corporate Governance, 20 August 2019",
+   "about": "Paul Gompers, Will Gornall, Steven N. Kaplan and Ilya A. Strebulaev, \"How do venture capitalists make decisions?\", Journal of Financial Economics, Vol. 135 No. 1, 2020, pp. 169-190",
+   "level": "secondary_source_read",
+   "link": "https://corpgov.law.harvard.edu/2019/08/20/how-do-venture-capitalists-make-decisions/"
+  },
+  {
+   "reference": "EconPapers (RePEc) bibliographic record of an article, \"How do venture capitalists make decisions?\", Journal of Financial Economics, 135(1), 169-190, 2020, with its abstract",
+   "level": "secondary_source_read",
+   "about": "Paul Gompers, Will Gornall, Steven N. Kaplan and Ilya A. Strebulaev, \"How do venture capitalists make decisions?\", Journal of Financial Economics, Vol. 135 No. 1, 2020, pp. 169-190",
+   "link": "https://econpapers.repec.org/RePEc:eee:jfinec:v:135:y:2020:i:1:p:169-190"
+  },
+  {
+   "reference": "Chicago Booth Review, \"Bet on the Horse\", 1 December 2005",
+   "about": "Steven N. Kaplan, Berk A. Sensoy and Per Stromberg, \"What Are Firms? Evolution from Birth to Public Companies\", NBER Working Paper 11581, August 2005",
+   "level": "secondary_source_read",
+   "link": "https://www.chicagobooth.edu/review/bet-horse"
+  }
+ ],
+ "checked_on": "2026-11-17"
+}

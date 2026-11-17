@@ -1,0 +1,26 @@
+{
+  "id": "free-cash-flow",
+  "name": "Cash beyond good projects",
+  "idea": "The work argues that managers of a firm with free cash flow, cash beyond what its profitable projects need, tend to spend it on growth that wastes it rather than pay it out to owners. Debt, it argues, curbs this by committing the firm to pay out future cash, and takeovers can discipline managers who waste it.",
+  "suggests": "Look at whether a company generates more cash than its profitable projects need, and at what it does with the rest: pays it out, or spends it on growth.",
+  "limits": "The work argues that the problem is greatest in firms with large cash flows and few profitable chances to grow, and that its remedy of debt suits such firms rather than growing ones.",
+  "competing_idea": "Another view holds that bidders overpay in takeovers because their managers overestimate a target's value.",
+  "questions": [
+    "Does the company generate more cash than its profitable projects can use?",
+    "Has it spent spare cash on acquisitions or growth with low returns rather than paying it out?",
+    "Do debt payments or pressure from owners limit what managers can do with spare cash?"
+  ],
+  "originals": [
+    {
+      "reference": "Michael C. Jensen, \"Agency Costs of Free Cash Flow, Corporate Finance, and Takeovers\", American Economic Review, Vol. 76 No. 2, 1986, pp. 323-329",
+      "level": "reference_confirmed",
+      "link": "https://openalex.org/W3121131820"
+    },
+    {
+      "reference": "Richard Roll, \"The Hubris Hypothesis of Corporate Takeovers\", The Journal of Business, Vol. 59 No. 2, April 1986, pp. 197-216",
+      "level": "reference_confirmed",
+      "link": "https://ideas.repec.org/a/ucp/jnlbus/v59y1986i2p197-216.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

@@ -1,0 +1,22 @@
+{
+  "id": "resources-hard-to-copy",
+  "name": "Resources that are valuable, rare and hard to copy",
+  "idea": "A review says the resource-based view aims to explain internal sources of lasting advantage. In the view, it says, a firm needs valuable, rare, hard-to-imitate and non-substitutable resources to gain one. It says the view rests on resources that differ by firm and are immobile. It says mechanisms stopping rivals competing above-normal profits away provide after-the-fact sources of that advantage.",
+  "suggests": "Look at which resources a company relies on for its edge, whether rivals could buy, build or substitute them, and what protects them.",
+  "limits": "The review finds the view's core message can withstand five of the critiques it reviews quite well, if its variables, boundaries and applicability are adequately specified. It finds three critiques cannot readily be dismissed; they arise from the indeterminate concepts of resource and of value and from the view's narrow idea of competitive advantage.",
+  "competing_idea": "Another view, which the review sets out, places what decides a firm's results in the structure of its industry rather than inside the firm. The review says the resource view complements that view rather than replacing it.",
+  "questions": [
+    "Which of the company's resources are valuable, rare, hard to copy and hard to replace with something else?",
+    "What stops rivals from building or buying the same resource, and how long would that protection last?",
+    "Is the company organised to make use of the resource, or does it hold it without exploiting it?"
+  ],
+  "originals": [
+    {
+      "reference": "Jeroen Kraaijenbrink, JC Spender and Aard Groen, \"The resource-based view: A review and assessment of its critiques\", MPRA Paper No. 21442, 2009 (published in Journal of Management, Vol. 36 No. 1, 2010, pp. 349-372)",
+      "level": "secondary_source_read",
+      "about": "The resource-based view of the firm and its critiques, including Jay Barney, \"Firm Resources and Sustained Competitive Advantage\", Journal of Management, Vol. 17 No. 1, March 1991, pp. 99-120",
+      "link": "https://mpra.ub.uni-muenchen.de/21442/"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

@@ -55,15 +55,18 @@ One JSON object and nothing else: no words before it or after it.
   "flags": [
     {
       "check": "independence",
-      "text": "The report that Competitor C may offer a line to outside customers (F7) rests on one unnamed source and is marked uncertain. The note on contradictions leans on it."
+      "text": "The report that Competitor C may offer a line to outside customers (F7) rests on one unnamed source and is marked uncertain. The note on contradictions leans on it.",
+      "message_ids": []
     },
     {
       "check": "causality",
-      "text": "A reasoning step in message M3 says a plant is hard to reverse, so these moves tell rivals how each firm means to compete. F3 and F6 state the moves; no fact of this run states how any rival read them."
+      "text": "A reasoning step in message M3 says a plant is hard to reverse, so these moves tell rivals how each firm means to compete. F3 and F6 state the moves; no fact of this run states how any rival read them.",
+      "message_ids": ["M3"]
     },
     {
       "check": "evidence_symmetry",
-      "text": "The points for buying outside capacity rest on F4, from source S3, whose record says it must be accurate for regulators but also wants to sound attractive to customers. No point against it comes from a source with the opposite stake."
+      "text": "The points for buying outside capacity rest on F4, from source S3, whose record says it must be accurate for regulators but also wants to sound attractive to customers. No point against it comes from a source with the opposite stake.",
+      "message_ids": []
     }
   ],
   "considered": ["framing", "outside_view", "uncertainty", "competitor_response", "evidence_symmetry", "missing_information", "success_stories", "causality", "disconfirmation", "independence"],
@@ -71,7 +74,7 @@ One JSON object and nothing else: no words before it or after it.
 }
 ```
 
-`check` is one of the ten names, exactly as the checks file writes them. The lead copies each flag into `audit_flags` word for word, so each flag has exactly `check` and `text`. `considered` always holds all ten names in the same order. `instructions_found` is always present, a list of plain sentences, and is empty when you found none. When nothing is flagged, `flags` is an empty list.
+`check` is one of the ten names, exactly as the checks file writes them. The lead copies each flag into `audit_flags` word for word, so each flag has exactly `check`, `text` and `message_ids`. `message_ids` lists the key messages the flag is about, by their ids such as M2, and is an empty list when it is about none. It names only messages of the analysis you read. `considered` always holds all ten names in the same order. `instructions_found` is always present, a list of plain sentences, and is empty when you found none. When nothing is flagged, `flags` is an empty list.
 
 ## What you never do
 

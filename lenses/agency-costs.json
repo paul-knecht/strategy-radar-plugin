@@ -1,0 +1,22 @@
+{
+  "id": "agency-costs",
+  "name": "Agency costs",
+  "idea": "A review chapter calls the work an influential analysis of corporate agency problems, tying agency costs to ownership structure and the firm's conduct. It defines agency costs as the principal's spending on monitoring, the agent's on bonding, and the loss left when their interests diverge. It adds that conflicts among shareholders, managers and lenders generate agency costs of equity and debt.",
+  "suggests": "Look at where managers' interests may part from those of owners and lenders, what the company spends on watching its managers, what the managers spend on binding themselves, and what loss remains.",
+  "limits": "The chapter says classical models assume people are mainly self-interested, downplaying norms and intrinsic motives, and that simple uses can overstate agency problems, as staff often cooperate even when outside incentives are weak. It holds the theory strongest where goals are reasonably contractible, performance measurable with tolerable noise, horizons short to medium, and enforcement credible.",
+  "competing_idea": "The chapter advises that in non-standard settings the mechanisms be tested against plausible alternatives such as stewardship, institutional and relational theories. The chapter adds that research on relational contracts shows believable promises and enforcement outside formal rules can replace or complement formal incentives.",
+  "questions": [
+    "Where do the interests of the company's managers differ from those of its owners or lenders?",
+    "How do its ownership and debt structure change managers' reasons to act for the owners?",
+    "Do loyalty, cooperation or informal promises keep managers in line where formal incentives are weak?"
+  ],
+  "originals": [
+    {
+      "reference": "Ying Zhang and Savvas Papagiannidis, \"Agency Theory: A review\", in S. Papagiannidis (ed.), TheoryHub Book, Newcastle University, 2026, ISBN 9781739604400 (CC BY-NC-ND 4.0)",
+      "level": "secondary_source_read",
+      "about": "Michael C. Jensen and William H. Meckling, \"Theory of the firm: Managerial behavior, agency costs and ownership structure\", Journal of Financial Economics, Vol. 3 No. 4, 1976, pp. 305-360",
+      "link": "https://open.ncl.ac.uk/theories/21/agency-theory/"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

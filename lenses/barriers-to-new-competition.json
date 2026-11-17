@@ -1,0 +1,22 @@
+{
+  "id": "barriers-to-new-competition",
+  "name": "Barriers that keep new competitors out",
+  "idea": "An encyclopedia entry lists a definition of a barrier to entry used in 1956: an advantage of established sellers over would-be entrants, seen in how far they can keep prices above competitive levels without drawing new firms in. It also says barriers to entry in general protect incumbents, restrict competition, can help distort prices, and matter most in antitrust policy.",
+  "suggests": "Look at what keeps new firms from entering a company's market, how far established firms can keep prices up without attracting entrants, and whether a planned move raises or lowers that protection.",
+  "limits": "The entry reports criticism that this definition is tautological, because it builds its own consequences into what it defines. It also says some things sometimes cited as barriers to entry do not fit all of the common definitions.",
+  "competing_idea": "The entry reports another definition, from 1968: a cost of producing that an entrant must bear but firms already in the industry do not; it reports criticism of its phrase \"is not borne\" as confusing and incomplete.",
+  "questions": [
+    "What advantages do the established firms in this market hold over a firm that might enter it?",
+    "Can the established firms keep prices above competitive levels without drawing in new competitors, and for how long?",
+    "Does the planned move raise a barrier to entry, lower one, or face one?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Barriers to entry\", Wikipedia, revision 1381492941 of 22 October 2026",
+      "level": "secondary_source_read",
+      "about": "Joe S. Bain's use in 1956 of a definition of a barrier to entry, as the entry states it; the entry names no work. Bain's 1956 book Barriers to New Competition (Harvard University Press; Library of Congress record LCCN 56011278) is a lead, not confirmed as the source of this definition",
+      "link": "https://en.wikipedia.org/w/index.php?title=Barriers_to_entry&oldid=1381492941"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

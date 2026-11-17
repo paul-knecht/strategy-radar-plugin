@@ -382,9 +382,9 @@ def pack_messages():
 
 def test_the_code_reading_helper_finds_the_pack_messages():
     found_in_code = pack_messages()
-    assert len(found_in_code) == 22
+    assert len(found_in_code) == 23   # 2026-11-17: the screening mark
     for expected in ("a pack lists candidates only", "must be a whole number from 1 to 120", pack.NOT_READABLE,
-                     pack.EMPTY, pack.UNKNOWN_KEY, pack.ID_FILE):
+                     pack.EMPTY, pack.UNKNOWN_KEY, pack.ID_FILE, pack.SCREENING_NOT_ALLOWED):
         assert expected in found_in_code
 
 
@@ -722,3 +722,69 @@ def test_a_pack_name_too_long_for_a_file_name_is_recorded_as_written(tmp_path, c
 def test_the_shipped_packs_are_the_plugin_s_own_folder():
     from radar import cli
     assert cli.SHIPPED_PACKS == ROOT / "packs" and (cli.SHIPPED_PACKS / "demo.json").is_file()
+
+
+# --- other names ----------------------------------------------------------------------------
+
+def test_other_names_are_taken_for_the_company_and_each_candidate(tmp_path):
+    path = write_pack(
+        tmp_path, other_names=["Example Pharma Group", "EP"],
+        competitors=[{**CANDIDATE, "other_names": ["Competitor A Holding"]}],
+        watch=[{**CANDIDATE, "name": "Competitor D", "other_names": []}])
+    assert found(path) == []
+    assert found(write_pack(tmp_path, other_names=[])) == []     # may be left out, or empty
+
+
+def test_other_names_must_be_a_list_of_filled_texts(tmp_path):
+    assert found(write_pack(tmp_path, other_names="x")) == [("other_names", pack.NOT_LIST)]
+    assert found(write_pack(tmp_path, other_names=["", 3])) == [
+        ("other_names[0]", pack.EMPTY), ("other_names[1]", pack.NOT_TEXT)]
+    assert found(write_pack(tmp_path, competitors=[{**CANDIDATE, "other_names": "x"}])) == [
+        ("competitors[0].other_names", pack.NOT_LIST)]
+    assert found(write_pack(tmp_path, watch=[{**CANDIDATE, "other_names": [" ", None]}])) == [
+        ("watch[0].other_names[0]", pack.EMPTY), ("watch[0].other_names[1]", pack.NOT_TEXT)]
+
+
+def test_companies_of_puts_the_home_company_first_then_competitors_then_watch():
+    data = {"company": "Example Pharma", "other_names": ["Example Pharma Group", " "],
+            "competitors": [{"name": "Competitor A", "other_names": ["Competitor A Holding"]},
+                            {"name": "Competitor B"},
+                            {"name": "  example   PHARMA "}],     # the home company again: skipped
+            "watch": [{"name": "Competitor D", "other_names": []}, {"name": "competitor a"}]}
+    assert pack.companies_of(data) == [
+        {"name": "Example Pharma", "other_names": ["Example Pharma Group"], "home": True},
+        {"name": "Competitor A", "other_names": ["Competitor A Holding"], "home": False},
+        {"name": "Competitor B", "other_names": [], "home": False},
+        {"name": "Competitor D", "other_names": [], "home": False}]
+    assert [c["name"] for c in pack.companies_of(data)] == [
+        "Example Pharma", "Competitor A", "Competitor B", "Competitor D"]
+
+
+def test_companies_of_the_demo_pack_lists_each_invented_company_once():
+    data = json.loads(DEMO.read_text(encoding="utf-8"))
+    companies = pack.companies_of(data)
+    assert [c["name"] for c in companies] == ["Example Pharma", "Competitor A", "Competitor B", "Competitor C",
+                                              "Competitor D", "Drug maker B"]
+    assert [c["home"] for c in companies] == [True] + [False] * 5
+
+
+def test_companies_of_a_pack_that_was_not_checked_never_raises():
+    assert pack.companies_of({}) == []
+    assert pack.companies_of({"company": 5, "other_names": "x", "competitors": "y", "watch": [3, {"name": None}]}) == []
+
+
+
+# --- the screening mark (VC screening memo, 2026-11-17) ------------------------------------
+
+STARTUP = ROOT / "tests" / "fixtures" / "startup-pack.json"
+
+
+def test_the_screening_mark_must_be_true_or_false(tmp_path):
+    assert found(write_pack(tmp_path, screening="yes")) == [("screening", pack.SCREENING_NOT_ALLOWED)]
+    assert found(write_pack(tmp_path, screening=1)) == [("screening", pack.SCREENING_NOT_ALLOWED)]
+    assert found(write_pack(tmp_path, screening=True)) == []
+    assert found(write_pack(tmp_path, screening=None)) == []   # write_pack drops a key given as None: no key is valid
+
+
+def test_the_startup_fixture_pack_passes():
+    assert pack.check_pack(STARTUP) == []

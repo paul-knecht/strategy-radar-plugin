@@ -1,0 +1,28 @@
+{
+  "id": "integration-or-local-responsiveness",
+  "name": "Global integration or local responsiveness",
+  "idea": "An open textbook states that globalized companies have typically moved to one of four structures, each placed in a matrix of global aggregation and local adaptation that the textbook credits to its first developers. It puts the pure multidomestic structure high on local adaptation and low on aggregation, the pure global company the reverse, and the transnational model aiming at both at once.",
+  "suggests": "Look at where a company's decisions about products, sourcing and resources are made: in each country, at headquarters, or in a mix of both, and whether that fits what its markets need in local adaptation and in scale.",
+  "limits": "The textbook states that the transnational model needs management-intensive processes and is very hard to put into practice in its pure form, and that many companies have settled on matrix-like structures that are easier to manage.",
+  "competing_idea": "The same textbook states that another framework offers three generic approaches to creating value across borders; it describes arbitrage as exploiting economic or other differences between countries or regions, usually by spreading the stages of the supply chain across them.",
+  "questions": [
+    "How much does the company adapt its offer to each country, and how much does it standardise across countries?",
+    "Which key decisions sit with country units and which with headquarters?",
+    "If it tries to be both locally responsive and globally integrated, how does it manage the extra complexity?"
+  ],
+  "originals": [
+    {
+      "reference": "Fundamentals of Global Strategy, Saylor Academy, section 10.4 \"Organization as Strategy\" (an open textbook)",
+      "level": "secondary_source_read",
+      "about": "the matrix of global aggregation and local adaptation that the textbook section credits to Bartlett and Ghoshal (it cites their works of 1987a, 1987b, 1988, 1992 and 2000, and not the 1989 book); their book \"Managing across borders: the transnational solution\" (Harvard Business School Press, Boston, 1989) is not cited by the textbook; its reference is confirmed by its library record",
+      "link": "https://saylordotorg.github.io/text_fundamentals-of-global-strategy/s12-04-organization-as-strategy.html"
+    },
+    {
+      "reference": "Fundamentals of Global Strategy, Saylor Academy, section 3.1 \"Ghemawat's AAA Global Strategy Framework\" (an open textbook)",
+      "level": "secondary_source_read",
+      "about": "the framework of Ghemawat that the textbook section sets out (it cites Ghemawat 2007a, chap. 6)",
+      "link": "https://saylordotorg.github.io/text_fundamentals-of-global-strategy/s05-01-ghemawat-s-aaa-global-strategy.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

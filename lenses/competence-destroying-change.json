@@ -1,0 +1,26 @@
+{
+  "id": "competence-destroying-change",
+  "name": "Change that destroys skills",
+  "idea": "The work argues that technology advances step by step until broken by discontinuities, which either enhance or destroy the competence of existing firms. Competence-destroying change, it argues, tends to come from new entrants and to make the market more turbulent, while competence-enhancing change tends to come from existing firms and to make it less so.",
+  "suggests": "Look at whether a new technology in a market builds on what existing firms already know how to do, or makes that knowledge obsolete.",
+  "limits": "The work argues that such discontinuities are rare and arrive at irregular intervals, so long periods of step-by-step change lie between them.",
+  "competing_idea": "Another view holds that even changes that leave a product's components much the same can defeat established firms, when they alter how the components are linked.",
+  "questions": [
+    "Does this new technology build on the existing firms' skills, or make them obsolete?",
+    "Who is bringing it to market: established firms or new entrants?",
+    "Has the market become more turbulent since it appeared, with firms entering, leaving or changing places?"
+  ],
+  "originals": [
+    {
+      "reference": "Michael L. Tushman and Philip Anderson, \"Technological Discontinuities and Organizational Environments\", Administrative Science Quarterly, Vol. 31 No. 3, September 1986, pp. 439-465",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.2307/2392832"
+    },
+    {
+      "reference": "Rebecca M. Henderson and Kim B. Clark, \"Architectural Innovation: The Reconfiguration of Existing Product Technologies and the Failure of Established Firms\", Administrative Science Quarterly, Vol. 35 No. 1, March 1990, pp. 9-30",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.2307/2393549"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

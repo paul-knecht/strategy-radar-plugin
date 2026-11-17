@@ -1,10 +1,12 @@
 """The data check: validate run.json, every source, every fact and analysis.json.
 
-`check_data` never raises on a broken run folder. Every empty or unreadable file becomes one
+`check_data` never raises on a broken run folder. Every empty or unreadable file of the run becomes one
 Problem with the message "not valid JSON", except a file this user may not open, which is named so. Problems come in a stable order: run.json, sources by
-id number, facts by id number, analysis.json (then any lens files it names). The checks of
-analysis.json live in `schema_analysis.py`; `check_data` stays the single entry point.
+id number, facts by id number, analysis.json (then any lens files it names, judged by `lenses.check_lens` with messages
+of its own), then the lens recommendation, by its form only (`recommend.shape_problems`; a run without one is fine, and the gate leaves out every problem of that file), and last the grouping into projects, by its form only (`projects.shape_problems`; the same holds).
+The checks of analysis.json live in `schema_analysis.py`; `check_data` stays the single entry point.
 """
+import os
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,14 +19,16 @@ from .verify import is_early_signal
 SAVED_BY = ("program", "hand")
 SOURCE_ACCESS = ("ok", "not_accessible")
 FACT_KINDS = ("capacity_move", "general")
-# Every key a fact may hold: what a proposal brings, and what the program adds (id, checks, status, withdrawal).
+# Every key a fact may hold: what a proposal brings, and what the program adds (id, checks, status, its reason, the codes for why a fact is uncertain, withdrawal).
 FACT_KEYS = ("id", "kind", "statement", "quote", "quote_language", "quote_translation", "source_id", "supporting",
-             "primary_source", "certainty", "tentative_reason", "early_signal", "fields", "checks", "status",
-             "status_reason", "withdrawn")
+             "primary_source", "certainty", "tentative_reason", "early_signal", "fields", "about_company",
+             "connections", "checks", "status", "status_reason", "uncertain_reasons", "withdrawn")
+COMPANY_KEYS = ("name", "other_names", "home")   # a company the run lists, from its pack
 SUPPORTING_KEYS = ("source_id", "quote", "quote_translation")
-PROGRAM_KEYS = ("id", "checks", "status", "status_reason", "withdrawn")   # set by the program, never by a proposal
+CONNECTION_KEYS = ("party", "tie", "description")   # a customer, buyer, seller or partner a fact names
+PROGRAM_KEYS = ("id", "checks", "status", "status_reason", "uncertain_reasons", "withdrawn")   # set by the program, never by a proposal
 CAPACITY_MOVE_FIELDS = ("company", "move_type", "site", "country", "what_added", "size_value", "size_unit",
-                        "announced", "planned_start", "stage", "access", "delivery")
+                        "announced", "planned_start", "stage", "access", "delivery", "in_question")
 
 EMPTY = "must not be empty"
 NOT_ALLOWED = "not an allowed value"
@@ -40,6 +44,12 @@ GROUPED_NUMBER = "write the number without thousands separators"
 DEMO_MARK_PROBLEM = "the practice-run mark is only allowed on the invented private practice run"
 SIZE_AS_TEXT = 'write the size as text, such as "2.5"'
 MUST_BE_TEXT = "must be text"
+TWO_OWN_COMPANIES = "at most one company of a run is its own company"
+NOTE_ON_A_WEB_PAGE_ONLY = "only a saved web page can have the note little_running_text"
+ABOUT_ON_A_MOVE = "a capacity move names its company in fields.company"
+UNNAMED_PARTY = "a connection that names no party must describe it"   # stored facts only; a proposal gets the next one
+IN_QUESTION_MISSING = "in_question is missing; it must be yes or no, set by the extractor"
+UNNAMED_PROPOSED_PARTY = "a connection names its other party; leave out a tie whose party the source does not name"
 
 
 @dataclass(frozen=True)
@@ -92,6 +102,39 @@ class _Problems:
             self.add(file, prefix + field, NOT_ALLOWED)
 
 
+def _check_companies(out: _Problems, run: dict) -> None:
+    """The companies of a run, as `init-run` records them from the pack. A run made before the key existed has none."""
+    if "companies" not in run:
+        return
+    companies = run["companies"]
+    if not isinstance(companies, list):
+        out.add("run.json", "companies", NOT_ALLOWED)
+        return
+    homes = 0
+    for index, company in enumerate(companies):
+        prefix = f"companies[{index}]"
+        if not isinstance(company, dict):
+            out.add("run.json", prefix, NOT_ALLOWED)
+            continue
+        for key in company:
+            if key not in COMPANY_KEYS:
+                out.add("run.json", f"{prefix}.{key}", NOT_ALLOWED)
+        out.nonempty("run.json", company, "name", f"{prefix}.")
+        names = company.get("other_names")
+        if not isinstance(names, list):
+            out.add("run.json", f"{prefix}.other_names", NOT_ALLOWED)
+        else:
+            for place, name in enumerate(names):
+                if not _filled(name):
+                    out.add("run.json", f"{prefix}.other_names[{place}]", EMPTY)
+        if not isinstance(company.get("home"), bool):
+            out.add("run.json", f"{prefix}.home", NOT_ALLOWED)
+        elif company["home"]:
+            homes += 1
+    if homes > 1:
+        out.add("run.json", "companies", TWO_OWN_COMPANIES)
+
+
 # --- run.json --------------------------------------------------------------
 
 def _check_run(out: _Problems, run_dir: Path) -> dict | None:
@@ -119,6 +162,7 @@ def _check_run(out: _Problems, run_dir: Path) -> dict | None:
     for key in store.RUN_RECORD_LISTS:   # every run record has them, each a list
         if not isinstance(run.get(key), list):
             out.add("run.json", key, NOT_ALLOWED)
+    _check_companies(out, run)
     checkpoints = run.get("checkpoints")
     for index, checkpoint in enumerate(checkpoints if isinstance(checkpoints, list) else []):
         prefix = f"checkpoints[{index}]."
@@ -190,6 +234,26 @@ def _is_web_address(value) -> bool:
     return True
 
 
+def _is_saved_web_page(source: dict) -> bool:
+    """Whether a source is a saved copy of a web page: its original is an .html or .htm file (save-source and
+    add-copy name it so)."""
+    orig_file = source.get("orig_file")
+    return (source.get("access") == "ok" and isinstance(orig_file, str)
+            and orig_file.lower().endswith((".html", ".htm")))
+
+
+def _check_text_note(out: _Problems, file: str, source: dict) -> None:
+    """A record without the key is fine (every record written before it existed has none). When it is there, it holds
+    its one value, and only on a saved web page: the program never sets it on a PDF, a text or a table."""
+    if "text_note" not in source:
+        return
+    note = source["text_note"]
+    if not (isinstance(note, str) and note in store.TEXT_NOTES):
+        out.add(file, "text_note", NOT_ALLOWED)
+    elif not _is_saved_web_page(source):
+        out.add(file, "text_note", NOTE_ON_A_WEB_PAGE_ONLY)
+
+
 def _check_source(out: _Problems, run_dir: Path, path: Path, source: dict, run_mode,
                   source_ids: set[str], links: dict[str, list[str]]) -> None:
     file = f"sources/{path.name}"
@@ -212,6 +276,7 @@ def _check_source(out: _Problems, run_dir: Path, path: Path, source: dict, run_m
     final_url = source.get("final_url")   # a record written before the key existed has none
     if final_url is not None and not _is_web_address(final_url):
         out.add(file, "final_url", NOT_ALLOWED)
+    _check_text_note(out, file, source)
     based_on = source.get("based_on")
     if based_on is not None and not isinstance(based_on, list):
         out.add(file, "based_on", NOT_ALLOWED)
@@ -338,6 +403,11 @@ def _fact_rules(out: _Problems, file: str, fact: dict, source_ids: set[str], ear
         _optional_text(out, file, fact, "tentative_reason")
     if fact.get("status") in ("uncertain", "rejected"):
         out.nonempty(file, fact, "status_reason")
+    if "uncertain_reasons" in fact:   # a fact settled before the codes existed has none, which is fine
+        codes = fact["uncertain_reasons"]
+        if not (isinstance(codes, list) and all(isinstance(code, str) and code in store.UNCERTAIN_REASONS
+                                                for code in codes)):
+            out.add(file, "uncertain_reasons", NOT_ALLOWED)
     withdrawn = fact.get("withdrawn")
     if withdrawn is not None:
         if isinstance(withdrawn, dict):
@@ -350,6 +420,7 @@ def _fact_rules(out: _Problems, file: str, fact: dict, source_ids: set[str], ear
         out.nonempty(file, fact, "quote_translation")
     else:
         _optional_text(out, file, fact, "quote_translation")
+    _company_and_connections(out, file, fact)
     fields = fact.get("fields")
     if fact.get("kind") == "capacity_move":
         if not isinstance(fields, dict):
@@ -370,8 +441,45 @@ def _fact_rules(out: _Problems, file: str, fact: dict, source_ids: set[str], ear
         out.allowed(file, fields, "access", store.ACCESS, "fields.")
         if fields.get("delivery") is not None:
             out.allowed(file, fields, "delivery", store.DELIVERY, "fields.")
+        if "in_question" in fields:   # a move stored before the field existed has none; a proposal must have it
+            out.allowed(file, fields, "in_question", store.IN_QUESTION, "fields.")
     elif fact.get("kind") == "general" and fields is not None:
         out.add(file, "fields", NOT_ALLOWED)
+
+
+def _company_and_connections(out: _Problems, file: str, fact: dict) -> None:
+    """The company a fact is about and the parties it names. Whether a name stands in a quote is judged when the
+    report is built, not here. A fact stored before the keys existed has neither, which is fine."""
+    if fact.get("kind") == "capacity_move" and fact.get("about_company") is not None:
+        out.add(file, "about_company", ABOUT_ON_A_MOVE)
+    else:
+        _optional_name(out, file, fact, "about_company")
+    connections = fact.get("connections")
+    if connections is not None and not isinstance(connections, list):
+        out.add(file, "connections", NOT_ALLOWED)
+        return
+    for index, connection in enumerate(connections or []):
+        prefix = f"connections[{index}]."
+        if not isinstance(connection, dict):
+            out.add(file, f"connections[{index}]", NOT_ALLOWED)
+            continue
+        _unknown_keys(out, file, connection, CONNECTION_KEYS, prefix)
+        out.allowed(file, connection, "tie", store.CONNECTION_TIES, prefix)
+        _optional_name(out, file, connection, "party", prefix)
+        description = connection.get("description")
+        if description is not None and not isinstance(description, str):
+            out.add(file, prefix + "description", MUST_BE_TEXT)
+        elif connection.get("party") is None and not _filled(description):
+            out.add(file, prefix + "description", UNNAMED_PARTY)
+
+
+def _optional_name(out: _Problems, file: str, record: dict, key: str, prefix: str = "") -> None:
+    """A name that may be null: when given, it is filled text."""
+    value = record.get(key)
+    if value is not None and not isinstance(value, str):
+        out.add(file, prefix + key, MUST_BE_TEXT)
+    elif value is not None and not value.strip():
+        out.add(file, prefix + key, EMPTY)
 
 
 # --- analysis.json ---------------------------------------------------------
@@ -404,7 +512,17 @@ def check_proposal(run_dir: Path, proposal: dict) -> list[Problem]:
     for key in proposal:
         if key in PROGRAM_KEYS:
             out.add("proposal", key, f"the key {key} is set by the program, not by a proposal")
-    _fact_rules(out, "proposal", store.proposed_fact(proposal), source_ids, early_sources)
+    fact = store.proposed_fact(proposal)
+    _fact_rules(out, "proposal", fact, source_ids, early_sources)
+    fields = fact.get("fields")
+    if fact.get("kind") == "capacity_move" and isinstance(fields, dict) and "in_question" not in fields:
+        out.add("proposal", "fields.in_question", IN_QUESTION_MISSING)
+    connections = fact.get("connections")   # a stored fact may leave its party out; a proposal may not
+    if isinstance(connections, list):
+        out.items = [p for p in out.items if p.message != UNNAMED_PARTY]
+        for index, connection in enumerate(connections):
+            if isinstance(connection, dict) and connection.get("party") is None:
+                out.add("proposal", f"connections[{index}].party", UNNAMED_PROPOSED_PARTY)
     return out.items
 
 
@@ -463,4 +581,22 @@ def check_data(run_dir: Path, lenses_dir: Path | None = None) -> list[Problem]:
         else:
             from .schema_analysis import check_analysis   # imported here: schema_analysis builds on this module
             check_analysis(out, analysis, fact_ids, Path(lenses_dir) if lenses_dir else None, frozenset(early_facts))
+
+    from . import recommend   # imported here: recommend builds on this module
+    recommendation_path = run_dir / recommend.RECORD
+    if os.path.lexists(recommendation_path):   # advice: its form only, and a run without one is fine
+        recommendation = _load(recommendation_path)
+        if recommendation is None:
+            out.add(recommend.RECORD, None, LOCKED if _may_not_be_opened(recommendation_path) else NOT_JSON)
+        else:
+            out.items.extend(recommend.shape_problems(recommendation))
+
+    from . import projects   # imported here: projects builds on this module
+    grouping_path = run_dir / projects.RECORD
+    if os.path.lexists(grouping_path):   # a help for reading: its form only, and a run without one is fine
+        grouping = _load(grouping_path)
+        if grouping is None:
+            out.add(projects.RECORD, None, LOCKED if _may_not_be_opened(grouping_path) else NOT_JSON)
+        else:
+            out.items.extend(projects.shape_problems(grouping))
     return out.items

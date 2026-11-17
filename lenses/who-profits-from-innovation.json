@@ -1,0 +1,26 @@
+{
+  "id": "who-profits-from-innovation",
+  "name": "Who profits from an innovation",
+  "idea": "The work argues that innovators often fail to capture the profits from their innovation, while imitators or the owners of needed complementary assets do. Who wins depends on how easily the innovation can be copied, on whether a dominant design has emerged, and on who controls the complementary assets, such as manufacturing, distribution and service, needed to bring it to market.",
+  "suggests": "Look at whether a company bringing a new product or process to market also controls the production, distribution and service it needs, and at how easily rivals could copy it.",
+  "limits": "The work argues that where imitation is hard, as with strong legal protection or know-how that is difficult to copy, the innovator can be protected and may do well without owning the complementary assets; its warning applies mainly where copying is easy.",
+  "competing_idea": "Another view holds that leading firms fail when a new technology that first serves small or new markets improves from below, because serving their main customers leads them to neglect it.",
+  "questions": [
+    "How easily could rivals copy this innovation: is it protected by law, by secrecy or by know-how that is hard to copy?",
+    "Which complementary assets, such as production, distribution or service, are needed to bring it to market, and who controls them?",
+    "Has a dominant design emerged yet, or is the product's form still open?"
+  ],
+  "originals": [
+    {
+      "reference": "David J. Teece, \"Profiting from technological innovation: Implications for integration, collaboration, licensing and public policy\", Research Policy, Vol. 15 No. 6, December 1986, pp. 285-305",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.1016/0048-7333(86)90027-2"
+    },
+    {
+      "reference": "Clayton M. Christensen and Joseph L. Bower, \"Customer Power, Strategic Investment, and the Failure of Leading Firms\", Strategic Management Journal, Vol. 17 No. 3, March 1996, pp. 197-218",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.1002/(SICI)1097-0266(199603)17:3%3C197::AID-SMJ804%3E3.0.CO;2-U"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

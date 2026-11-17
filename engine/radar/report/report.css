@@ -43,7 +43,7 @@ body {
   overflow-wrap: anywhere;
 }
 
-main, .masthead, .tabs { max-width: 62rem; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+main, .masthead { max-width: 62rem; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
 main { padding-bottom: 4rem; }
 h1 { font-size: 1.6rem; line-height: 1.25; margin: 1.2rem 0 0.6rem; }
 h2 { font-size: 1.3rem; margin: 1.4rem 0 0.8rem; }
@@ -64,7 +64,7 @@ code { font-size: 0.9em; }
 .banner.illustrative { background: var(--warn-bg); color: var(--warn); }
 
 /* Tabs: only useful with JavaScript, so they are hidden without it. */
-.tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; padding-top: 0.6rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 1.6rem; padding-top: 0.6rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--line); }
 html:not(.js) .tabs { display: none; }
 .tabs button {
   font: inherit;
@@ -81,7 +81,6 @@ html:not(.js) .tabs { display: none; }
 
 /* Views: without JavaScript every view shows, one after another. */
 .view { padding-top: 0.4rem; border-top: 1px solid var(--line); margin-top: 1.4rem; }
-.view:first-child { border-top: 0; margin-top: 0; }
 html.js .view { display: none; border-top: 0; margin-top: 0; }
 html.js .view.on { display: block; }
 
@@ -118,10 +117,10 @@ blockquote {
   background: var(--surface);
   color: var(--muted);
 }
-.pill.status-uncertain, .pill.support-weak, .pill.includes-uncertain { background: var(--warn-bg); border-color: var(--warn); color: var(--warn); }
-.pill.status-confirmed, .pill.support-strong { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); }
+.pill.status-uncertain, .pill.support-weak, .pill.includes-uncertain, .pill.count-uncertain, .pill.count-single_source { background: var(--warn-bg); border-color: var(--warn); color: var(--warn); }
+.pill.status-confirmed, .pill.support-strong, .pill.count-confirmed { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); }
 .pill.class-licensed, .pill.class-internal { background: var(--alert-bg); border-color: var(--alert); color: var(--alert); }
-.pill.not-accessible { background: var(--warn-bg); border-color: var(--warn); color: var(--warn); }
+.pill.not-accessible, .pill.little-running-text { background: var(--warn-bg); border-color: var(--warn); color: var(--warn); }
 .pill.home { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
 .factref { white-space: nowrap; }
 
@@ -168,9 +167,9 @@ html:not(.js) .print { display: none; }
    banner on every page, in the top margin; in a run that is both, the illustrative one stands below the other. */
 @media print {
   @page { margin: 26mm 14mm 14mm; }
-  html.js .view { display: block; border-top: 1px solid var(--line); margin-top: 1.4rem; }
-  html.js .view:first-child { border-top: 0; margin-top: 0; }
-  .tabs, .print { display: none; }
+  html.js:not(.company-mode) .view { display: block; border-top: 1px solid var(--line); margin-top: 1.4rem; }
+  html.js .tabs, #companies, .print, html .filters { display: none; }
+  html.company-mode .filtered-out { display: none; }
   .banner.confidential, .banner.illustrative { position: fixed; top: -22mm; left: 0; right: 0; z-index: 2; padding: 0.1rem 0; font-size: 0.8rem; line-height: 1.4; }
   .banner.confidential + .banner.illustrative { top: -15mm; }
   details, blockquote, .scenario, .option, .lens-card, .source, tr, .bar-row { break-inside: avoid; page-break-inside: avoid; }
@@ -209,3 +208,74 @@ html:not(.js) .print { display: none; }
   .bar-track { grid-column: 1 / -1; }
   .bar-row .bar-note, .bar-row .factref { grid-column: auto; }
 }
+
+/* The answer first: a bar of the projects by who the capacity is for, then the buttons for one company, then the key messages. */
+#answer, #companies, #messages { margin-top: 1.4rem; }
+#answer h2, #companies h2, #messages h2 { margin-top: 0; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.answer-bar { display: flex; width: 100%; min-height: 2.2rem; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.answer-part { display: flex; align-items: center; justify-content: center; min-width: 1.6rem; color: var(--text); font-weight: 600; text-decoration: none; border-right: 1px solid var(--bg); }
+.answer-part:last-child { border-right: 0; }
+.answer-part.open, .answer-swatch.open { background: var(--ok-bg); box-shadow: inset 0 -3px 0 var(--ok); }
+.answer-part.captive, .answer-swatch.captive { background: var(--accent-bg); box-shadow: inset 0 -3px 0 var(--accent); }
+.answer-part.disagree, .answer-swatch.disagree { background: var(--warn-bg); box-shadow: inset 0 -3px 0 var(--warn); }
+.answer-part.not_stated, .answer-swatch.not_stated { background: var(--surface); box-shadow: inset 0 -3px 0 var(--muted); }
+.answer-legend { display: flex; flex-wrap: wrap; gap: 0.2rem 1.4rem; list-style: none; padding: 0; margin: 0.6rem 0; }
+.answer-swatch { display: inline-block; width: 0.9rem; height: 0.9rem; border: 1px solid var(--line); border-radius: 3px; vertical-align: -0.1rem; }
+.answer-total { font-weight: 600; }
+.answer-note, .answer-rule { color: var(--muted); font-size: 0.92rem; margin: 0.3rem 0; }
+.company-buttons { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.company-button { display: inline-block; padding: 0.3rem 0.8rem; border: 1px solid var(--accent); border-radius: 6px; background: var(--surface); color: var(--accent); text-decoration: none; font-size: 0.95rem; }
+.company-note { color: var(--muted); font-size: 0.85em; }
+.company-button:hover { background: var(--accent-bg); }
+.message-item { margin: 0.9rem 0; }
+.message-item details.message { margin-bottom: 0.2rem; }
+.message-sources { margin: 0.2rem 0 0.2rem 0.9rem; color: var(--muted); font-size: 0.92rem; }
+.message-checks { margin: 0.4rem 0 0 0.9rem; padding: 0.3rem 0.9rem 0.5rem; border-left: 4px solid var(--warn); background: var(--warn-bg); border-radius: 0 8px 8px 0; font-size: 0.95rem; }
+.message-checks h4 { margin: 0.3rem 0 0.1rem; color: var(--warn); }
+.message-checks ul { margin: 0.2rem 0; padding-left: 1.2rem; }
+.flag-messages { color: var(--muted); font-size: 0.92rem; }
+
+/* Projects: one row each, opening to show every report of it. */
+details.project summary { font-weight: 500; }
+.project-name { font-weight: 600; }
+.project-company { color: var(--muted); font-size: 0.92rem; }
+.spread-row { display: block; font-weight: 400; font-size: 0.92rem; color: var(--muted); }
+.spread-item { display: inline-block; margin-right: 1rem; }
+.spread-label { text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.04em; margin-right: 0.2rem; }
+.spread { margin-top: 0.4rem; }
+.project-reports { list-style: none; padding-left: 0; }
+.project-report { padding: 0.35rem 0; border-top: 1px solid var(--line); }
+.report-source { color: var(--muted); font-size: 0.92rem; }
+.fact-company { font-weight: 600; margin-right: 0.3rem; }
+.single-source-note, .connection-description, .baseline-company { color: var(--muted); font-size: 0.92rem; }
+.connection-description { display: block; }
+.baseline { margin-top: 0.8rem; }
+.projects-more { margin-top: 2rem; padding-top: 0.4rem; border-top: 1px solid var(--line); }
+.corner { text-align: left; }
+.grid th[scope="row"], .delivery th[scope="row"] { font-weight: 400; background: none; }
+.pill.status-single_source { border-style: dashed; }
+
+/* Filters: a bar at the top of the facts, projects, connections and sources, a page for each company. They need
+   JavaScript, so without it they are hidden and every item shows. A hidden item is hidden on the screen only; a printed
+   report shows everything, unless a company's page is open: then it prints what the screen shows. */
+html:not(.js) .filters, html:not(.js) .company-head, html:not(.js) .filter-count { display: none; }
+@media screen { .filtered-out { display: none; } }
+.filters { display: flex; flex-wrap: wrap; align-items: start; gap: 0.5rem 1rem; margin: 0.6rem 0 1rem; padding: 0.6rem 0.9rem; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.filter { display: flex; flex-direction: column; font-size: 0.85rem; color: var(--muted); }
+.filter select, .filter input { font: inherit; font-size: 0.95rem; padding: 0.25rem 0.4rem; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); max-width: 14rem; }
+.filter select:disabled { opacity: 0.7; }
+.filter-count { flex-basis: 100%; margin: 0; color: var(--muted); font-size: 0.92rem; }
+
+/* A company's page: the head on top, then the projects, the connections, the key messages and the sources. */
+.company-head { margin-top: 1.4rem; padding: 0.8rem 1rem 1rem; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 8px; }
+.company-head h2 { margin-top: 0.8rem; }
+.company-head-note { color: var(--muted); font-size: 0.92rem; }
+.company-back { font: inherit; font-size: 0.92rem; padding: 0.3rem 0.8rem; border: 1px solid var(--accent); border-radius: 6px; background: var(--bg); color: var(--accent); cursor: pointer; }
+html.company-mode main { display: flex; flex-direction: column; }
+html.company-mode #answer, html.company-mode #companies, html.company-mode .tabs, html.company-mode .projects-more { display: none; }
+html.company-mode .company-head { order: 0; }
+html.company-mode #view-projects { order: 1; }
+html.company-mode #view-connections { order: 2; }
+html.company-mode #messages { order: 3; }
+html.company-mode #view-sources { order: 4; }

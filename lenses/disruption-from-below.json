@@ -1,0 +1,26 @@
+{
+  "id": "disruption-from-below",
+  "name": "Disruption from below",
+  "idea": "The work argues that leading firms can lose their lead not through poor management but because they listen to their main customers. Resources go to what those customers want, so a new technology that at first performs worse on what they value, and serves only small or new markets, gets too little investment until it has improved enough to take the mainstream market.",
+  "suggests": "Look at whether a cheaper or simpler product that the leading firms dismiss is winning customers they do not serve, and at how fast it is improving toward what mainstream customers need.",
+  "limits": "The work argues that established firms did lead in new technologies their existing customers wanted, even technically difficult ones; its account concerns technologies those customers did not yet want.",
+  "competing_idea": "Another view holds that who profits from an innovation depends on how easily it can be copied and on who controls the complementary assets needed to bring it to market, which can favour established firms that own those assets.",
+  "questions": [
+    "Is a cheaper or simpler product gaining customers in a small or new segment that the leading firms ignore?",
+    "Is that product improving fast enough to meet the needs of mainstream customers soon?",
+    "Does the way the company allocates resources, led by its largest customers, keep it from investing in the new technology?"
+  ],
+  "originals": [
+    {
+      "reference": "Clayton M. Christensen and Joseph L. Bower, \"Customer Power, Strategic Investment, and the Failure of Leading Firms\", Strategic Management Journal, Vol. 17 No. 3, March 1996, pp. 197-218",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.1002/(SICI)1097-0266(199603)17:3%3C197::AID-SMJ804%3E3.0.CO;2-U"
+    },
+    {
+      "reference": "David J. Teece, \"Profiting from technological innovation: Implications for integration, collaboration, licensing and public policy\", Research Policy, Vol. 15 No. 6, December 1986, pp. 285-305",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.1016/0048-7333(86)90027-2"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

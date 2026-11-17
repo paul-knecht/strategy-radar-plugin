@@ -1,0 +1,22 @@
+{
+  "id": "organizations-becoming-alike",
+  "name": "Why organizations become alike",
+  "idea": "An encyclopedia entry defines an isomorphism as an organization's structure or processes resembling another's, by imitation or separate growth under like constraints, and says the work's authors chiefly developed institutional isomorphism. It names three main types: coercive, from organizations one depends on; mimetic, copying a structure thought beneficial; and normative, driven by professions.",
+  "suggests": "Look at how far a company's structure and practices follow those of similar organizations, what its regulators, lenders or large customers require, and which practices arrive with the professions it hires.",
+  "limits": "The entry states that mimetic copying, of a structure thought beneficial, happens mainly when an organization's goals, or its means of reaching them, are unclear.",
+  "competing_idea": "The entry contrasts isomorphism among states with theories of policy transfer or diffusion, which usually leave the states that adopt a policy more agency.",
+  "questions": [
+    "Which of the company's recent changes copy what similar organizations did, and how clear were its own goals when it made them?",
+    "Which outside parties that the company depends on, such as regulators, lenders or large customers, require it to take a certain form?",
+    "Which practices came in with the professions it hires, and how alike are its managers' training and backgrounds?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Isomorphism (sociology)\", Wikipedia, the free encyclopedia, article as last edited on 9 October 2026 (revision 1379281910)",
+      "level": "secondary_source_read",
+      "about": "Paul J. DiMaggio and Walter W. Powell, \"The Iron Cage Revisited: Institutional Isomorphism and Collective Rationality in Organizational Fields\", American Sociological Review, Vol. 48 No. 2, April 1983, pp. 147-160",
+      "link": "https://en.wikipedia.org/wiki/Isomorphism_(sociology)"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

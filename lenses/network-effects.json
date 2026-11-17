@@ -1,0 +1,26 @@
+{
+  "id": "network-effects",
+  "name": "When each user adds value for the others",
+  "idea": "The work argues that for many products the benefit a user gets rises with the number of other users of the same or a compatible product. It argues that consumers' expectations about network sizes help decide how large each firm's network becomes, and that firms' choices on compatibility shape competition.",
+  "suggests": "Look at whether a company's product becomes more useful as more people or firms use it or compatible products, and at how it handles compatibility with rivals.",
+  "limits": "The work argues that firms' private incentives to make their products compatible can differ from what would serve society, and that outcomes depend heavily on what consumers expect, so more than one outcome is possible.",
+  "competing_idea": "Another view holds that network effects do not by themselves mean the market fails: many claimed cases are ordinary features of markets, and those who own a network can capture and internalise its benefits.",
+  "questions": [
+    "Does each additional user make the product more valuable to the others, directly or through compatible products?",
+    "What do customers expect about which network will grow, and what is the company doing to shape that expectation?",
+    "Is the company opening its product to compatibility with rivals, or keeping it closed, and why?"
+  ],
+  "originals": [
+    {
+      "reference": "Michael L. Katz and Carl Shapiro, \"Network Externalities, Competition, and Compatibility\", American Economic Review, Vol. 75 No. 3, 1985, pp. 424-440",
+      "level": "reference_confirmed",
+      "link": "https://ideas.repec.org/a/aea/aecrev/v75y1985i3p424-40.html"
+    },
+    {
+      "reference": "S. J. Liebowitz and Stephen E. Margolis, \"Network Externality: An Uncommon Tragedy\", Journal of Economic Perspectives, Vol. 8 No. 2, Spring 1994, pp. 133-150",
+      "level": "reference_confirmed",
+      "link": "https://www.aeaweb.org/articles?id=10.1257/jep.8.2.133"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

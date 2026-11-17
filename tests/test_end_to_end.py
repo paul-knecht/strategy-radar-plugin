@@ -134,7 +134,7 @@ def visible_text(html):
 
 RAW_TOKENS = ("not_found", "not_supported", "quote_too_short", "quote_too_long", "no_saved_copy",
               "supporting_quote_not_found", "checks_incomplete", "support_check_outdated", "final_report",
-              "network_error", "too_large", "unsupported_type", "no_text_layer", "unreadable_file", "too_little_text",
+              "network_error", "certificate_failed", "too_large", "unsupported_type", "no_text_layer", "unreadable_file", "too_little_text",
               "login_required", "outside_view", "competitor_response", "evidence_symmetry", "missing_information",
               "success_stories", "single_source", "under_construction", "not_stated", "not_yet")
 
@@ -206,7 +206,7 @@ def demo_report(tmp_path, capsys):
 
 def fact_card(html, fact_id):
     """The text a reader sees in the card of one fact in the facts view."""
-    return visible_text(re.search(rf'<details class="fact" id="{fact_id}">(.*?)</details>', html, re.S).group(1))
+    return visible_text(re.search(rf'<details class="fact" id="{fact_id}"[^>]*>(.*?)</details>', html, re.S).group(1))
 
 
 def test_a_quote_from_the_fact_s_own_source_is_not_shown_as_a_second_source(tmp_path, capsys):
@@ -216,9 +216,10 @@ def test_a_quote_from_the_fact_s_own_source_is_not_shown_as_a_second_source(tmp_
         card = fact_card(html, fact_id)
         assert "More from the same source" in card and "Also stated by" not in card, fact_id
         assert card.split("More from the same source", 1)[1].count("S" + {"F3": "2", "F4": "3"}[fact_id]) == own
-    for fact_id in ("F1", "F6"):                       # F1: the trade piece; F6: the trade journal
-        card = fact_card(html, fact_id)
-        assert "Also stated by" in card and "More from the same source" not in card, fact_id
+    card = fact_card(html, "F1")                       # the trade piece
+    assert "Also stated by" in card and "More from the same source" not in card
+    card = fact_card(html, "F6")                       # the seller's own report names the seller; the trade journal
+    assert "Also stated by" in card and "More from the same source" in card
     for fact_id in ("F2", "F5", "F7"):                 # no supporting quote: neither heading
         card = fact_card(html, fact_id)
         assert "Also stated by" not in card and "More from the same source" not in card, fact_id
@@ -229,7 +230,7 @@ def test_a_date_that_is_not_stated_is_said_in_words(tmp_path, capsys):
     _, md, html = demo_report(tmp_path, capsys)
     for name, text in (("report.md", md), ("report.html", visible_text(html))):
         assert "not_stated" not in text.replace("\\_", "_"), name
-    competitors = md.split("## Competitors", 1)[1].split("\n## ", 1)[0]
+    competitors = md.split("## Projects", 1)[1].split("\n## ", 1)[0]
     assert "(F6, announcement date not stated)" in competitors
     assert "(F7 (Uncertain), announcement date not stated)" in competitors
 
@@ -242,3 +243,13 @@ def test_a_decision_answered_by_a_test_says_so_once(tmp_path, capsys):
         for line in ("Before choosing lenses: Recorded test answer: use the lenses firm-boundaries and "
                      "capacity-commitment.", "Before the final report: Recorded test answer: build the report."):
             assert line in text, (name, line)
+
+
+def test_the_demo_still_has_its_planted_errors_and_counts(tmp_path):
+    run = build_demo_run(tmp_path)
+    facts = store.read_facts(run)
+    assert sorted(f["status"] for f in facts.values()) == ["confirmed"] * 6 + ["rejected"] * 3 + ["uncertain"]
+    assert sorted(f["status_reason"] for f in facts.values() if f["status"] == "rejected") == \
+        ["not_found", "not_supported", "not_supported"]
+    assert main(["build-report", "--run", str(run), "--lenses", LENSES]) == 0
+    assert (run / "projects.json").exists()   # building the report leaves the grouping as it was

@@ -14,8 +14,10 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from .. import calc, store, verify
+from .. import calc, lenses, store, verify
 from ..textnorm import normalise
+from . import companies as company_view
+from . import projects_view
 
 _LABELS_FILE = Path(__file__).with_name("labels_en.json")
 # The project's probability scale: (lowest probability, span shown in the legend, label key), highest first.
@@ -24,7 +26,8 @@ PROBABILITY_SCALE = ((95, "95-100", "prob_95"), (80, "80-94", "prob_80"), (60, "
 REASONS = ("not_found", "not_supported", "quote_too_short", "quote_too_long", "no_saved_copy",
            "supporting_quote_not_found", "withdrawn", "checks_incomplete", "support_check_outdated")
 ACCESS_REASONS = ("timeout", "network_error", "too_large", "unsupported_type", "no_text_layer", "unreadable_file",
-                  "too_little_text", "login_required", "robots", "private_address", "too_many_redirects")
+                  "too_little_text", "login_required", "robots", "private_address", "too_many_redirects",
+                  "certificate_failed")
 _HTTP_REASON = re.compile(r"http_([0-9]+)")
 # Each field whose values have labels, with the label prefix and the values that have one. Nothing else resolves.
 _FIELD_LABELS = {"move_type": ("move_", store.MOVE_TYPES), "stage": ("stage_", store.STAGES),
@@ -84,11 +87,17 @@ def label(labels: dict[str, str], prefix: str, value, known: tuple) -> str:
 
 def fact_notes(fact: dict, labels: dict[str, str]) -> list[tuple[str, str, str]]:
     """How every reference to a fact is marked: (kind, value, label) for an uncertain or rejected status and for a
-    source that is not public. A confirmed fact from a public source carries no note."""
+    source that is not public. A confirmed fact from a public source carries no note. An uncertain fact whose one
+    reason is a single source is marked ("status", "single_source", "One source only"): its `shown_status`, or, on a
+    bare fact without that key, the same worked out from the fact itself (`companies.shown_status`)."""
     notes = []
     status = fact.get("status")
     if status in ("uncertain", "rejected"):
-        notes.append(("status", status, labels[f"status_{status}"]))
+        shown = fact["shown_status"] if "shown_status" in fact else company_view.shown_status(fact, {})
+        if status == "uncertain" and shown == "single_source":
+            notes.append(("status", "single_source", labels["shown_single_source"]))
+        else:
+            notes.append(("status", status, labels[f"status_{status}"]))
     data_class = fact.get("data_class")
     if data_class not in (None, "public"):
         notes.append(("class", str(data_class), labels.get(f"class_{data_class}", str(data_class))))
@@ -150,13 +159,9 @@ def _company_key(company) -> str:
     return normalise(company).casefold() if isinstance(company, str) else ""
 
 
-def _id_number(record_id: str) -> int:
-    digits = "".join(ch for ch in str(record_id) if ch.isdigit())
-    return int(digits) if digits else 0
-
-
 class _Resolver:
-    """Turns fact ids into fact dicts that carry their source and data class."""
+    """Turns fact ids into fact dicts that carry their source, data class and shown status, so a fact named anywhere
+    in the report carries the same label as in the facts list."""
 
     def __init__(self, facts: dict[str, dict], sources: dict[str, dict]):
         self._facts, self._sources = facts, sources
@@ -170,6 +175,7 @@ class _Resolver:
             source = self._sources.get(fact.get("source_id"))
             fact["source"] = copy.deepcopy(source) if source is not None else None
             fact["data_class"] = source.get("data_class") if source is not None else None
+            fact["shown_status"] = company_view.shown_status(fact, self._sources)
             self._cache[fact_id] = fact
         return copy.deepcopy(self._cache[fact_id])
 
@@ -193,6 +199,98 @@ def _load_lens(lenses_dir: Path, lens_id: str) -> dict:
     except (OSError, ValueError):
         pass
     return {"id": lens_id, "name": lens_id}
+
+
+def lens_rests_on(lens: dict, labels: dict[str, str]) -> str | None:
+    """What a lens rests on, in the words of the first stop (see `lenses.rests_on_text`), or None for a lens whose
+    file could not be read as a lens: the report is built from lenses that passed the check, but it never raises
+    on one that did not."""
+    try:
+        return lenses.rests_on_text(lens, labels)
+    except (KeyError, TypeError, AttributeError, ValueError):
+        return None
+
+
+_LENS_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*")
+
+
+def _start_of_sentence(text: str) -> str:
+    return text[:1].upper() + text[1:]
+
+
+def _link_sentences(mark: dict, labels: dict[str, str]) -> list[str]:
+    """What each reader said about one link, in the order of the readers, as sentences. A reader that recorded nothing
+    is said so: it never counts as agreement. A verdict on the link that cannot be read is said last."""
+    from .. import recommend
+    said = {verdict["reader"]: verdict for verdict in mark.get("verdicts") or []}
+    sentences = []
+    for reader in recommend.READERS:
+        who = _start_of_sentence(labels[f"helper_{reader}"])
+        verdict = said.get(reader)
+        note = verdict["note"].strip() if verdict else ""
+        if verdict is None:
+            if reader in mark.get("unread_by", recommend.READERS):   # else its verdict cannot be read: said below
+                sentences.append(labels["mark_unread"].format(reader=who))
+        elif verdict["verdict"] == "doubt":
+            sentences.append(labels["mark_doubt" if note else "mark_doubt_plain"].format(reader=who, note=note))
+        else:
+            sentences.append(labels["mark_bears_note" if note else "mark_bears"].format(reader=who, note=note))
+    if mark.get("unreadable"):
+        sentences.append(labels["mark_unreadable"])
+    return sentences
+
+
+def _recommendation(run_dir: Path, lenses_dir: Path, resolve: "_Resolver", labels: dict[str, str]) -> dict | None:
+    """The run's lens recommendation as the report shows it: None when the run holds no record file, and
+    `{"damaged": True, "stale": False, "note": None, "entries": [], "helpers": [], "flags": []}` when the file is there
+    but nothing of it can be read; advice never stops a report (see `recommend`).
+
+    Otherwise `{"damaged", "stale", "note", "entries": [{"lens", "name", "question_part", "why", "missing", "flags",
+    "links": [{"fact", "counts", "doubts", "sentences"}]}], "helpers": [{"helper", "model"}], "flags"}`. Every text is
+    as recorded, and a part that cannot be read is None. A damaged record is not thrown out (Paul's decision 18):
+    `damaged` is then true, and `flags` (the record's own) and each entry's `flags` say in plain words exactly which
+    part was changed after the program wrote it (`recommend.readable_record`). `fact` is the resolved fact, or just its
+    id when the run no longer holds it. `stale` is true when the facts that count now are not the facts the record
+    saw, by the same comparison as the first stop's view (`recommend.is_stale`), and `counts` says whether a linked
+    fact still counts."""
+    from .. import recommend   # here and not at the top: `recommend` reaches this module through `lens_view`
+    record, damage, damaged = recommend.readable_record(run_dir)
+    if record is None:
+        return {"damaged": True, "stale": False, "note": None, "entries": [], "helpers": [], "flags": []} \
+            if damaged else None
+    marked = recommend.marks(run_dir)
+    facts_now = store.read_facts(run_dir)
+    entries = []
+    for entry in record["entries"]:
+        lens_id = entry["lens"]
+        name = _load_lens(lenses_dir, lens_id).get("name", lens_id) if _LENS_ID.fullmatch(lens_id) else lens_id
+        links = []
+        for fact_id in entry["facts"]:
+            mark = marked.get(f"{lens_id}/{fact_id}", {})
+            links.append({"fact": resolve.fact(fact_id) or {"id": fact_id},
+                          "counts": fact_id in facts_now and recommend.counts(facts_now[fact_id]),
+                          "doubts": mark.get("doubts", 0), "sentences": _link_sentences(mark, labels)})
+        entries.append({"lens": lens_id, "name": name if isinstance(name, str) else lens_id,
+                        "question_part": entry["question_part"], "why": entry["why"], "missing": entry["missing"],
+                        "flags": recommend.damage_sentences(entry["damage"], labels), "links": links})
+    models = record["models_set_to"]
+    helpers = [{"helper": labels[f"helper_{name}"], "model": models[name] if isinstance(models[name], str) else None}
+               for name in recommend.MODEL_NAMES if name in models]
+    return {"damaged": damaged, "stale": recommend.is_stale(run_dir, record), "note": record["note"],
+            "entries": entries, "helpers": helpers, "flags": recommend.damage_sentences(damage, labels)}
+
+
+def link_sentences(link: dict, labels: dict[str, str]) -> list[str]:
+    """What the report says next to one link of the recommendation: that its fact no longer counts, when it does not,
+    then what each reader said."""
+    return ([labels["rec_fact_gone"]] if link.get("counts") is False else []) + list(link["sentences"])
+
+
+def helpers_line(recommendation: dict, labels: dict[str, str]) -> str:
+    """The sentence that says which model each helper was set to use, or "" when the record names none."""
+    helpers = recommendation["helpers"]
+    models = ", ".join(f"{item['helper']}: {item['model'] or labels['rec_no_model']}" for item in helpers)
+    return labels["rec_helpers"].format(models=models) if helpers else ""
 
 
 def _lenses_in_order_of_use(analysis: dict) -> list[str]:
@@ -222,29 +320,39 @@ def split_early_signals(facts: list[dict]) -> tuple[list[dict], list[dict]]:
 def group_by_company(facts: list[dict], home_company, baselines: list[dict] | None = None) -> list[dict]:
     """Capacity moves grouped by company, the home company first, then by name; each group lists its moves.
 
+    A fact the report model has arranged is grouped by the name of its `company` (a pack company's pack name, or an
+    outside company's tidy name; never by its key, which is "other" for many companies); a bare fact by its
+    `fields.company`.
+
     Each group also carries `baseline`: the facts the company's baselines rest on, each once, in the order named.
     `baselines` are the analysis items with their facts attached under `facts`. A company that has a baseline but no
     move still gets a group, with no moves.
     """
     groups: dict[str, dict] = {}
 
-    def group_of(company) -> dict:
+    def group_of(company, home: bool = False) -> dict:
         key = _company_key(company)
-        return groups.setdefault(key, {"company": normalise(company) if isinstance(company, str) else "",
-                                       "home": key == _company_key(home_company) and key != "",
-                                       "moves": [], "baseline": []})
+        group = groups.setdefault(key, {"company": normalise(company) if isinstance(company, str) else "",
+                                        "home": key == _company_key(home_company) and key != "",
+                                        "moves": [], "baseline": []})
+        group["home"] = group["home"] or home
+        return group
 
     for fact in facts:
         if fact.get("kind") != "capacity_move" or not isinstance(fact.get("fields"), dict):
             continue
-        group_of(fact["fields"].get("company"))["moves"].append(fact)
+        shown = fact.get("company")
+        if isinstance(shown, dict) and shown.get("name") is not None:
+            group_of(shown["name"], shown.get("home") is True)["moves"].append(fact)
+        else:
+            group_of(fact["fields"].get("company"))["moves"].append(fact)
     for item in baselines or []:
         shown = group_of(item.get("company"))["baseline"]
         for fact in item.get("facts") or []:
             if fact["id"] not in {seen["id"] for seen in shown}:
                 shown.append(fact)
     for group in groups.values():
-        group["moves"].sort(key=lambda fact: (fact["fields"].get("announced") or "", _id_number(fact["id"])))
+        group["moves"].sort(key=lambda fact: (fact["fields"].get("announced") or "", company_view.id_number(fact["id"])))
     return sorted(groups.values(), key=lambda group: (not group["home"], _company_key(group["company"])))
 
 
@@ -277,6 +385,49 @@ def _read_changes(run_dir: Path) -> dict | None:
     return changes if isinstance(changes, dict) else None
 
 
+def _audit_flags(analysis: dict) -> list[dict]:
+    """The audit flags, each with `message_ids`: the ids it names of messages that exist, in its order ([] for a flag
+    of an older run, which names none)."""
+    known = {message.get("id") for message in analysis.get("messages") or [] if isinstance(message, dict)}
+    flags = []
+    for flag in analysis.get("audit_flags") or []:
+        flag = copy.deepcopy(flag)
+        named = flag.get("message_ids")
+        flag["message_ids"] = [message_id for message_id in dict.fromkeys(named if isinstance(named, list) else [])
+                               if isinstance(message_id, str) and message_id in known]
+        flags.append(flag)
+    return flags
+
+
+def _message_facts(message: dict) -> list[dict]:
+    """The facts a message rests on, in order: those of its chain steps, then those of its outside view."""
+    facts = [fact for step in message.get("chain") or [] for fact in step.get("facts") or []]
+    outside = message.get("outside_view")
+    return facts + (list(outside.get("facts") or []) if isinstance(outside, dict) else [])
+
+
+def _message_sources(facts: list[dict], sources: dict[str, dict]) -> list[dict]:
+    """The main sources of `facts`, each once, in order of first use: `{"id", "publisher", "own"}`. `own` is true when
+    one of these facts from that source is the company's own statement (`primary_source`)."""
+    found: dict[str, dict] = {}
+    for fact in facts:
+        source_id = fact.get("source_id")
+        if not isinstance(source_id, str):
+            continue
+        entry = found.setdefault(source_id, {"id": source_id,
+                                             "publisher": (sources.get(source_id) or {}).get("publisher"),
+                                             "own": False})
+        entry["own"] = entry["own"] or fact.get("primary_source") is True
+    return list(found.values())
+
+
+def _connections(facts: list[dict]) -> list[dict]:
+    """Every kept connection of the arranged facts, in the order of the facts."""
+    return [{"fact": copy.deepcopy(fact), "company": dict(fact["company"]), "party": copy.deepcopy(entry["party"]),
+             "party_name": entry["party_name"], "tie": entry["tie"], "description": entry["description"]}
+            for fact in facts for entry in fact.get("connections") or []]
+
+
 def build_model(run_dir: Path, lenses_dir: Path, now: datetime | None = None) -> dict:
     """Everything the renderers need. `now` is when the report is built (default: the current time, in UTC)."""
     run_dir = Path(run_dir)
@@ -287,12 +438,17 @@ def build_model(run_dir: Path, lenses_dir: Path, now: datetime | None = None) ->
     analysis = store.read_analysis(run_dir) or {}
     resolve = _Resolver(all_facts, sources)
 
+    # `arrange` gives every fact a `connections` list; a run whose facts never had the key was made before connections existed
+    connections_old = bool(all_facts) and not any("connections" in fact for fact in all_facts.values())
     counted = [resolve.fact(fact_id) for fact_id, fact in all_facts.items() if fact.get("status") in store.COUNTING]
     rejected = [resolve.fact(fact_id) for fact_id, fact in all_facts.items() if fact.get("status") == "rejected"]
+    arranged = company_view.arrange(run, counted, sources)
+    counted = company_view.order(counted, arranged["companies"])
     changes = _read_changes(run_dir)
     confidential = (any(source.get("data_class") != "public" for source in sources.values())
                     or (changes is not None and changes.get("previous_confidential") is True))
 
+    audit_flags = _audit_flags(analysis)
     messages = []
     for message in analysis.get("messages") or []:
         message = copy.deepcopy(message)
@@ -303,7 +459,20 @@ def build_model(run_dir: Path, lenses_dir: Path, now: datetime | None = None) ->
                             if isinstance(lens_id, str) else None)
         if isinstance(message.get("outside_view"), dict):
             message["outside_view"] = resolve.attach(message["outside_view"])
+        used = _message_facts(message)
+        message["sources"] = _message_sources(used, sources)
+        message["flags"] = [copy.deepcopy(flag) for flag in audit_flags if message.get("id") in flag["message_ids"]]
+        message["companies"] = list(dict.fromkeys(arranged["by_id"][fact["id"]]["company"]["key"] for fact in used
+                                                  if fact["id"] in arranged["by_id"]))
         messages.append(message)
+
+    shown_projects = projects_view.build(run_dir, counted, arranged["companies"])
+    outside = [fact for fact in counted if projects_view.outside(fact)]
+    for entry in arranged["companies"]:
+        own = [item for item in shown_projects["items"] if item["company"]["key"] == entry["key"]]
+        own_outside = sum(1 for fact in outside if fact["company"]["key"] == entry["key"])
+        entry["core_answer"] = projects_view.core_answer(own, own_outside) if own else None
+        entry["outside"] = own_outside   # shown in the company's head even when it has no project
 
     options = copy.deepcopy(analysis.get("decision_options"))
     if isinstance(options, dict):
@@ -317,6 +486,7 @@ def build_model(run_dir: Path, lenses_dir: Path, now: datetime | None = None) ->
     for lens_id in _lenses_in_order_of_use(analysis):
         lens = _load_lens(lenses_dir, lens_id)
         lens["here"] = notes.get(lens_id, "")
+        lens["rests_on"] = lens_rests_on(lens, labels)
         lenses.append(lens)
 
     assumptions = []
@@ -353,6 +523,7 @@ def build_model(run_dir: Path, lenses_dir: Path, now: datetime | None = None) ->
         "run_id": run.get("run_id"),
         "pack": run.get("pack"),
         "illustrative": bool(run.get("illustrative")),
+        "screening": bool(run.get("screening")),
         "sources_read_until": (run.get("sources_read_until") or _latest_save_date(sources)
                                or (run.get("started_at") or "")[:10] or None),
         "built_on": store._stamp(now)[:10],
@@ -362,18 +533,30 @@ def build_model(run_dir: Path, lenses_dir: Path, now: datetime | None = None) ->
         "status_line": {
             "confirmed": sum(1 for fact in all_facts.values() if fact.get("status") == "confirmed"),
             "uncertain": sum(1 for fact in all_facts.values() if fact.get("status") == "uncertain"),
+            "single_source": sum(1 for fact in all_facts.values()
+                                 if company_view.shown_status(fact, sources) == "single_source"),
             "rejected": len(rejected),
             "sources": len(sources),
             "not_accessible": sum(1 for source in sources.values() if source.get("access") == "not_accessible"),
         },
         "messages": messages,
         "facts": counted,
+        "companies": arranged["companies"],
+        "projects": shown_projects,
+        # counted by project, never read from a file; None when no capacity move counts
+        "core_answer": (projects_view.core_answer(shown_projects["items"], len(outside))
+                        if shown_projects["items"] or outside else None),
+        "connections": _connections(counted),
+        "connections_old": connections_old,
         "rejected": rejected,
-        "competitors": group_by_company(counted, run.get("home_company"), baselines),
+        # a baseline joins its company's moves under the name the report shows (pack name, or tidy name)
+        "competitors": group_by_company(counted, run.get("home_company"),
+                                        [dict(item, company=company_view.shown_name(run, item.get("company")))
+                                         for item in baselines]),
         "demand_signals": [resolve.attach(signal) for signal in analysis.get("demand_signals") or []],
         "decision_options": options,
         "watch_items": copy.deepcopy(analysis.get("watch_items") or []),
-        "audit_flags": copy.deepcopy(analysis.get("audit_flags") or []),
+        "audit_flags": audit_flags,
         "not_found": copy.deepcopy(analysis.get("not_found") or []),
         "contradictions": [resolve.attach(item) for item in analysis.get("contradictions") or []],
         "lenses": lenses,
@@ -382,10 +565,14 @@ def build_model(run_dir: Path, lenses_dir: Path, now: datetime | None = None) ->
         "how_made": {"search_log": copy.deepcopy(run.get("search_log") or []),
                      "excluded": copy.deepcopy(run.get("excluded") or []),
                      "checkpoints": copy.deepcopy(run.get("checkpoints") or []),
+                     # company and party names a model gave that were not found in the fact's words, dropped
+                     "names_dropped": arranged["names_dropped"],
                      # the person's own reply to the private-mode notice, word for word; shown next to the decisions
                      "private_acknowledged": (run.get("private_acknowledged_words")
                                               if run.get("mode") == "private"
-                                              and isinstance(run.get("private_acknowledged_words"), str) else None)},
+                                              and isinstance(run.get("private_acknowledged_words"), str) else None),
+                     # advice, shown as unchecked: None when the run holds no usable recommendation
+                     "recommendation": _recommendation(run_dir, lenses_dir, resolve, labels)},
         "changes": changes,
         "assumptions": assumptions,
         "scenarios": scenarios,

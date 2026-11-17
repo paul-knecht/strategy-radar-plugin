@@ -11,9 +11,10 @@ import json
 import re
 from decimal import Decimal, ROUND_HALF_UP
 
-from .. import store
-from ..calc import parse_number
+from .. import projects, store
 from ..textnorm import normalise
+from . import companies as company_view
+from .numbers import shown
 from .model import fact_notes, field_label, group_by_company, load_labels, unit_for
 
 _TOKEN = re.compile(r"[a-z][a-z0-9_]*")
@@ -52,7 +53,14 @@ def class_pill(data_class, labels: dict) -> str:
 
 def marks(fact: dict, labels: dict) -> str:
     """The labels that make an uncertain, rejected or non-public fact recognisable wherever it appears."""
-    return "".join(pill(f"{kind}-{token(value)}", text) for kind, value, text in fact_notes(fact, labels))
+    return "".join(pill(_note_class(kind, value), text) for kind, value, text in fact_notes(fact, labels))
+
+
+def _note_class(kind: str, value) -> str:
+    """The class of a note's pill. "One source only" is a kind of uncertain, so it keeps the uncertain look."""
+    if (kind, value) == ("status", "single_source"):
+        return "status-uncertain status-single_source"
+    return f"{kind}-{token(value)}"
 
 
 def fact_ref(fact: dict, labels: dict) -> str:
@@ -86,9 +94,11 @@ def _listing(items, css: str = "", item_css: str = "") -> str:
     return f"<ul{attribute}>" + "".join(f"<li{item_attribute}>{item}</li>" for item in items) + "</ul>" if items else ""
 
 
-def _table(css: str, head: list[str], rows: list[str]) -> str:
-    """A table with an empty corner cell, so the column headers are the only `th scope="col"` cells."""
-    header = "<tr><td></td>" + "".join(f'<th scope="col">{cell}</th>' for cell in head) + "</tr>"
+def _table(css: str, head: list[str], rows: list[str], corner: str = "") -> str:
+    """A table whose corner cell is empty, so the column headers are the only `th scope="col"` cells; or, given a
+    `corner`, headed by it (the heading of the column of row headings)."""
+    corner_cell = f'<th scope="col" class="corner">{corner}</th>' if corner else "<td></td>"
+    header = f"<tr>{corner_cell}" + "".join(f'<th scope="col">{cell}</th>' for cell in head) + "</tr>"
     return (f'<div class="table-wrap"><table class="{css}"><thead>{header}</thead>'
             f'<tbody>{"".join(rows)}</tbody></table></div>')
 
@@ -102,6 +112,16 @@ def _fields(fact: dict) -> dict | None:
 
 def _moves(facts: list[dict]) -> list[dict]:
     return [fact for fact in facts if _fields(fact) is not None]
+
+
+def _inside_moves(facts: list[dict]) -> list[dict]:
+    """The moves inside the question: only these are compared and counted."""
+    return [fact for fact in _moves(facts) if projects.in_question(fact)]
+
+
+def outside_pill(fact: dict, labels: dict) -> str:
+    """The mark of a move outside the question, shown wherever such a move is listed but not counted."""
+    return "" if projects.in_question(fact) else pill("outside", labels["pill_outside"])
 
 
 def _text(value) -> str | None:
@@ -123,9 +143,15 @@ def start_year(value: str | None) -> int | None:
     return int(found.group()) if found else None
 
 
+def _company_name(fact: dict) -> str:
+    """The name the report shows for a fact's company: the model's tidy name, else (a bare fact) the one written."""
+    shown = fact.get("company")
+    name = shown.get("name") if isinstance(shown, dict) else None
+    return _text(name) or _text(_fields(fact).get("company")) or ""
+
+
 def _site_line(fact: dict) -> str:
-    fields = _fields(fact)
-    return join([_text(fields.get("company")) or "", _text(fields.get("site")) or ""], ", ")
+    return join([_company_name(fact), _text(_fields(fact).get("site")) or ""], ", ")
 
 
 # --- timeline ---
@@ -149,7 +175,8 @@ def _bar_classes(fact: dict, base: str) -> str:
 def _timeline_entry(fact: dict, labels: dict) -> str:
     note = _text(_fields(fact).get("site"))
     return ('<span class="entry">' + _bar(fact, _bar_classes(fact, "bar"))
-            + (f' <span class="bar-note">{esc(note)}</span>' if note else "") + marks(fact, labels) + "</span>")
+            + (f' <span class="bar-note">{esc(note)}</span>' if note else "") + marks(fact, labels)
+            + outside_pill(fact, labels) + "</span>")
 
 
 def timeline(facts: list[dict], home_company: str | None = None) -> str:
@@ -180,8 +207,8 @@ def timeline(facts: list[dict], home_company: str | None = None) -> str:
         legend = " ".join(f'<span class="bar {access}">{esc(labels["access_" + access])}</span>' for access in store.ACCESS)
         parts.append(f'<p class="bar-legend">{legend}</p>')
     if undated:
-        items = [join([esc(_site_line(fact)), esc(_text(_fields(fact).get("what_added"))), fact_ref(fact, labels)])
-                 for fact in undated]
+        items = [join([esc(_site_line(fact)), esc(_text(_fields(fact).get("what_added"))), fact_ref(fact, labels),
+                       outside_pill(fact, labels)]) for fact in undated]
         parts.append(f'<h4>{esc(labels["start_not_stated"])}</h4>' + _listing(items, "undated"))
     return "\n".join(parts)
 
@@ -191,7 +218,8 @@ def timeline(facts: list[dict], home_company: str | None = None) -> str:
 def _tally(facts: list[dict]) -> dict:
     return {"n": len(facts),
             "uncertain": sum(1 for fact in facts if fact.get("status") == "uncertain"),
-            "non_public": sum(1 for fact in facts if fact.get("data_class") not in (None, "public"))}
+            "non_public": sum(1 for fact in facts if fact.get("data_class") not in (None, "public")),
+            "outside": sum(1 for fact in facts if not projects.in_question(fact))}
 
 
 def tally_notes(tally: dict, labels: dict) -> list[str]:
@@ -201,14 +229,16 @@ def tally_notes(tally: dict, labels: dict) -> list[str]:
         notes.append(labels["grid_uncertain"].format(n=tally["uncertain"]))
     if tally["non_public"]:
         notes.append(labels["grid_non_public"].format(n=tally["non_public"]))
+    if tally.get("outside"):
+        notes.append(labels["grid_outside"].format(n=tally["outside"]))
     return notes
 
 
 def move_counts(facts: list[dict]) -> list[tuple[str, list[dict]]]:
-    """Per company, one tally for each move type in the order of `MOVE_TYPES`."""
+    """Per company, one tally for each move type in the order of `MOVE_TYPES`; moves outside the question are left out."""
     return [(group["company"], [_tally([fact for fact in group["moves"] if _fields(fact).get("move_type") == move])
                                 for move in store.MOVE_TYPES])
-            for group in group_by_company(_moves(facts), None)]
+            for group in group_by_company(_inside_moves(facts), None)]
 
 
 def delivery_counts(facts: list[dict]) -> list[tuple[str, list[dict]]]:
@@ -228,20 +258,24 @@ def _count_cell(tally: dict, labels: dict) -> str:
     notes = [pill("status-uncertain", labels["grid_uncertain"].format(n=tally["uncertain"]))] if tally["uncertain"] else []
     if tally["non_public"]:
         notes.append(pill("class-internal", labels["grid_non_public"].format(n=tally["non_public"])))
+    if tally.get("outside"):
+        notes.append(pill("outside", labels["grid_outside"].format(n=tally["outside"])))
     return "<td>" + join([esc(tally["n"])] + notes) + "</td>"
 
 
-def _count_table(css: str, columns: list[str], rows: list[tuple[str, list[dict]]], labels: dict) -> str:
+def _count_table(css: str, columns: list[str], rows: list[tuple[str, list[dict]]], labels: dict, corner: str = "") -> str:
     body = ['<tr><th scope="row">' + esc(company) + "</th>" + "".join(_count_cell(tally, labels) for tally in tallies) + "</tr>"
             for company, tallies in rows]
-    return _table(css, [esc(label) for label in columns], body)
+    return _table(css, [esc(label) for label in columns], body, esc(corner))
 
 
 def move_grid(facts: list[dict]) -> str:
-    """Rows are companies, columns the move types; each cell the number of facts, empty when there are none."""
+    """Rows are companies, columns the move types; each cell the number of facts, empty when there are none. The
+    corner says what the rows are, so a company name is not mistaken for a column heading."""
     labels = load_labels()
     rows = move_counts(facts)
-    return _count_table("grid", [labels[f"move_{move}"] for move in store.MOVE_TYPES], rows, labels) if rows else ""
+    return (_count_table("grid", [labels[f"move_{move}"] for move in store.MOVE_TYPES], rows, labels, labels["col_company"])
+            if rows else "")
 
 
 def delivery_table(facts: list[dict]) -> str:
@@ -253,10 +287,18 @@ def delivery_table(facts: list[dict]) -> str:
 
 # --- capacity bars ---
 
-def _stated_size(fact: dict) -> str:
+def _size_of(fact: dict) -> dict:
+    """The tidy size of a capacity move: the model's, or (a bare fact) the same worked out from its fields."""
+    size = fact.get("size")
+    return size if isinstance(size, dict) else company_view.size_of(_fields(fact))
+
+
+def stated_size(fact: dict, sep: str = "") -> str:
+    """The size as stated: its value as written (with `sep` between its thousands, where one is given) and its unit
+    tidied."""
     fields = _fields(fact)
     value = _text(fields.get("size_value"))
-    return join([value or "", unit_for(value, _text(fields.get("size_unit"))) or ""])
+    return join([shown(value, sep) or "", unit_for(value, _size_of(fact).get("unit")) or ""])
 
 
 def _width(value: Decimal, largest: Decimal) -> int:
@@ -266,31 +308,52 @@ def _width(value: Decimal, largest: Decimal) -> int:
     return int((value * 100 / largest).to_integral_value(rounding=ROUND_HALF_UP))
 
 
+def _shown_size(fact: dict, labels: dict) -> str:
+    """The size for a bar: in the unit the bars compare in, with what was stated next to it when that differs."""
+    converted = _size_of(fact).get("converted")
+    sep = labels["thousands_separator"]
+    if not isinstance(converted, dict):
+        return esc(stated_size(fact, sep))
+    value = f"{shown(converted['number'], sep)} {converted['unit']}"
+    if converted.get("about"):
+        value = labels["converted_about"].format(value=value)
+    return _fmt(labels, "converted_from", converted=value, stated=stated_size(fact, sep))
+
+
 def _bar_row(fact: dict, value: Decimal, largest: Decimal, labels: dict) -> str:
     access = _access(fact)
     fill = _bar_classes(fact, "bar-fill")
     return (f'<li class="bar-row"><span class="bar-label">{esc(_site_line(fact))}</span>'
             f'<div class="bar-track"><div class="{fill}" style="width:{_width(value, largest)}%"></div></div>'
-            f'<span class="bar-value">{esc(_stated_size(fact))}</span> '
+            f'<span class="bar-value">{_shown_size(fact, labels)}</span> '
             f'<span class="bar-note">{esc(labels["access_" + access])}</span> {fact_ref(fact, labels)}</li>')
 
 
+def _comparable_number(size: dict) -> Decimal | None:
+    """The size's number in the unit the bars compare in (its conversion where it has one), or None."""
+    converted = size.get("converted")
+    number = converted["number"] if isinstance(converted, dict) else size.get("number")
+    return Decimal(number) if isinstance(number, str) and number else None
+
+
 def capacity_bars(facts: list[dict]) -> str:
-    """Bars for sizes stated in the same unit; every other stated size is listed, never converted or compared."""
+    """Bars for sizes in the same unit, where two units that differ only by a fixed factor (square feet and square
+    metres, or one currency in millions and in billions) count as one: the bar is drawn in the unit the family is
+    compared in, with what was stated shown next to it. Every other stated size is listed, never compared. A move
+    outside the question is left out: it adds another kind of capacity."""
     labels = load_labels()
     groups: dict[str, dict] = {}
     listed = []
-    for fact in _moves(facts):
-        fields = _fields(fact)
-        if not _stated_size(fact):
+    for fact in _inside_moves(facts):
+        if not stated_size(fact):
             continue
-        unit = _text(fields.get("size_unit"))
-        if unit is None:
+        size = _size_of(fact)
+        unit = size.get("compare_unit")   # as the program tidied it: "m²" must not go through `normalise`
+        if not isinstance(unit, str) or not unit.strip():
             listed.append(fact)
             continue
         group = groups.setdefault(unit.casefold(), {"unit": unit, "items": []})
-        value = _text(fields.get("size_value"))
-        group["items"].append((fact, parse_number(value) if value else None))
+        group["items"].append((fact, _comparable_number(size)))
     parts = []
     for group in groups.values():
         numbers = [(fact, value) for fact, value in group["items"] if value is not None]
@@ -302,7 +365,7 @@ def capacity_bars(facts: list[dict]) -> str:
         parts.append(f'<div class="capacity-group"><h4>{esc(group["unit"])}</h4><ul class="bars">'
                      + "".join(_bar_row(fact, value, largest, labels) for fact, value in numbers) + "</ul></div>")
     if listed:
-        items = [join([esc(_site_line(fact)) + ":", esc(_stated_size(fact)), fact_ref(fact, labels)]) for fact in listed]
+        items = [join([esc(_site_line(fact)) + ":", esc(stated_size(fact, labels["thousands_separator"])), fact_ref(fact, labels)]) for fact in listed]
         parts.append(f'<div class="not-comparable"><p>{esc(labels["not_comparable"])}</p>{_listing(items)}</div>')
     return "\n".join(parts)
 
@@ -314,7 +377,7 @@ def totals(calculations: list[dict]) -> str:
     labels = load_labels()
     items = []
     for calculation in calculations:
-        result, unit = esc(calculation.get("result")), calculation.get("unit")
+        result, unit = esc(shown(calculation.get("result"), labels["thousands_separator"])), calculation.get("unit")
         value = (f"{result}%" if calculation.get("operation") == "share"
                  else join([result, esc(unit_for(calculation.get("result"), unit))]))
         refs = " ".join(fact_ref(fact, labels) for fact in calculation.get("inputs") or [])
@@ -329,23 +392,35 @@ def totals(calculations: list[dict]) -> str:
 
 # --- sites by country ---
 
+def _countries_of(fact: dict) -> list[str | None]:
+    """The countries a move names, each by its one name: the model's, or (a bare fact) the one written. A move that
+    names none is listed under no country (None)."""
+    named = fact.get("countries")
+    if not isinstance(named, list):
+        written = _text(_fields(fact).get("country"))
+        named = [written] if written else []
+    return [country for country in named if _text(country)] or [None]
+
+
 def sites_by_country(facts: list[dict]) -> str:
-    """Countries alphabetically with the unknown one last, each with its sites and links to the facts."""
+    """Countries alphabetically with the unknown one last, each with its sites and links to the facts. A move that
+    names several countries is listed under each."""
     labels = load_labels()
     countries: dict[str, dict] = {}
     for fact in _moves(facts):
-        fields = _fields(fact)
-        country, site = _text(fields.get("country")), _text(fields.get("site"))
-        if country is None and site is None:
-            continue
-        entry = countries.setdefault((country or "").casefold(), {"name": country, "sites": {}})
-        entry["sites"].setdefault((site or "").casefold(), {"name": site, "facts": []})["facts"].append(fact)
+        site = _text(_fields(fact).get("site"))
+        for country in _countries_of(fact):
+            if country is None and site is None:
+                continue
+            entry = countries.setdefault((country or "").casefold(), {"name": country, "sites": {}})
+            entry["sites"].setdefault((site or "").casefold(), {"name": site, "facts": []})["facts"].append(fact)
     ordered = sorted(countries.values(), key=lambda entry: (entry["name"] is None, (entry["name"] or "").casefold()))
     items = []
     for entry in ordered:
         sites = sorted(entry["sites"].values(), key=lambda site: (site["name"] is None, (site["name"] or "").casefold()))
         rows = [join([esc(site["name"] if site["name"] is not None else labels["site_not_stated"]),
-                      " ".join(fact_ref(fact, labels) for fact in site["facts"])]) for site in sites]
+                      " ".join(fact_ref(fact, labels) + outside_pill(fact, labels) for fact in site["facts"])])
+                for site in sites]
         name = entry["name"] if entry["name"] is not None else labels["country_not_stated"]
         items.append(f'<strong class="country-name">{esc(name)}</strong>' + _listing(rows, "sites"))
     return _listing(items, "countries", "country")

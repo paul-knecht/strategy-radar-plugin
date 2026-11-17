@@ -1,0 +1,162 @@
+{
+  "themes": [
+    {
+      "name": "Where the firm's boundary lies",
+      "lenses": [
+        "asset-specificity",
+        "cost-of-integrating",
+        "team-production",
+        "agency-costs",
+        "who-owns-the-asset",
+        "gains-from-partners",
+        "resource-dependence",
+        "economies-of-scope"
+      ]
+    },
+    {
+      "name": "Resources, capabilities and growth",
+      "lenses": [
+        "what-a-firm-is-good-at",
+        "absorbing-growth",
+        "resources-hard-to-copy",
+        "absorptive-capacity",
+        "product-market-growth",
+        "assets-built-over-time",
+        "dynamic-capabilities",
+        "routines-and-evolution",
+        "knowledge-based-view",
+        "exploration-and-exploitation",
+        "natural-resource-view"
+      ]
+    },
+    {
+      "name": "International business and trade",
+      "lenses": [
+        "build-abroad-market-or-cost",
+        "tariffs-subsidies-supply-chains",
+        "diamond-of-national-advantage",
+        "distance-between-countries",
+        "adapt-aggregate-arbitrage",
+        "product-cycle-abroad",
+        "investing-abroad-for-control",
+        "internalising-across-borders",
+        "step-by-step-entry-abroad",
+        "integration-or-local-responsiveness",
+        "cultural-dimensions",
+        "governing-value-chains",
+        "regional-not-global"
+      ]
+    },
+    {
+      "name": "Positioning and competitive advantage",
+      "lenses": [
+        "value-chain",
+        "generic-strategies",
+        "strategy-not-operational-effectiveness"
+      ]
+    },
+    {
+      "name": "Industry structure and profitability",
+      "lenses": [
+        "barriers-to-new-competition",
+        "strategic-groups",
+        "how-much-industry-matters",
+        "sunk-costs-and-concentration",
+        "industry-life-cycle"
+      ]
+    },
+    {
+      "name": "Competitive moves and interaction",
+      "lenses": [
+        "co-opetition",
+        "first-mover-advantages"
+      ]
+    },
+    {
+      "name": "Competition and industry structure",
+      "lenses": [
+        "five-competitive-forces",
+        "capacity-to-deter-entry",
+        "network-effects"
+      ]
+    },
+    {
+      "name": "Innovation and who gains from it",
+      "lenses": [
+        "who-profits-from-innovation",
+        "disruption-from-below",
+        "dominant-design",
+        "architectural-innovation",
+        "competence-destroying-change",
+        "diffusion-of-innovations"
+      ]
+    },
+    {
+      "name": "Judgement and forecasts",
+      "lenses": [
+        "inside-and-outside-view"
+      ]
+    },
+    {
+      "name": "Platforms and modular systems",
+      "lenses": [
+        "two-sided-markets",
+        "modularity"
+      ]
+    },
+    {
+      "name": "Corporate strategy, acquisitions and organisation",
+      "lenses": [
+        "corporate-parenting",
+        "dominant-logic",
+        "integrating-acquisitions",
+        "bidder-hubris",
+        "free-cash-flow",
+        "corporate-strategy-tests",
+        "related-or-unrelated-diversification",
+        "structure-follows-strategy"
+      ]
+    },
+    {
+      "name": "How firms decide",
+      "lenses": [
+        "bounded-rationality",
+        "behavioural-theory-of-the-firm",
+        "three-models-of-a-decision",
+        "deliberate-and-emergent-strategy",
+        "escalating-commitment",
+        "fast-decisions"
+      ]
+    },
+    {
+      "name": "Institutions and organisational environments",
+      "lenses": [
+        "organizations-becoming-alike",
+        "population-ecology",
+        "responses-to-institutional-pressure"
+      ]
+    },
+    {
+      "name": "The firm's responsibility to society",
+      "lenses": [
+        "profit-as-the-firms-responsibility",
+        "managing-for-stakeholders",
+        "layers-of-responsibility",
+        "responsibility-as-investment"
+      ]
+    },
+    {
+      "name": "Venture screening",
+      "lenses": [
+        "product-market-fit",
+        "jockey-or-horse",
+        "how-investors-decide",
+        "founder-and-track-record",
+        "unit-economics-of-a-customer",
+        "default-alive",
+        "staged-financing",
+        "endorsement-by-prominent-backers"
+      ]
+    }
+  ]
+}

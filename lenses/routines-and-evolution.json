@@ -1,0 +1,22 @@
+{
+  "id": "routines-and-evolution",
+  "name": "Routines and evolution",
+  "idea": "An encyclopedia article states that the work defined routines as regular and predictable patterns of a firm, and that its authors proposed that routines act like genes, being heritable and selectable by the environment. It says the book is considered the most influential work on routines and goes against traditional assumptions of neoclassical economics.",
+  "suggests": "Look at which ways of working a company repeats year after year, what they let it do well, and which changes they make slow or hard.",
+  "limits": "The article states that ambiguities remain about how intended, stable or changing routines are. It adds that routines can be transferred to other settings only to a limited degree, which indicates that they can reflect local rather than global best solutions.",
+  "competing_idea": "Another view the article reports sees routines as a range of possibilities describable as grammars, in which choosing and carrying out a routine is an effortful achievement.",
+  "questions": [
+    "Which routines does the company repeat most, and what do they let it do better than others?",
+    "Which changes would require it to give up or rebuild those routines?",
+    "Can its successful routines be copied to new sites or markets, or do they depend on local history?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Organisational routines\", Wikipedia, The Free Encyclopedia, revision 1377876803 of 1 October 2026",
+      "level": "secondary_source_read",
+      "about": "Richard R. Nelson and Sidney G. Winter, An Evolutionary Theory of Economic Change, Belknap Press of Harvard University Press, 1982",
+      "link": "https://en.wikipedia.org/w/index.php?title=Organisational_routines&oldid=1377876803"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

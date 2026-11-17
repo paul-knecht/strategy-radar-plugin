@@ -1,0 +1,22 @@
+{
+  "id": "managing-for-stakeholders",
+  "name": "Managing for all with a stake",
+  "idea": "An encyclopedia entry credits the work's author with first proposing, in the 1980s, a view of corporate governance called stakeholder theory. In its early forms, the entry says, managers should weigh the interests of everyone with a stake in the firm. The entry adds that in one place the work argues this serves the firm's strategy better than maximizing shareholder wealth.",
+  "suggests": "List the groups with a stake in the company's choices, and look at which of them the current plan treats as a cost and which it treats as part of the strategy.",
+  "limits": "The entry reports that critics find the theory incompletely articulated and weakly defended, and that its supporters have given no clear reason for where the line of who counts as a stakeholder is drawn, though the line matters a great deal.",
+  "competing_idea": "The entry names shareholder primacy as the rival view: firms should be run in the best interests of their shareholders, usually taken to mean maximizing their wealth. It calls this the dominant view in the business world, and in business schools too.",
+  "questions": [
+    "Which groups have a stake in this decision, and what does each stand to gain or lose from it?",
+    "Where would the company draw the line between groups it must consider and groups it need not, and what reason can it give for that line?",
+    "Does serving these groups strengthen the company's strategy, or does it only add costs that owners would rather avoid?"
+  ],
+  "originals": [
+    {
+      "reference": "Jeffrey Moriarty, \"Business Ethics\", Stanford Encyclopedia of Philosophy, first published 17 November 2016, substantive revision 8 June 2021",
+      "level": "secondary_source_read",
+      "about": "Freeman, R.E., 1984, Strategic Management: A Stakeholder Approach, Boston, MA: Pitman, as the entry's bibliography gives it",
+      "link": "https://plato.stanford.edu/entries/ethics-business/"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

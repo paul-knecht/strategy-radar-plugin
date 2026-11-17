@@ -7,7 +7,7 @@ Examples use invented names only (Example Pharma, Competitor A).
    Never type or retell source text into a saved copy. The program saves the copy; you only name where it is.
    Why: a quote can only be trusted if the copy is untouched.
 
-2. **A fact record is one proposal with these keys.** The full tables are in the engine reference (`docs/engine.md`, "The proposal format"). Any other key is refused. The program sets `id`, `checks`, `status`, `status_reason` and `withdrawn` itself; never write them.
+2. **A fact record is one proposal with these keys.** The full tables are in the engine reference (`docs/engine.md`, "The proposal format"). Any other key is refused. The program sets `id`, `checks`, `status`, `status_reason`, `uncertain_reasons` and `withdrawn` itself; never write them.
    - `kind`: `capacity_move` or `general`.
    - `statement`: the fact in one or two sentences.
    - `quote`: one exact quote (rule 3).
@@ -20,6 +20,8 @@ Examples use invented names only (Example Pharma, Competitor A).
    - `early_signal`: true for an early signal (rule 8); may be left out otherwise.
    - `fields`: the details of a move (see the playbook). Needed when the kind is `capacity_move`; left out for `general`.
    - `supporting`: more quotes for the same fact, from its own source or from a second source; see rule 7. May be left out.
+   - `about_company`: the one company a `general` fact is about, or `null` when it is about no single company. Always `null` on a capacity move: its company stands in `fields`.
+   - `connections`: each customer, buyer, seller or partner the source names in this fact, as an object with `party` (the name, or `null` when the source does not name it), `tie` (`buyer`, `seller`, `customer` or `partner`) and `description` (the source's words for a party it does not name). May be left out.
    Why: a proposal with a missing or unknown key is refused.
 
 3. **A quote is copied character for character from the saved copy.**

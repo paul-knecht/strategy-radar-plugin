@@ -287,13 +287,38 @@ def expected_status(fact: dict, sources: dict[str, dict],
         return "uncertain", EARLY_SIGNAL_REASON
     if fact.get("primary_source") is True:
         return "confirmed", None
+    if _confirmed_by_second_source(fact, checks, sources, texts):
+        return "confirmed", None
+    return "uncertain", NOT_PRIMARY_REASON
+
+
+def _confirmed_by_second_source(fact: dict, checks: dict, sources: dict[str, dict], texts: dict[str, str] | None) -> bool:
+    """Whether a supporting entry from an independent second source passed its quote check. The one rule for the
+    status (`expected_status`) and for the `single_source` code (`uncertain_reasons`), so the two never drift apart."""
     main_id = text_id(fact.get("source_id"))
     for entry in checks.get("supporting") or []:
         if _is_hint(entry.get("source_id"), sources):   # a hint is never the second source that confirms
             continue
         if entry.get("passed") is True and independent(main_id, text_id(entry.get("source_id")), sources, texts):
-            return "confirmed", None
-    return "uncertain", NOT_PRIMARY_REASON
+            return True
+    return False
+
+
+def uncertain_reasons(fact: dict, sources: dict[str, dict], texts: dict[str, str] | None = None) -> list[str]:
+    """The codes (`store.UNCERTAIN_REASONS`, in that order) that say why a fact is uncertain; `[]` for a fact that is
+    not uncertain by `expected_status`. A fact may have several: it is tentative, an early signal, and rests on one
+    source that is not the party itself. They explain the status; they never change it."""
+    if expected_status(fact, sources, texts)[0] != "uncertain":
+        return []
+    codes = []
+    if fact.get("certainty") == "tentative":
+        codes.append("tentative")
+    if is_early_signal(fact, sources):
+        codes.append("early_signal")
+    if fact.get("primary_source") is not True and not _confirmed_by_second_source(
+            fact, fact.get("checks") or {}, sources, texts):
+        codes.append("single_source")
+    return codes
 
 
 def needs_settling(fact: dict, sources: dict[str, dict], texts: dict[str, str] | None = None) -> bool:
@@ -307,6 +332,19 @@ def needs_settling(fact: dict, sources: dict[str, dict], texts: dict[str, str] |
     except (AttributeError, TypeError):   # checks or entries of the wrong type, written by hand
         return True
     return expected != fact.get("status")
+
+
+def codes_need_settling(fact: dict, sources: dict[str, dict], texts: dict[str, str] | None = None) -> bool:
+    """Whether a settled fact that stores `uncertain_reasons` holds codes that its stored checks no longer give it:
+    a source link recorded after `settle` can make a second source no longer independent without changing the
+    status. A fact without the key (settled before codes existed) never needs it. Never raises. This is kept apart
+    from `needs_settling`, which compares the status only."""
+    if fact.get("status") not in store.COUNTING + ("rejected",) or "uncertain_reasons" not in fact:
+        return False
+    try:
+        return fact["uncertain_reasons"] != uncertain_reasons(fact, sources, texts)
+    except (AttributeError, TypeError):   # checks or entries of the wrong type, written by hand
+        return True
 
 
 # --- the quote check -----------------------------------------------------------------
@@ -429,7 +467,7 @@ def withdraw_fact(run_dir: Path, fact_id: str, reason: str, now: datetime | None
 
 
 def settle(run_dir: Path) -> dict[str, str]:
-    """Re-check every quote, then write `status` and `status_reason` into every fact.
+    """Re-check every quote, then write `status`, `status_reason` and `uncertain_reasons` into every fact.
 
     Returns `{fact_id: status}`. Quotes are re-checked first so a stored quote check is never stale. Holds the run
     lock from the first quote check to the last status, so nothing written in parallel is lost or settled half-way.
@@ -442,6 +480,7 @@ def settle(run_dir: Path) -> dict[str, str]:
         statuses = {}
         for fact_id, fact in read_facts(run_dir).items():
             fact["status"], fact["status_reason"] = expected_status(fact, sources, texts)
+            fact["uncertain_reasons"] = uncertain_reasons(fact, sources, texts)
             write_fact(run_dir, fact)
             statuses[fact_id] = fact["status"]
     return statuses

@@ -1,12 +1,13 @@
 """The driver's own tests. They start no model, so they run in the default suite."""
 import json
 import os
+import time
 from pathlib import Path
 
 import pytest
 
-from model.driver import (ALLOWED, ANSWER, ROOT, denied, lead_commands, only_run, parse_turn, plain, say,
-                          session_command, session_environment, step_line)
+from model.driver import (ALLOWED, ANSWER, ROOT, denied, lead_commands, lead_outputs, only_run, parse_turn, plain,
+                          say, session_command, session_environment, step_line)
 from helpers import make_run
 
 FIXTURE = Path(__file__).parent / "fixtures" / "turn.jsonl"   # one real turn in the stream form, recorded
@@ -145,14 +146,39 @@ def test_the_session_environment_refuses_a_path_with_a_radar_of_its_own(tmp_path
         session_environment(tmp_path / "project")
 
 
+def _limit_starts_once_it_printed(marker: Path, monkeypatch, deadline: float = 30) -> None:
+    """The turn's limit starts only once the fake session has printed its line and made `marker`.
+
+    On a busy computer a shell can take longer than the limit of one second just to start, and the turn file is then
+    empty for a reason that has nothing to do with the driver. The first wait of `say` (its `communicate`) therefore
+    starts after the marker exists, or after `deadline` seconds without it; every later wait is left as it is."""
+    import model.driver as driver
+    real = driver.subprocess.Popen
+
+    class Started(real):
+        waited = False
+
+        def communicate(self, input=None, timeout=None):
+            if not self.waited:
+                self.waited = True
+                until = time.monotonic() + deadline
+                while not marker.exists() and time.monotonic() < until:
+                    time.sleep(0.01)
+            return super().communicate(input, timeout)
+
+    monkeypatch.setattr(driver.subprocess, "Popen", Started)
+
+
 def test_a_turn_that_does_not_end_in_time_keeps_what_it_printed(tmp_path, monkeypatch):
     """The turn is stopped, its output so far is saved, and the test fails naming the file."""
     fake = tmp_path / "bin"
     fake.mkdir()
-    (fake / "claude").write_text('#!/bin/sh\necho \'{"type": "system", "subtype": "init"}\'\nexec sleep 30\n',
-                                 encoding="utf-8")
+    ready = tmp_path / "ready"
+    (fake / "claude").write_text('#!/bin/sh\necho \'{"type": "system", "subtype": "init"}\'\n'
+                                 f': > "{ready}"\nexec sleep 30\n', encoding="utf-8")
     (fake / "claude").chmod(0o755)
     monkeypatch.setenv("PATH", str(fake) + os.pathsep + "/usr/bin" + os.pathsep + "/bin")
+    _limit_starts_once_it_printed(ready, monkeypatch)
     project = tmp_path / "project"
     with pytest.raises(pytest.fail.Exception) as failed:
         say(project, "hello", timeout=1)
@@ -176,6 +202,7 @@ def test_a_late_turn_is_still_saved_when_its_group_is_gone_and_a_child_holds_the
         raise ProcessLookupError(pid)
     monkeypatch.setattr(driver.os, "killpg", gone)                         # the group has gone; the process has not
     monkeypatch.setattr(driver, "AFTER_KILL", 1)
+    _limit_starts_once_it_printed(pid_file, monkeypatch)                  # the pid file is written after the line
     try:
         with pytest.raises(pytest.fail.Exception) as failed:
             say(tmp_path / "project", "hello", timeout=1)
@@ -217,3 +244,32 @@ def test_a_test_answer_starts_with_the_words_the_steps_look_for():
     steps = ROOT / "skills" / "run" / "steps"
     for step in ("06-checkpoint-lenses.md", "09-checkpoint-final.md"):
         assert f"the exact words `{ANSWER.strip()}`" in (steps / step).read_text(encoding="utf-8"), step
+
+
+def test_parse_turn_keeps_what_each_of_the_lead_s_shell_commands_printed_and_no_helper_s():
+    """Final review: the new-lens test reads what the lead's own checks printed (check-lenses, the overlap check), so
+    each lead command is paired with the result of its call; a helper's call and its result are left out."""
+    recorded = parse_turn(FIXTURE.read_text(encoding="utf-8"))
+    assert recorded.outputs == (("radar --version", '{"version": "0.1.0"}'),)
+    lead = {"type": "assistant", "parent_tool_use_id": None,
+            "message": {"content": [{"type": "tool_use", "id": "toolu_a", "name": "Bash",
+                                     "input": {"command": "radar check-lenses --lenses x --real"}},
+                                    {"type": "tool_use", "id": "toolu_b", "name": "Read", "input": {"file_path": "/x"}},
+                                    {"type": "tool_use", "id": "toolu_c", "name": "Bash",
+                                     "input": {"command": "python3 scripts/check_lens_overlap.py --lens x"}}]}}
+    results = {"type": "user", "parent_tool_use_id": None,
+               "message": {"content": [{"type": "tool_result", "tool_use_id": "toolu_a", "is_error": True,
+                                        "content": [{"type": "text", "text": "Exit code 1"},
+                                                    {"type": "text", "text": '{"problems": []}'}]},
+                                       {"type": "tool_result", "tool_use_id": "toolu_b", "content": "read text"},
+                                       {"type": "tool_result", "tool_use_id": "toolu_c", "content": "1 stretch"}]}}
+    helper = {"type": "assistant", "parent_tool_use_id": "toolu_1",
+              "message": {"content": [{"type": "tool_use", "id": "toolu_h", "name": "Bash",
+                                       "input": {"command": "radar record-support --run x --fact F1"}}]}}
+    helper_result = {"type": "user", "parent_tool_use_id": "toolu_1",
+                     "message": {"content": [{"type": "tool_result", "tool_use_id": "toolu_h", "content": "ok"}]}}
+    result = {"type": "result", "is_error": False, "session_id": "S", "result": "Done.", "permission_denials": []}
+    turn = parse_turn("\n".join(json.dumps(event) for event in (lead, results, helper, helper_result, result)))
+    assert turn.outputs == (("radar check-lenses --lenses x --real", 'Exit code 1\n{"problems": []}'),
+                            ("python3 scripts/check_lens_overlap.py --lens x", "1 stretch"))
+    assert lead_outputs(turn) == list(turn.outputs) and lead_outputs() == []

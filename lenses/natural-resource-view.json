@@ -1,0 +1,21 @@
+{
+  "id": "natural-resource-view",
+  "name": "Advantage from the natural environment",
+  "idea": "The work argues that a firm's relationship with the natural environment can be a source of lasting competitive advantage. It names linked capabilities, such as preventing pollution and taking responsibility for products across their life, and extends the resource-based view of the firm to cover them.",
+  "suggests": "Look at which environmental capabilities the company has built, and whether they are hard for competitors to copy or only a cost of doing business.",
+  "limits": "The work builds on the resource-based view of the firm, so what it argues rests on that view's way of explaining advantage.",
+  "competing_idea": "The work starts from the point that earlier accounts of competitive advantage left the natural environment out, and it offers its view as a way to bring it in.",
+  "questions": [
+    "Which environmental capabilities does the company have, and how did it build them?",
+    "Would competitors find these capabilities hard to copy, or could they match them quickly?",
+    "Does a planned environmental investment add to the company's advantage, or does it only meet a rule?"
+  ],
+  "originals": [
+    {
+      "reference": "Stuart L. Hart, \"A Natural-Resource-Based View of the Firm\", Academy of Management Review, Vol. 20 No. 4, October 1995, pp. 986-1014",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.5465/amr.1995.9512280033"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

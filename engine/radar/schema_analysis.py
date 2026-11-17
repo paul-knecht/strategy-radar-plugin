@@ -10,10 +10,12 @@ from datetime import date
 from pathlib import Path
 
 from . import store
-from .schema import (AT_LEAST_ONE, MUST_BE_TEXT, NOT_A_DATE, NOT_A_PROBABILITY, NOT_ALLOWED, NOT_JSON,
-                     SCENARIO_COUNT, Problem, _Problems, _filled, _load, _walk)
+from .lenses import LENS_ID, check_lens, folder_unreadable, lens_file, lens_files
+from .schema import (AT_LEAST_ONE, MUST_BE_TEXT, NOT_A_DATE, NOT_A_PROBABILITY, NOT_ALLOWED, SCENARIO_COUNT,
+                     Problem, _Problems, _filled, _walk)
 
-AUDIT_FLAG_KEYS = ("check", "text")   # a flag is exactly a check and a text; the report prints nothing else of it
+# A flag is a check and a text, and may name the key messages it is about. A flag of an older run has no message_ids.
+AUDIT_FLAG_KEYS = ("check", "text", "message_ids")
 
 MUST_BE_LIST = "must be a list"
 MUST_BE_OBJECT = "must be an object"
@@ -23,9 +25,10 @@ CONCLUSION_NOT_LAST = "the last step of a chain must be its conclusion"
 FLAG_KEY_NOT_KNOWN = "the key {} is not known in a flag"   # ruling FWA-5a: explained for a flag, not for a fact
 # A flag of the bias audit may name any fact of the run, whatever its status, but only one that exists (ruling FWA-4).
 FLAG_NAMES_NO_FACT = "a flag names fact {}, which does not exist"
+# A flag may name the key messages it is about (decision D10); each must be a message of this analysis.
+FLAG_NAMES_NO_MESSAGE = "a flag names message {}, which does not exist"
 _FACT_ID_IN_TEXT = re.compile(r"(?<![A-Za-z0-9_])F[0-9]+(?![A-Za-z0-9_])")   # F9, standing on its own, as the gate reads it
 
-_LENS_ID = re.compile(r"[\w-]+")
 _ISO_DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
 
@@ -72,6 +75,8 @@ def _check_message(out: _Problems, index: int, message: dict) -> None:
     for field in ("text", "counter_view", "would_change"):
         out.nonempty("analysis.json", message, field, prefix)
     out.allowed("analysis.json", message, "confidence", store.CONFIDENCE, prefix)
+    if "memo_part" in message:   # only a screening run's messages have one
+        out.allowed("analysis.json", message, "memo_part", store.MEMO_PARTS, prefix)
     chain = message.get("chain")
     if chain is not None and not isinstance(chain, list):
         out.add("analysis.json", prefix + "chain", MUST_BE_LIST)
@@ -156,27 +161,16 @@ def _check_sections(out: _Problems, analysis: dict) -> None:
 
 
 def _lens_problems(lenses_dir: Path, lens_id: str) -> list[Problem] | None:
-    """Problems in one lens file, or None if there is no such lens."""
-    path = lenses_dir / f"{lens_id}.json"
-    if not _LENS_ID.fullmatch(lens_id) or not path.is_file():
+    """Problems in one lens file, by the rule of `radar check-lenses` without its `--real` part, or None if the folder
+    lists no lens under exactly that name (a name in another case is no lens). The lens is found in the folder's
+    listing, as `check-lenses` finds it; a folder that cannot be read is its one problem."""
+    if not LENS_ID.fullmatch(lens_id):
         return None
-    file = f"lenses/{lens_id}.json"
-    out = _Problems()
-    lens = _load(path)
-    if lens is None:
-        out.add(file, None, NOT_JSON)
-        return out.items
-    questions = lens.get("questions")
-    if not (isinstance(questions, list) and len(questions) == 3):
-        out.add(file, "questions", "lens must have exactly 3 questions")
-    originals = lens.get("originals")
-    if not isinstance(originals, list):
-        out.add(file, "originals", NOT_ALLOWED)
-        return out.items
-    for index, original in enumerate(originals):
-        if not (isinstance(original, dict) and original.get("level") in store.LENS_LEVELS):
-            out.add(file, f"originals[{index}].level", NOT_ALLOWED)
-    return out.items
+    files = lens_files(lenses_dir)
+    if files is None:
+        return [folder_unreadable()]
+    path = lens_file(files, lens_id)
+    return None if path is None else check_lens(path, real=False, today=date.today())
 
 
 # --- assumptions, scenarios, predictions, calculations ---------------------
@@ -338,6 +332,23 @@ def _check_flag_facts(out: _Problems, analysis: dict, fact_ids: set[str]) -> Non
                 out.add("analysis.json", f"audit_flags[{index}].text", FLAG_NAMES_NO_FACT.format(fact_id))
 
 
+def _check_flag_messages(out: _Problems, analysis: dict) -> None:
+    """A flag's `message_ids`, when it has them, is a list of ids of messages of this analysis."""
+    messages = analysis.get("messages")
+    message_ids = {message.get("id") for message in messages if isinstance(message, dict)} \
+        if isinstance(messages, list) else set()
+    flags = analysis.get("audit_flags")
+    for index, flag in enumerate(flags if isinstance(flags, list) else []):
+        if not isinstance(flag, dict) or flag.get("message_ids") is None:
+            continue
+        where = f"audit_flags[{index}].message_ids"
+        named = _list(out, flag, "message_ids", where)
+        _texts(out, named, where)
+        for message_id in dict.fromkeys(item for item in named if isinstance(item, str)):   # each id once
+            if message_id not in message_ids:
+                out.add("analysis.json", where, FLAG_NAMES_NO_MESSAGE.format(message_id))
+
+
 def check_analysis(out: _Problems, analysis: dict, fact_ids: set[str], lenses_dir: Path | None,
                    early_ids: frozenset = frozenset()) -> None:
     """Add every problem in analysis.json to `out`. `early_ids` are the facts that are early signals."""
@@ -346,6 +357,7 @@ def check_analysis(out: _Problems, analysis: dict, fact_ids: set[str], lenses_di
     _check_options(out, analysis)
     _check_sections(out, analysis)
     _check_flag_facts(out, analysis, fact_ids)
+    _check_flag_messages(out, analysis)
     _check_judgements(out, analysis)
     _check_baselines(out, analysis, early_ids)
     checked: dict[str, list[Problem] | None] = {}
@@ -362,7 +374,9 @@ def check_analysis(out: _Problems, analysis: dict, fact_ids: set[str], lenses_di
             if isinstance(value, str):
                 if value not in checked:
                     checked[value] = _lens_problems(lenses_dir, value)
-                    out.items.extend(checked[value] or [])
+                    for problem in checked[value] or []:
+                        if problem not in out.items:   # a lens folder that cannot be read is named once
+                            out.items.append(problem)
                 found = checked[value]
             if found is None:
                 out.add(file, path, f"lens {value} does not exist")

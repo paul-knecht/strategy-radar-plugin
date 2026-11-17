@@ -21,17 +21,21 @@ What is pinned, in both directions: the options of every command against `radar.
 switch, required, allowed values, default); the printed keys, in the order they are printed, one level down and further
 where the block names them, against what the commands really print on the invented demo run; the exit code of every
 case run here against the codes the block's `exit:` line names, with at least one refusal case for every command and its
-printed shape; and the three proposal tables against what the program's own proposal check accepts and refuses. Every
-key of a table is tried in four proposals (the base: a capacity move, quote in English, firm; a quote in another
-language; a tentative fact; a general fact, which holds no `fields`): left out, it is refused exactly where its
-Required cell (yes, no, "when `K` is `V`", "when `K` is not `V`"; any other form fails) says it is required, and a
-conditional cell must be seen both applying and not applying; a value of the documented type is accepted (where the key
-is required, or in the base for a key that never is) and a value of every other basic type (text, number, true or
-false, list, object) is refused; null is accepted exactly where the type says "or null" and the key is not required;
-the Values cell lists exactly the program's values. The prose around the blocks is not checked by a program.
+printed shape; and the four proposal tables against what the program's own proposal check accepts and refuses. Every
+key of a table is tried in four proposals (the base: a capacity move, quote in English, firm, with one named connection;
+a quote in another language; a tentative fact; a general fact, which holds no `fields`): left out, it is refused exactly where its Required cell (yes, no, "when `K` is `V`", "when `K` is not `V`",
+where `K` is read in the row's own object when it holds `K`, and `null` stands for null; any other form fails) says it
+is required, and a conditional cell must be seen both applying and not applying; a value of the documented type is
+accepted (where the key is required, or in the base for a key that never is) and a value of every other basic type
+(text, number, true or false, list, object) is refused; null is accepted exactly where the type says "or null" and the
+key is not required; the Values cell lists exactly the program's values. One Type cell names a condition: "text or
+null; null when `kind` is `capacity_move`". Where it holds, null and leaving the key out are accepted and a value of the
+documented type is refused; where it does not, the usual rules hold, and the value of the documented type is tried
+there instead of in the base; it too must be seen both holding and not holding. The prose around the blocks is not checked by a program.
 Everything here is invented.
 """
 import contextlib
+import copy
 import io
 import json
 import re
@@ -42,7 +46,7 @@ from pathlib import Path
 
 import pytest
 
-from radar import fetch, schema, setup_env, status, store
+from radar import fetch, lenses, projects, recommend, schema, setup_env, status, store
 from radar.cli import build_parser, main
 from radar.demo import LENSES, build_demo_run
 
@@ -230,18 +234,28 @@ def radar(*argv) -> tuple[int, dict]:
     return code, printed
 
 
+# An invented page that holds only menu words (its article would be built by a script in a browser): it is saved with
+# the note that it holds little running text (plan 2b, Task 10, change F).
+MENU_PAGE = ("<html><body><nav><ul>" + "".join(f"<li>{entry}</li>" for entry in (
+    "Home", "About us", "Products and services", "Contract manufacturing", "Quality and compliance", "Careers",
+    "News and media", "Press releases", "Investors", "Financial reports", "Contact", "Locations", "Customer portal",
+    "Imprint", "Privacy notice", "Cookie settings", "Terms of use")) + "</ul></nav><main></main></body></html>")
+
+
 @contextlib.contextmanager
 def _local_site():
-    """An invented page on a server on 127.0.0.1; robots.txt and everything else answer 404."""
-    page = ("<html><body><p>" + "Competitor A adds two filling lines at Plant North (invented). " * 6 +
-            "</p></body></html>").encode("utf-8")
+    """Two invented pages on a server on 127.0.0.1, an article and a page of menu words; robots.txt and everything else
+    answer 404. The article holds more than 800 characters of running text, so it is saved without a note."""
+    pages = {"/news": ("<html><body><p>" + "Competitor A adds two filling lines at Plant North (invented). " * 14 +
+                       "</p></body></html>").encode("utf-8"),
+             "/menu": MENU_PAGE.encode("utf-8")}
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
-            found = self.path == "/news"
+            found = self.path in pages
             self.send_response(200 if found else 404)
             self.send_header("Content-Type", "text/html; charset=utf-8")
-            body = page if found else b"not found"
+            body = pages[self.path] if found else b"not found"
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -284,14 +298,24 @@ class World:
         path.write_text(content if isinstance(content, str) else json.dumps(content), encoding="utf-8")
         return path
 
-    def save_source(self) -> tuple[int, dict]:
+    def join(self, fold: str = "S1#2") -> tuple[int, dict]:
+        """join-proposals on the demo run `joined`, whose source S1 has a saved answer of two proposals; `fold` is
+        folded into the first."""
+        run = self.demo("joined", stage="sources")
+        (run / "proposals").mkdir(exist_ok=True)
+        answer = {"proposals": [GOOD_PROPOSAL, GOOD_PROPOSAL], "notes": {}}
+        (run / "proposals" / "S1.json").write_text(json.dumps(answer), encoding="utf-8")
+        return radar("join-proposals", "--run", run, "--sources", "S1", "--out", run / "proposals" / "all.json",
+                     "--merges", self.file("merges.json", [{"keep": "S1#1", "fold": [fold]}]))
+
+    def save_source(self, path: str = "/news") -> tuple[int, dict]:
         self.monkeypatch.setattr(fetch, "check_address", lambda host, resolve=None: fetch.PUBLIC)   # 127.0.0.1
         for name in ("http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY", "all_proxy", "ALL_PROXY"):
             self.monkeypatch.delenv(name, raising=False)
         self.monkeypatch.setenv("no_proxy", "127.0.0.1,localhost")
         with _local_site() as base:
             code, printed = radar("save-source", "--run", self.demo("checked", stage="checked"),
-                                  "--url", base + "/news", *META)
+                                  "--url", base + path, *META)
         assert printed["access"] == "ok", printed
         return code, printed
 
@@ -321,6 +345,67 @@ class World:
 
         self.monkeypatch.setattr(setup_env, "setup", lambda home, python: original(home, python, run=fake_run))
         return radar("setup", "--home", self.root / "radar-home")
+
+    def recommendation(self, name: str, lens: str = "firm-boundaries") -> Path:
+        """A list for the lens advisor to record on the demo run `name`: one entry on a lens, with the first three words
+        of the run's question and the first fact that counts."""
+        run = self.demo(name)
+        question = json.loads((run / "run.json").read_text(encoding="utf-8"))["question"]
+        fact = next(fact_id for fact_id, fact in store.read_facts(run).items() if recommend.counts(fact))
+        return self.file(f"{name}-{lens}.json", {"entries": [{
+            "lens": lens, "question_part": " ".join(question.split()[:3]), "why": "An invented reason for the lens.",
+            "facts": [fact], "missing": "Nothing found on what the plant costs."}], "note": None})
+
+    def record_recommendation(self, lens: str = "firm-boundaries", by: str = recommend.ADVISOR) -> tuple[int, dict]:
+        return radar("record-lens-recommendation", "--run", self.demo("recommended"), "--lenses", LENSES, "--by", by,
+                     "--file", self.recommendation("recommended", lens))
+
+    def link_check(self, verdict: str = "bears", note: str = "", lens: str = "firm-boundaries", by: str = "lens-link-reader",
+                   fact: str | None = None) -> tuple[int, dict]:
+        """record-link-check on the demo run `recommended`, once the lens advisor's list is recorded on it; `fact` is
+        the first fact of that list unless another is given."""
+        assert self.record_recommendation()[0] == 0
+        run = self.demo("recommended")
+        fact = fact or recommend.read_record(run)["entries"][0]["facts"][0]
+        return radar("record-link-check", "--run", run, "--lens", lens, "--fact", fact, "--verdict", verdict,
+                     "--by", by, "--note", note)
+
+    def link_context(self) -> tuple[int, dict]:
+        assert self.record_recommendation()[0] == 0
+        return radar("lens-link-context", "--run", self.demo("recommended"), "--lenses", LENSES)
+
+    def lens_view(self) -> tuple[int, dict]:
+        """lens-view on the demo run `recommended` with a list on two of the shipped lenses (one with a fact, one with
+        none) and one doubt recorded, so that every part the reference documents is filled."""
+        run, shipped = self.demo("recommended"), ROOT / "lenses"
+        question = json.loads((run / "run.json").read_text(encoding="utf-8"))["question"]
+        fact = next(fact_id for fact_id, fact in store.read_facts(run).items() if recommend.counts(fact))
+        part = " ".join(question.split()[:3])
+        recommend.record_recommendation(run, shipped, [
+            {"lens": "asset-specificity", "question_part": part, "why": "An invented reason.", "facts": [fact],
+             "missing": "Nothing found on what the plant costs."},
+            {"lens": "absorbing-growth", "question_part": part, "why": "An invented reason.", "facts": [],
+             "missing": "A source on the management team."}], None, recommend.ADVISOR)
+        recommend.record_link_check(run, "asset-specificity", fact, "doubt", "lens-link-reader", "An invented doubt.")
+        return radar("lens-view", "--run", run, "--lenses", shipped)
+
+    def list_on_standard_input(self, lines: str) -> tuple[int, dict]:
+        """record-lens-recommendation with its list as plain lines on standard input, the way the lens advisor sends
+        it; on a fresh demo run of its own, so the list of `record_recommendation` stays as it is."""
+        self.monkeypatch.setattr("sys.stdin", io.TextIOWrapper(io.BytesIO(lines.encode("utf-8")), encoding="utf-8"))
+        return radar("record-lens-recommendation", "--run", self.demo("recommended-lines"), "--lenses", LENSES,
+                     "--by", recommend.ADVISOR, "--list-stdin")
+
+    def record_projects(self, by: str = projects.GROUPER, leave_out: int = 0, lines: str | None = None
+                        ) -> tuple[int, dict]:
+        """record-projects on the demo run `grouped`, as the project grouper sends it: plain lines on standard input,
+        by default one project for each move that counts, less the last `leave_out` moves."""
+        run = self.demo("grouped")
+        if lines is None:
+            ids = list(projects.moves(run))
+            lines = "\n".join(f"project: Move {fact_id}\nfacts: {fact_id}\n" for fact_id in ids[:len(ids) - leave_out])
+        self.monkeypatch.setattr("sys.stdin", io.TextIOWrapper(io.BytesIO(lines.encode("utf-8")), encoding="utf-8"))
+        return radar("record-projects", "--run", run, "--by", by, "--list-stdin")
 
     def note_on_standard_input(self, *argv) -> tuple[int, dict]:
         """record-support with its note on standard input, the way the support checker sends it."""
@@ -353,6 +438,8 @@ def _cases(w: World) -> dict:
                                                 "--file", w.file("proposals.json", [GOOD_PROPOSAL]))),
                               (1, lambda: radar("add-facts", "--run", checked(), "--file", w.file(
                                   "mixed.json", [GOOD_PROPOSAL, {**GOOD_PROPOSAL, "quote": "too short"}])))],
+        ("join-proposals", None): [(0, lambda: w.join())],
+        ("join-proposals", "exit 1, the answers or the merges break a rule"): [(1, lambda: w.join("S1#3"))],
         ("checkpoint", None): [(0, lambda: radar("checkpoint", "--run", checked(), "--name", "lenses",
                                                  "--answered-by", "test", "--answer", "Use both lenses."))],
         ("log-search", None): [(0, lambda: radar("log-search", "--run", checked(), "--place", "Company websites",
@@ -360,6 +447,10 @@ def _cases(w: World) -> dict:
         ("log-excluded", None): [(0, lambda: radar("log-excluded", "--run", checked(), "--what", "Source S4",
                                                    "--why", "Nothing on this question.", "--source", "S4"))],
         ("save-source", None): [(0, w.save_source)],
+        ("save-source", "exit 0, a web page that holds little running text"): [(0, lambda: w.save_source("/menu"))],
+        ("add-copy", "exit 0, a web page that holds little running text"): [
+            (0, lambda: radar("add-copy", "--run", checked(), "--file", w.file("menu.html", MENU_PAGE),
+                              "--url", "https://www.site-a.example/menu", "--data-class", "public", *META))],
         ("add-copy", None): [(0, lambda: radar("add-copy", "--run", checked(), "--file", w.file(
             "note.txt", "A text saved by hand for the reference check, long enough to be read as a source."),
             "--url", "https://www.site-a.example/note", "--data-class", "public", *META)),
@@ -406,6 +497,29 @@ def _cases(w: World) -> dict:
         ("check-pack", None): [(0, lambda: radar("check-pack", "--file", PACK, "--today", "2026-11-12")),
                                (1, lambda: radar("check-pack", "--file", w.file("broken.json", {"id": "broken"}))),
                                (1, lambda: radar("check-pack", "--file", w.file("empty.json", "")))],
+        ("check-lenses", None): [(0, lambda: radar("check-lenses", "--lenses", LENSES)),
+                                 (1, lambda: radar("check-lenses", "--lenses", LENSES, "--real"))],
+        ("list-lenses", None): [(0, lambda: radar("list-lenses", "--lenses", ROOT / "lenses")),   # the themes index sorts all six
+                                (0, lambda: radar("list-lenses", "--lenses", LENSES))],   # no index: both are not yet sorted
+        ("record-lens-recommendation", None): [(0, w.record_recommendation),
+                                               (1, lambda: w.record_recommendation(lens="no-such-lens")),
+                                               (0, lambda: w.list_on_standard_input(
+                                                   "note: No lens fits a question about prices.\n")),
+                                               (1, lambda: w.list_on_standard_input(""))],
+        ("lens-advisor-input", None): [(0, lambda: radar("lens-advisor-input", "--run", complete(),
+                                                         "--lenses", LENSES))],
+        ("lens-advisor-input", "exit 1, no such part"): [(1, lambda: radar("lens-advisor-input", "--run", complete(),
+                                                                           "--lenses", LENSES, "--part", "99"))],
+        ("lens-link-context", None): [(0, w.link_context)],
+        ("project-grouper-input", None): [(0, lambda: radar("project-grouper-input", "--run", complete()))],
+        ("project-grouper-input", "exit 1, no such part"): [(1, lambda: radar("project-grouper-input", "--run",
+                                                                              complete(), "--part", "99"))],
+        ("record-projects", None): [(0, w.record_projects), (1, lambda: w.record_projects(leave_out=1))],
+        ("lens-view", None): [(0, lambda: radar("lens-view", "--run", complete(), "--lenses", LENSES)),   # no record
+                              (0, w.lens_view)],   # a recorded list, with the shipped themes
+        ("record-link-check", None): [(0, w.link_check),
+                                      (0, lambda: w.link_check("doubt", "The fact does not name the customer.",
+                                                               by="lens-link-reader-quick"))],
         ("demo", None): [(0, lambda: radar("demo", "--root", w.root / "demo-command"))],
         ("demo", "--variant private"): [(0, lambda: radar("demo", "--root", w.root / "demo-command",
                                                           "--variant", "private", "--stage", "sources"))],
@@ -500,6 +614,8 @@ def _refusals(w: World, monkeypatch) -> dict:
     plain prints line, "error" or "error busy" for the general rules of the reference."""
     not_a_run = w.root / "not-a-run"
     not_a_run.mkdir(exist_ok=True)
+    no_lenses = w.root / "no-lenses"   # a folder that holds no lens file
+    no_lenses.mkdir(exist_ok=True)
     complete = lambda: w.demo("complete")                       # noqa: E731
     checked = lambda: w.demo("checked", stage="checked")        # noqa: E731
 
@@ -523,6 +639,7 @@ def _refusals(w: World, monkeypatch) -> dict:
     usual = {command: [(2, lambda command=command: radar(command, "--run", not_a_run, *extra), "error")]
              for command, extra in {
                  "add-fact": ["--file", PACK], "add-facts": ["--file", PACK], "check-quotes": [], "settle": [],
+                 "join-proposals": ["--sources", "S1", "--out", w.root / "all.json"],
                  "check-data": [], "gate": [], "status": [], "quote-context": ["--open"],
                  "build-report": ["--lenses", LENSES], "calc": ["--operation", "count", "--facts", "F1"],
                  "record-support": ["--fact", "F1", "--passed", "true", "--by", "b", "--note", "n"],
@@ -530,6 +647,14 @@ def _refusals(w: World, monkeypatch) -> dict:
                  "checkpoint": ["--name", "lenses", "--answered-by", "test", "--answer", "a"],
                  "log-search": ["--place", "p", "--result", "r"], "log-excluded": ["--what", "w", "--why", "y"],
                  "add-based-on": ["--source", "S2", "--on", "S1"],
+                 "record-lens-recommendation": ["--lenses", LENSES, "--by", "lens-advisor", "--file", PACK],
+                 "lens-advisor-input": ["--lenses", LENSES],
+                 "lens-link-context": ["--lenses", LENSES],
+                 "lens-view": ["--lenses", LENSES],
+                 "project-grouper-input": [],
+                 "record-projects": ["--by", projects.GROUPER, "--file", PACK],
+                 "record-link-check": ["--lens", "firm-boundaries", "--fact", "F1", "--verdict", "bears",
+                                       "--by", "lens-link-reader", "--note", ""],
                  "save-source": ["--url", "https://www.site-a.example/x", *META],
                  "add-copy": ["--file", PACK, "--url", "https://www.site-a.example/x", "--data-class", "public",
                               *META]}.items()}
@@ -545,6 +670,9 @@ def _refusals(w: World, monkeypatch) -> dict:
             "short.json", {**GOOD_PROPOSAL, "quote": "too short"})), "error")],
         "add-facts": [(1, lambda: radar("add-facts", "--run", checked(), "--file", w.file(
             "unknown-source.json", [{**GOOD_PROPOSAL, "source_id": "S99"}])), None)],
+        "join-proposals": [(1, lambda: w.join("S1#1"), "exit 1, the answers or the merges break a rule"),
+                           (2, lambda: radar("join-proposals", "--run", checked(), "--sources", "S1,S1",
+                                             "--out", w.root / "all.json"), "error")],
         "add-copy": [(2, lambda: radar("add-copy", "--run", w.demo("practice", private=True, stage="sources"),
                                        "--file", w.file("memo.txt", "An invented internal memo."),
                                        "--url", "internal://memo", "--data-class", "internal",
@@ -583,6 +711,33 @@ def _refusals(w: World, monkeypatch) -> dict:
                     (2, lambda: radar("compare", "--previous", not_a_run, "--current", complete()), "error")],
         "check-pack": [(1, lambda: radar("check-pack", "--file", w.file("broken.json", {"id": "broken"})), None),
                        (2, lambda: radar("check-pack", "--file", w.root / "missing.json"), "error")],
+        "check-lenses": [(1, lambda: radar("check-lenses", "--lenses", no_lenses), None),
+                         (2, lambda: radar("check-lenses", "--lenses", w.root / "missing-lenses"), "error")],
+        "list-lenses": [(2, lambda: radar("list-lenses", "--lenses", w.root / "missing-lenses"), "error")],
+        "record-lens-recommendation": [(1, lambda: w.record_recommendation(lens="no-such-lens"), None),
+                                       (2, lambda: w.record_recommendation(by="support-checker"), "error"),
+                                       (2, lambda: radar("record-lens-recommendation", "--run", checked(),
+                                                         "--lenses", LENSES, "--by", recommend.ADVISOR,
+                                                         "--file", w.file("not-a-list.json", [])), "error"),
+                                       (2, lambda: w.list_on_standard_input("lens firm-boundaries\n"), "error")],
+        "lens-advisor-input": [(2, lambda: radar("lens-advisor-input", "--run", complete(),
+                                                 "--lenses", w.root / "missing-lenses"), "error")],
+        "lens-link-context": [(2, lambda: radar("lens-link-context", "--run", complete(),
+                                                "--lenses", w.root / "missing-lenses"), "error")],
+        "lens-view": [(2, lambda: radar("lens-view", "--run", complete(), "--lenses", w.root / "missing-lenses"),
+                       "error")],
+        "record-link-check": [(2, lambda: w.link_check(by="lens-advisor"), "error"),
+                              (2, lambda: w.link_check(fact="F99"), "error"),
+                              (2, lambda: w.link_check(lens="capacity-commitment"), "error"),
+                              (2, lambda: w.link_check("doubt", ""), "error"),
+                              (2, lambda: radar("record-link-check", "--run", complete(), "--lens", "firm-boundaries",
+                                                "--fact", "F1", "--verdict", "bears", "--by", "lens-link-reader",
+                                                "--note", ""), "error")],
+        "record-projects": [(1, lambda: w.record_projects(leave_out=1), None),
+                            (2, lambda: w.record_projects(by="lead"), "error"),
+                            (2, lambda: w.record_projects(lines="project Plant North\n"), "error"),
+                            (2, lambda: radar("record-projects", "--run", complete(), "--by", projects.GROUPER,
+                                              "--file", w.file("not-projects.json", {"projects": "F1"})), "error")],
         "demo": [(2, lambda: (complete(), radar("demo", "--root", w.root / "complete"))[1], "error")],
         "doctor": [(1, no_pdf_library, None)],
         "setup": [(2, lambda: radar("setup", "--home", PACK, "--dry-run"), "error")],
@@ -667,13 +822,18 @@ def _table(header: str) -> dict[str, dict]:
     return rows
 
 
-# Each documented type: the basic type of value the key takes, and whether null is allowed too.
-TYPES = {"text": ("text", False), "text or null": ("text", True), "true or false": ("true or false", False),
-         "list": ("list", False), "list or null": ("list", True), "object or null": ("object", True)}
+# Each documented type: the basic type of value the key takes, whether null is allowed too, and the condition in which
+# only null is taken (a key and its value, as in a Required cell), or None.
+NULL_ON_A_MOVE = "text or null; null when `kind` is `capacity_move`"
+TYPES = {"text": ("text", False, None), "text or null": ("text", True, None),
+         "true or false": ("true or false", False, None), "list": ("list", False, None),
+         "list or null": ("list", True, None), "object or null": ("object", True, None),
+         NULL_ON_A_MOVE: ("text", True, ("kind", None, "capacity_move"))}
 # One value of each basic type. A key takes its documented type and refuses each of the others.
 OTHER_TYPES = {"text": "An invented text.", "number": 5, "true or false": True, "list": ["x"], "object": {"x": "y"}}
 CHOICES = {"kind": schema.FACT_KINDS, "certainty": store.CERTAINTY, "move_type": store.MOVE_TYPES,
-           "stage": store.STAGES, "access": store.ACCESS, "delivery": store.DELIVERY}
+           "stage": store.STAGES, "access": store.ACCESS, "delivery": store.DELIVERY, "tie": store.CONNECTION_TIES,
+           "in_question": store.IN_QUESTION}
 QUOTE = "Competitor A will add a second filling line at Plant North by 2028."
 # The kinds of proposal every row is tried in: the base (a capacity move, quote in English, firm) and one for each
 # condition a Required cell may name. Each is a complete proposal that the program accepts; `...` leaves a key out.
@@ -696,11 +856,14 @@ def proposal_run(tmp_path):
 
 def _base():
     from helpers import proposal
-    return proposal(supporting=[{"source_id": "S2", "quote": QUOTE}])
+    return proposal(supporting=[{"source_id": "S2", "quote": QUOTE}],
+                    connections=[{"party": "Drug maker B", "tie": "customer", "description": None}])
 
 
 def _target(proposal: dict, table: str):
     """The object of the proposal that holds the keys of the given table; None when the proposal has none."""
+    if table == "connection":
+        return proposal["connections"][0]
     return (proposal if table == "proposal" else proposal["supporting"][0] if table == "supporting"
             else proposal.get("fields"))
 
@@ -711,12 +874,13 @@ def _in_context(context: dict) -> dict:
         if item is ...:
             proposal.pop(name, None)
         else:
-            proposal[name] = item
+            proposal[name] = copy.deepcopy(item)   # a try changes the proposal, never the context
     return proposal
 
 
 def _field(table: str, key: str) -> str:
-    return {"proposal": key, "supporting": f"supporting[0].{key}", "fields": f"fields.{key}"}[table]
+    return {"proposal": key, "supporting": f"supporting[0].{key}", "fields": f"fields.{key}",
+            "connection": f"connections[0].{key}"}[table]
 
 
 def _refused(run, proposal: dict, table: str, key: str) -> bool:
@@ -726,14 +890,22 @@ def _refused(run, proposal: dict, table: str, key: str) -> bool:
 _WHEN = re.compile(r"when `(\w+)` is (not )?`(\w+)`")
 
 
-def _is_required(cell: str, proposal: dict) -> bool:
+def _holds(condition: tuple, proposal: dict, target: dict | None) -> bool:
+    """Whether a condition (key, "not " or None, value) holds: the key is read in the row's own object when it holds
+    the key, else in the proposal; the value `null` stands for null."""
+    key, negated, value = condition
+    actual = (target if isinstance(target, dict) and key in target else proposal).get(key)
+    expected = None if value == "null" else value
+    return (actual != expected) if negated else (actual == expected)
+
+
+def _is_required(cell: str, proposal: dict, target: dict | None = None) -> bool:
     """What a Required cell says about one proposal. The cell is one of four fixed forms; any other fails."""
     if cell in ("yes", "no"):
         return cell == "yes"
     found = _WHEN.fullmatch(cell)
     assert found, f"a Required cell that is not in one of the fixed forms: {cell!r}"
-    key, negated, value = found.groups()
-    return (proposal.get(key) != value) if negated else (proposal.get(key) == value)
+    return _holds(found.groups(), proposal, target)
 
 
 def _samples(row: dict, current) -> list:
@@ -751,7 +923,8 @@ def _samples(row: dict, current) -> list:
     return [current if isinstance(current, str) else OTHER_TYPES["text"]]
 
 
-TABLES = {"proposal": "Key of a proposal", "supporting": "Key of a supporting entry", "fields": "Key inside `fields`"}
+TABLES = {"proposal": "Key of a proposal", "supporting": "Key of a supporting entry", "fields": "Key inside `fields`",
+          "connection": "Key of a connection"}
 
 
 def _table_problems(run, table: str, rows: dict[str, dict]) -> list[str]:
@@ -777,14 +950,21 @@ def _table_problems(run, table: str, rows: dict[str, dict]) -> list[str]:
         if row["type"] not in TYPES:
             problems.append(f"{key}: a Type cell that is not in one of the fixed forms: {row['type']!r}")
             continue
-        basic, null_allowed = TYPES[row["type"]]
+        basic, null_allowed, null_only = TYPES[row["type"]]
+
+        def only_null(proposal: dict) -> bool:
+            """Whether the Type cell's condition holds, so that the key takes null or nothing."""
+            return null_only is not None and _holds(null_only, proposal, _target(proposal, table))
+
         applies = set()   # whether the key was seen required, and seen not required
+        null_applies = set()   # whether the Type cell's condition was seen holding, and seen not holding
         for name, context in CONTEXTS.items():
             left_out = tried(context, key, ...)
             if left_out is None:
                 continue
-            required = _is_required(row["required"], left_out)
+            required = _is_required(row["required"], left_out, _target(left_out, table))
             applies.add(required)
+            null_applies.add(only_null(left_out))
             where = f"{key} in {name}"
             if _refused(run, left_out, table, key) != required:   # left out: refused exactly where it is required
                 problems.append(f"{where}: left out is {'accepted' if required else 'refused'}, "
@@ -799,14 +979,26 @@ def _table_problems(run, table: str, rows: dict[str, dict]) -> list[str]:
                 if other != basic and not _refused(run, tried(context, key, value), table, key):
                     problems.append(f"{where}: a value of the type {other} is accepted, "
                                     f"the Type cell says {row['type']!r}")
+            if only_null(left_out):   # where only null is taken, a value of the documented type is refused too
+                for value in _samples(row, _target(_in_context(context), table).get(key)):
+                    if not _refused(run, tried(context, key, value), table, key):
+                        problems.append(f"{where}: the value {value!r} is accepted, the Type cell says "
+                                        f"{row['type']!r}")
         if row["required"] not in ("yes", "no") and applies != {True, False}:
             problems.append(f"{key}: the Required cell {row['required']!r} is not tried both where it applies and "
                             f"where it does not")
+        if null_only is not None and null_applies != {True, False}:
+            problems.append(f"{key}: the Type cell {row['type']!r} is not tried both where its condition holds and "
+                            f"where it does not")
         if null_allowed and False not in applies:
             problems.append(f"{key}: the Type cell {row['type']!r} allows null, but the key is always required")
-        # The contexts in which a value of the documented type is tried: where the key is required, or else the base.
-        homes = [context for context in CONTEXTS.values() if tried(context, key, ...) is not None
-                 and _is_required(row["required"], tried(context, key, ...))] or [CONTEXTS["base"]]
+        # The contexts in which a value of the documented type is tried: where the key is required, or else the base,
+        # or the first context in which the Type cell's condition does not hold.
+        usable = [context for context in CONTEXTS.values() if tried(context, key, ...) is not None
+                  and not only_null(tried(context, key, ...))]
+        homes = [context for context in usable
+                 if _is_required(row["required"], tried(context, key, ...), _target(tried(context, key, ...), table))] \
+            or [context for context in usable if context is CONTEXTS["base"]] or usable[:1]
         for context in homes:
             current = _target(_in_context(context), table).get(key)
             for value in _samples(row, current):   # a value of the documented type: accepted
@@ -824,7 +1016,7 @@ def test_the_proposal_tables_name_every_key_and_its_type_required_and_values_as_
         proposal_run, table):
     rows = _table(TABLES[table])
     expected = {"proposal": set(schema.FACT_KEYS) - set(schema.PROGRAM_KEYS), "supporting": set(schema.SUPPORTING_KEYS),
-                "fields": set(schema.CAPACITY_MOVE_FIELDS)}[table]
+                "fields": set(schema.CAPACITY_MOVE_FIELDS), "connection": set(schema.CONNECTION_KEYS)}[table]
     assert set(rows) == expected
     assert _table_problems(proposal_run, table, rows) == []
     for key in schema.PROGRAM_KEYS:
@@ -869,6 +1061,23 @@ def test_a_table_that_says_something_else_than_the_program_does_is_caught(propos
     assert _table_problems(proposal_run, table, _changed(rows, key, **cells)) != []
 
 
+@pytest.mark.parametrize("table, key, cells", [
+    ("proposal", "tentative_reason", {"type": NULL_ON_A_MOVE}),   # the program takes a reason on a move
+    ("proposal", "quote_translation", {"type": NULL_ON_A_MOVE}),
+    ("proposal", "about_company", {"type": "text or null"}),      # the program refuses a company on a move
+    ("proposal", "about_company", {"type": "text"}),
+    ("proposal", "connections", {"type": "list"}),
+    ("connection", "party", {"type": "text or null"}),   # the program refuses an unnamed party in a proposal
+    ("connection", "party", {"required": "no"}),
+    ("connection", "description", {"required": "yes"}),
+    ("connection", "tie", {"values": ["buyer", "seller", "customer", "partner", "supplier"]}),
+])
+def test_a_table_that_claims_null_on_a_move_or_misstates_a_connection_is_caught(proposal_run, table, key, cells):
+    rows = _table(TABLES[table])
+    assert _table_problems(proposal_run, table, rows) == []
+    assert _table_problems(proposal_run, table, _changed(rows, key, **cells)) != []
+
+
 @pytest.mark.parametrize("cell", ["sometimes", "when `kind` is general", "yes, when `kind` is `general`", ""])
 def test_a_required_cell_in_an_unknown_form_fails(proposal_run, cell):
     rows = _table(TABLES["proposal"])
@@ -900,3 +1109,58 @@ def test_every_init_run_example_that_names_the_demo_pack_uses_the_pack_file():
         names_demo = re.search(r"--pack(?:-file)?[ =](?:\S*/)?demo(?:\.json)?\b", line)
         if names_demo:
             assert "--pack-file packs/demo.json" in line and not re.search(r"--pack[ =]demo\b", line), line
+
+
+# --- Plan 2b, Task 8 fix round 1: the lens check measures length; it claims nothing about pasted text ---------------
+
+def test_the_lens_check_is_described_by_what_it_measures():
+    block = next(line for line in DOC.read_text(encoding="utf-8").splitlines() if line.startswith("**check-lenses**"))
+    assert "Every text is filled in and at most 400 characters long." in block
+    for text in (block, " ".join(lenses.__doc__.split())):
+        assert "passage of a work" not in text and "pasted" not in text
+
+
+# --- Plan 2b, Task 10, change F: the note on a web page that holds little running text is described as built --------
+
+def test_the_note_on_a_page_with_little_running_text_is_described_with_the_program_s_numbers():
+    lines = DOC.read_text(encoding="utf-8").splitlines()
+    save_source = next(line for line in lines if line.startswith("**save-source**"))
+    add_copy = next(line for line in lines if line.startswith("**add-copy**"))
+    printed = next(line for line in lines if line.startswith("`save-source` prints the whole source record"))
+    assert fetch._MIN_PROSE_CHARS == 800
+    for text in (save_source, printed):
+        for needed in ("fewer than 800 characters", "lines of eight or more words", "`text_note`",
+                       "`little_running_text`", "counts as saved"):
+            assert needed in text, needed
+    assert "`.html` or `.htm` file gets the same note" in add_copy and "never" in add_copy
+    assert "is a problem" in printed and "not a saved web page" in printed
+    # fix round 1 (findings 1 and 4): as the program measures it, with its known limit
+    assert "save the page as a PDF and add it as a file" in save_source and "menu words" not in save_source
+    assert ("Text without spaces between words, such as Chinese or Japanese, counts as no running text, so such a "
+            "page always gets the note.") in save_source
+
+
+def test_the_two_waits_of_save_source_are_described_with_the_program_s_numbers():
+    """Fix round 1 (findings 7, 8 and 9): the 10 and 30 seconds are the program's, and each holds for one wait."""
+    lines = DOC.read_text(encoding="utf-8").splitlines()
+    save_source = next(line for line in lines if line.startswith("**save-source**"))
+    printed = next(line for line in lines if line.startswith("`save-source` prints the whole source record"))
+    robots, page = fetch.ROBOTS_TIMEOUT_SECONDS, fetch.TIMEOUT_SECONDS
+    assert (f"{robots} seconds for the robots.txt and {page} seconds for the page, so a server that sends a few "
+            "bytes at a time can take longer") in save_source
+    assert "it holds for each wait for an answer, not for the whole download" in save_source
+    assert f"A robots.txt that gives no answer within {robots} seconds ends the save as `timeout`" in save_source
+    assert f"`timeout` (the robots.txt gave no answer in {robots} seconds or the page none in {page})" in printed
+    assert "allows the page, as before" not in save_source and "any other robots.txt that cannot be read allows the " \
+                                                               "page." in save_source
+
+
+def test_the_lens_view_paragraph_says_who_reads_the_recommendation_record_and_the_doc_is_plain_ascii():
+    """`status` reads the record file for the age of the report; only the gate never looks at it. Both are so."""
+    text = DOC.read_text(encoding="utf-8")
+    paragraph = next(line for line in text.splitlines() if line.startswith("**lens-view** prints"))
+    assert "The gate never stops on the record (it leaves out every problem of that file), and `status` reads the record file only to tell whether the report is older than it." in paragraph
+    assert "`status` and `gate` never look at the record" not in paragraph
+    assert re.search(r"[^\x00-\x7f]", text) is None          # the cut mark of a quote's context is described, not typed
+    assert "recommend.RECORD" in (ROOT / "engine" / "radar" / "status.py").read_text(encoding="utf-8")
+    assert "problem.file not in (recommend.RECORD, projects.RECORD)" in (ROOT / "engine" / "radar" / "gate.py").read_text(encoding="utf-8")

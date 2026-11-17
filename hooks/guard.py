@@ -10,9 +10,13 @@ A hand write is refused as well when the guard cannot follow the file name, part
 place where it lands, and when that place is one that each program sees for itself or that is named by
 numbers (SHORTCUT_FOLDERS), see _follow and _judge. A write into a file with another name as well is
 refused with its own reason, see _has_other_names.
-Rule 2, for the plugin's helpers: only the support checker runs commands, and only its two.
-Rule 3, for every other caller (the lead, any other agent): a command that holds the word record-support is
-refused, because only the support checker records a verdict, see _decide.
+Rule 2, for the plugin's helpers: only the support checker, the lens advisor, the two link readers and the project
+grouper run commands, each only its own two, in the form its file shows, and a command that records names the helper
+itself (see _fits). The other three run none.
+Rule 3, for every other caller (the lead, any other agent): a command that holds the word record-support,
+record-link-check, record-lens-recommendation or record-projects is refused, because only the support checker records
+a verdict, only the two link readers record a link verdict, only the lens advisor records the recommendation and only
+the project grouper records the projects, see _decide.
 
 An event the guard cannot read (not JSON, not an object, a value of another kind than expected,
 no file named) is let through: the guard must never break a session. But a helper is never unlimited:
@@ -40,9 +44,19 @@ SECOND_NAME_REASON = SENDER + ("This file also has a second name somewhere else 
                                "see where, so it is not written by hand. Save a fresh copy of the file under a new name "
                                "and work on that.")
 FAILED_REASON = SENDER + "The guard could not check this call, so a helper may not make it."
+ADVISOR_REASON = SENDER + "This helper may only run: radar lens-advisor-input and radar record-lens-recommendation."
+READER_REASON = SENDER + "This helper may only run: radar lens-link-context and radar record-link-check."
+LINK_VERDICT_REASON = SENDER + ("Only the two link readers record whether a fact bears on a lens. "
+                                "Ask the link readers to read the suggested links.")
+LIST_REASON = SENDER + ("Only the lens advisor records the lens recommendation. "
+                        "Ask the lens advisor to make the list.")
+GROUPER_REASON = SENDER + "This helper may only run: radar project-grouper-input and radar record-projects."
+PROJECTS_REASON = SENDER + ("Only the project grouper records the projects. "
+                            "Ask the project grouper to group the moves.")
 
 PLUGIN = "strategy-radar"
-HELPERS = ("source-scout", "fact-extractor", "support-checker", "bias-auditor")
+HELPERS = ("source-scout", "fact-extractor", "support-checker", "bias-auditor",
+           "lens-advisor", "lens-link-reader", "lens-link-reader-quick", "project-grouper")
 CHECKER = "support-checker"
 
 WRITING_TOOLS = ("Write", "Edit", "NotebookEdit")
@@ -68,9 +82,47 @@ OPTIONS = {                                          # each one exactly once, in
     "quote-context": ("--run", "--fact"),
     "record-support": ("--run", "--fact", "--passed", "--by", "--note-stdin"),
 }
-SWITCHES = ("--note-stdin",)                         # options that take no value
+SWITCHES = ("--note-stdin", "--list-stdin")         # options that take no value
+OPTIONAL = {                                         # options a subcommand may also take, at most once
+    "lens-advisor-input": ("--part",),               # the input comes in parts; the helper reads them one by one
+    "project-grouper-input": ("--part",),
+}
+_PART = re.compile(r"[1-9][0-9]*")                   # a part is a positive whole number, written plainly
+CHECKER_COMMANDS = {                                 # each subcommand: its options and the here-document it takes
+    "quote-context": (OPTIONS["quote-context"], None),
+    "record-support": (OPTIONS["record-support"], (HEREDOC_OPENER, HEREDOC_END)),
+}
+LIST_OPENER = "<<'RADAR_LIST'"                       # the advisor's list comes as plain lines in its own here-document
+LIST_END = "RADAR_LIST"
+LINK_VERDICT_WORD = "record-link-check"              # the command that records a link verdict
+LIST_WORD = "record-lens-recommendation"             # the command that records the recommendation
+PROJECTS_WORD = "record-projects"                    # the command that records the projects
+_READER_COMMANDS = {
+    "lens-link-context": (("--run", "--lenses"), None),
+    "record-link-check": (("--run", "--lens", "--fact", "--verdict", "--by", "--note-stdin"),
+                          (HEREDOC_OPENER, HEREDOC_END)),
+}
+LENS_COMMANDS = {                                    # what each lens helper may run; its --by is its own name
+    "lens-advisor": {
+        "lens-advisor-input": (("--run", "--lenses"), None),
+        "record-lens-recommendation": (("--run", "--lenses", "--by", "--list-stdin"), (LIST_OPENER, LIST_END)),
+    },
+    "lens-link-reader": _READER_COMMANDS,
+    "lens-link-reader-quick": _READER_COMMANDS,
+}
+LENS_REASONS = {"lens-advisor": ADVISOR_REASON, "lens-link-reader": READER_REASON,
+                "lens-link-reader-quick": READER_REASON}
+GROUPER_COMMANDS = {                                 # the project grouper's own table; its --by is its own name
+    "project-grouper": {
+        "project-grouper-input": (("--run",), None),
+        "record-projects": (("--run", "--by", "--list-stdin"), (LIST_OPENER, LIST_END)),
+    },
+}
+RECORD_WORDS = ((VERDICT_WORD, VERDICT_REASON), (LINK_VERDICT_WORD, LINK_VERDICT_REASON), (LIST_WORD, LIST_REASON),
+                (PROJECTS_WORD, PROJECTS_REASON))
 _BARE_WORD = re.compile(r"[A-Za-z0-9._/:-][A-Za-z0-9._/:=-]*")
 _FACT_ID = re.compile(r"F[0-9]+")
+_LENS_ID = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_-]*")  # a lens name, plain letters only; never an option
 _UNSEEN = ("Cc", "Cf", "Cs", "Zs", "Zl", "Zp")       # control, format, half a pair, spaces, line breaks
 
 
@@ -337,8 +389,9 @@ def _is_own_radar(program):
         return False
 
 
-def _words(line):
-    """Split one line at spaces into (text, was_quoted) words; None when it holds a quoting the guard does not allow."""
+def _words(line, openers):
+    """Split one line at spaces into (text, was_quoted) words; None when it holds a quoting the guard does not allow.
+    The here-document openers in `openers` are the only words with a single quote that stand outside double quotes."""
     words = []
     position, end = 0, len(line)
     while position < end:
@@ -357,15 +410,15 @@ def _words(line):
             stop = line.find(" ", position)
             stop = end if stop < 0 else stop
             word = line[position:stop]
-            if word != HEREDOC_OPENER and not _BARE_WORD.fullmatch(word):
+            if word not in openers and not _BARE_WORD.fullmatch(word):
                 return None
             words.append((word, False))
             position = stop
     return words
 
 
-def _value_fits(option, text, quoted):
-    if option == "--run":
+def _value_fits(option, text, quoted, by):
+    if option in ("--run", "--lenses"):
         return not text.startswith("-")
     if quoted:
         return False
@@ -373,43 +426,55 @@ def _value_fits(option, text, quoted):
         return _FACT_ID.fullmatch(text) is not None
     if option == "--passed":
         return text in ("true", "false")
-    return text == CHECKER_BY                           # --by
+    if option == "--lens":
+        return _LENS_ID.fullmatch(text) is not None
+    if option == "--verdict":
+        return text in ("bears", "doubt")
+    if option == "--part":
+        return _PART.fullmatch(text) is not None
+    return option == "--by" and text == by
 
 
-def _is_a_checker_command(command):
-    """True only for the two commands of the support checker, written the way its file writes them.
-
-    record-support takes its note as plain text from a here-document (--note-stdin); never --note or --from-json,
-    through which a helper could set any option."""
+def _fits(command, commands, by):
+    """True only for one of `commands` (subcommand: its options and its here-document or None), written the way the
+    helper's file writes it: `radar` (or this plugin's own bin/radar), the subcommand, each of its options exactly
+    once in any order (and those `OPTIONAL` gives it at most once: a `--part` only as a plain positive whole number),
+    and, for a subcommand that takes one, the here-document opener last on the first line, the
+    text, and the end mark alone on the last line. No line of the text may be the end mark. `--by` must be `by`.
+    No --note, --file or --from-json: through them a helper could put outside text on the command line, set any
+    option, or send a list with curly brackets, which would stop every call for an approval."""
     if not isinstance(command, str) or "\0" in command:
         return False
     if command.endswith("\n"):
         command = command[:-1]
     lines = command.split("\n")
-    words = _words(lines[0])
-    if not words or len(words) < 2 or (HEREDOC_OPENER, False) in words[:-1]:
+    openers = tuple(here[0] for _, here in commands.values() if here)
+    words = _words(lines[0], openers)
+    if not words or len(words) < 2 or any((opener, False) in words[:-1] for opener in openers):
         return False
     program = words[0][0]
     if program != "radar" and not _is_own_radar(program):
         return False
     subcommand, quoted = words[1]
-    if quoted or subcommand not in OPTIONS:
+    if quoted or subcommand not in commands:
         return False
+    needed, here = commands[subcommand]
+    optional = OPTIONAL.get(subcommand, ())
     rest = words[2:]
-    if subcommand == "record-support":
-        if not rest or rest[-1] != (HEREDOC_OPENER, False):
+    if here:
+        opener, end = here
+        if not rest or rest[-1] != (opener, False):
             return False
-        if len(lines) < 2 or lines[-1] != HEREDOC_END or HEREDOC_END in lines[1:-1]:
+        if len(lines) < 2 or lines[-1] != end or end in lines[1:-1]:
             return False
         rest = rest[:-1]
-    elif len(lines) != 1 or (HEREDOC_OPENER, False) in rest:
+    elif len(lines) != 1 or any((opener, False) in rest for opener in openers):
         return False
-    needed = OPTIONS[subcommand]
     seen = set()
     index = 0
     while index < len(rest):
         option, option_quoted = rest[index]
-        if option_quoted or option not in needed or option in seen:
+        if option_quoted or (option not in needed and option not in optional) or option in seen:
             return False
         seen.add(option)
         if option in SWITCHES:
@@ -418,10 +483,35 @@ def _is_a_checker_command(command):
         if index + 1 >= len(rest):
             return False
         text, text_quoted = rest[index + 1]
-        if not _value_fits(option, text, text_quoted):
+        if not _value_fits(option, text, text_quoted, by):
             return False
         index += 2
-    return seen == set(needed)
+    return seen - set(optional) == set(needed)
+
+
+def _is_a_checker_command(command):
+    """True only for the two commands of the support checker, written the way its file writes them.
+
+    record-support takes its note as plain text from a here-document (--note-stdin); never --note or --from-json,
+    through which a helper could set any option."""
+    return _fits(command, CHECKER_COMMANDS, CHECKER_BY)
+
+
+def _is_a_lens_helper_command(helper, command):
+    """True only for the two commands of the lens helper `helper`, written the way its file writes them: the advisor
+    records its list as plain lines from its own here-document (--list-stdin), a reader its note as plain text from a
+    here-document (--note-stdin), and each only under its own name, so one reader never records under the other's."""
+    return _fits(command, LENS_COMMANDS[helper], helper)
+
+
+def _is_a_grouper_command(command):
+    """True only for the two commands of the project grouper, written the way its file writes them: it records its
+    list as plain lines from a here-document (--list-stdin), never through a file, and only under its own name. A curly
+    bracket anywhere in the call is refused too: with one, Claude Code may stop the call to ask the person, and the
+    grouper is told to write none, so the refusal lets it correct the list and send it again."""
+    if isinstance(command, str) and ("{" in command or "}" in command):
+        return False
+    return _fits(command, GROUPER_COMMANDS["project-grouper"], "project-grouper")
 
 
 # ---------------------------------------------------------------- the decision
@@ -436,14 +526,25 @@ def _decide(event):
         command = tool_input.get("command") if isinstance(tool_input, dict) else None
         if helper is None:
             # Rule 3. The one place where the guard judges a command of the lead (or of any agent that is not one of
-            # this plugin's helpers): only the support checker records a verdict, so a command that holds the word
-            # record-support anywhere (by a full path, through start_radar.py, inside sh -c) is refused. It is a catch
+            # this plugin's helpers): only the support checker records a verdict, only the two link readers record a
+            # link verdict, only the lens advisor records the recommendation and only the project grouper records the
+            # projects, so a command that holds one of these words anywhere (by a full path, through start_radar.py,
+            # inside sh -c) is refused, with the sentence of the first of RECORD_WORDS that it holds. It is a catch
             # for slips, not a wall: a lead set on getting round it can, by spelling the word another way or by
             # running Python itself. The gate stays the real check.
-            return VERDICT_REASON if isinstance(command, str) and VERDICT_WORD in command else None
-        if helper != CHECKER:
-            return NO_COMMANDS_REASON
-        return None if _is_a_checker_command(command) else HELPER_REASON
+            if not isinstance(command, str):
+                return None
+            for word, reason in RECORD_WORDS:
+                if word in command:
+                    return reason
+            return None
+        if helper == CHECKER:
+            return None if _is_a_checker_command(command) else HELPER_REASON
+        if helper in LENS_COMMANDS:
+            return None if _is_a_lens_helper_command(helper, command) else LENS_REASONS[helper]
+        if helper in GROUPER_COMMANDS:
+            return None if _is_a_grouper_command(command) else GROUPER_REASON
+        return NO_COMMANDS_REASON
     return None
 
 

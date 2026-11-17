@@ -2,7 +2,7 @@ import json
 
 from radar import calc, store, verify
 from radar.cli import main
-from radar.gate import gate
+from radar.gate import REASONS_DO_NOT_FOLLOW, gate
 from radar.schema import Problem
 from helpers import make_run, add_source, add_fact, minimal_analysis
 
@@ -1094,3 +1094,179 @@ def test_an_unknown_key_in_a_flag_has_its_own_message_and_explanation(tmp_path):
     assert "severity" in explained["what"] and "again" in explained["do"], explained
     fact = explain(Problem("facts/F1.json", "note", "the key note is not known"))
     assert fact["what"].startswith("A fact holds") and fact["do"].startswith("This fact was changed outside")
+
+
+# --- why a fact is uncertain: the codes ------------------------------------------------------------------------------
+
+def run_with_an_uncertain_fact(tmp_path):
+    run = passing_run(tmp_path)
+    add_fact(run, source_id="S1", primary_source=False, certainty="tentative", tentative_reason="one unnamed source",
+             quote="adds two high-speed syringe lines for customers")
+    verify.check_quotes(run); verify.record_support(run, "F2", True, "support-checker", ""); verify.settle(run)
+    assert store.read_facts(run)["F2"]["uncertain_reasons"] == ["tentative", "single_source"] and gate(run) == []
+    return run
+
+
+def test_codes_changed_by_hand_close_the_gate(tmp_path):
+    run = run_with_an_uncertain_fact(tmp_path)
+    edit_fact(run, "F2", uncertain_reasons=["single_source"])
+    assert Problem("facts/F2.json", "uncertain_reasons", REASONS_DO_NOT_FOLLOW) in gate(run)
+    edit_fact(run, "F2", uncertain_reasons=[])
+    assert Problem("facts/F2.json", "uncertain_reasons", REASONS_DO_NOT_FOLLOW) in gate(run)
+
+
+def test_codes_written_onto_a_confirmed_fact_close_the_gate(tmp_path):
+    run = passing_run(tmp_path)
+    edit_fact(run, "F1", uncertain_reasons=["single_source"])
+    assert Problem("facts/F1.json", "uncertain_reasons", REASONS_DO_NOT_FOLLOW) in gate(run)
+
+
+def test_a_settled_fact_without_codes_still_passes_the_gate(tmp_path):
+    run = run_with_an_uncertain_fact(tmp_path)
+    fact = store.read_facts(run)["F2"]
+    fact.pop("uncertain_reasons")   # a run made before codes existed
+    store.write_fact(run, fact)
+    assert gate(run) == []
+
+
+# --- a "not found" about money must face the confirmed facts that state an amount --------------------------------------
+
+MONEY_TEXT = "Example Pharma will invest almost half a billion euros in the Site Y site by 2031."
+
+
+def _run_with_a_money_fact(tmp_path, not_found, primary_source=True, second=None):
+    """F1 states an amount; `second` (a text that is its own statement and quote) adds a confirmed F2 from S2."""
+    run = make_run(tmp_path)
+    add_source(run, MONEY_TEXT)
+    add_fact(run, kind="general", fields=None, source_id="S1", primary_source=primary_source,
+             statement="Example Pharma will invest almost half a billion euros in the Site Y site.",
+             quote="Example Pharma will invest almost half a billion euros in the Site Y site")
+    if second:
+        add_source(run, second + ".")
+        add_fact(run, kind="general", fields=None, source_id="S2", primary_source=True, statement=second + ".",
+                 quote=second)
+    verify.check_quotes(run)
+    for fact_id in store.read_facts(run):
+        verify.record_support(run, fact_id, True, "support-checker", "")
+    verify.settle(run)
+    analysis = minimal_analysis(fact_ids=["F1"])
+    analysis["not_found"] = not_found
+    store.write_analysis(run, analysis)
+    store.record_checkpoint(run, "lenses", "test", "ok"); store.record_checkpoint(run, "final_report", "test", "ok")
+    return run
+
+
+def test_a_not_found_about_money_that_ignores_a_confirmed_amount_is_refused(tmp_path):
+    from radar.explain import explain
+    run = _run_with_a_money_fact(tmp_path, ["No source names a customer.", "No source gives the price of buying a site."])
+    assert store.read_facts(run)["F1"]["status"] == "confirmed"
+    problems = gate(run)
+    assert problems == [Problem("analysis.json", "not_found[1]", "a not-found entry about money names none of the confirmed facts that state an amount: F1")]
+    assert explain(problems[0])["known"] is True
+
+
+def test_a_not_found_about_money_that_names_a_fact_passes(tmp_path):
+    run = _run_with_a_money_fact(
+        tmp_path, ["No source gives the price of buying a site (F1 is a build budget, not a purchase price)."])
+    assert gate(run) == []
+
+
+MONEY_ENTRY = "No source gives the price of buying a site"
+REFUSED = "a not-found entry about money names none of the confirmed facts that state an amount"
+
+
+def test_a_not_found_about_money_must_name_a_fact_that_states_an_amount(tmp_path):
+    run = _run_with_a_money_fact(tmp_path / "other", [MONEY_ENTRY + " (F2 is about a filling line)."],
+                                 second="Example Pharma adds a filling line in Site Y")
+    assert gate(run) == [Problem("analysis.json", "not_found[0]", f"{REFUSED}: F1")]
+    run = _run_with_a_money_fact(tmp_path / "amount", [MONEY_ENTRY + " (F1 is a build budget, not a purchase price)."],
+                                 second="Example Pharma adds a filling line in Site Y")
+    assert gate(run) == []
+
+
+def test_a_withdrawn_money_fact_does_not_answer_a_not_found_about_money(tmp_path):
+    run = _run_with_a_money_fact(tmp_path, [MONEY_ENTRY + " (F2 is a build budget, not a purchase price)."],
+                                 second="Example Pharma will spend 300 million euros on the Site Y site")
+    verify.withdraw_fact(run, "F2", "the figure was retracted")
+    assert store.read_facts(run)["F2"]["status"] == "confirmed"   # withdrawn, not yet settled
+    assert Problem("analysis.json", "not_found[0]", f"{REFUSED}: F1") in gate(run)
+
+
+def test_an_uncertain_money_fact_does_not_trigger_the_check(tmp_path):
+    run = _run_with_a_money_fact(tmp_path, ["No source gives the price of buying a site."], primary_source=False)
+    assert store.read_facts(run)["F1"]["status"] == "uncertain"
+    assert gate(run) == []
+
+
+# --- fix list item 14: the same check over every text that says money is missing ---------------------------------
+
+ANY_TEXT = "a text that says an amount is missing names none of the confirmed facts that state an amount"
+
+
+def _with_text(run, place, text):
+    analysis = store.read_analysis(run)
+    if place == "step":
+        analysis["messages"][0]["chain"][1]["text"] = text
+    elif place == "lens_note":
+        analysis["lens_notes"] = [{"lens_id": "firm-boundaries", "here": text}]
+    store.write_analysis(run, analysis)
+    return run
+
+
+def test_a_reasoning_step_that_says_no_source_gives_a_price_is_refused_while_an_amount_is_confirmed(tmp_path):
+    """Run 3: a reasoning step said no source gives what a plant costs, while confirmed facts gave prices."""
+    from radar.explain import explain
+    run = _with_text(_run_with_a_money_fact(tmp_path, []), "step", "No source gives what a new plant costs.")
+    problems = gate(run)
+    assert problems == [Problem("analysis.json", "messages[0].chain[1].text", f"{ANY_TEXT}: F1")]
+    assert explain(problems[0])["known"] is True
+
+
+def test_a_text_that_says_money_is_missing_and_names_an_amount_fact_passes(tmp_path):
+    run = _with_text(_run_with_a_money_fact(tmp_path, []), "lens_note",
+                     "The price of a purchase is not stated: F1 is a build budget.")
+    assert gate(run) == []
+
+
+def test_a_text_about_money_that_claims_nothing_is_missing_passes(tmp_path):
+    run = _with_text(_run_with_a_money_fact(tmp_path, []), "step", "The investment shows the site matters to the firm.")
+    assert gate(run) == []
+
+
+def test_a_missing_claim_and_a_money_word_must_share_a_sentence(tmp_path):
+    """A screening memo: funding in one sentence, a missing milestone in the next, is no claim that money is missing."""
+    run = _with_text(_run_with_a_money_fact(tmp_path, []), "step",
+                     "Investor Q putting in more is repeat funding. The sources do not say what Example Robotics "
+                     "must show next.")
+    assert gate(run) == []
+
+
+def test_a_text_whose_own_item_cites_an_amount_fact_passes(tmp_path):
+    run = _run_with_a_money_fact(tmp_path, [])
+    analysis = store.read_analysis(run)
+    analysis["messages"][0]["chain"][1].update(text="No source gives what a new plant costs.", fact_ids=["F1"])
+    store.write_analysis(run, analysis)
+    assert gate(run) == []
+
+
+def test_value_and_financial_alone_do_not_make_a_reasoning_text_about_money(tmp_path):
+    for place, text in (("step", "The value proposition for hospitals is not stated on its site."),
+                        ("step", "Its financial backers are named, but their stakes are not disclosed."),
+                        ("lens_note", "The value proposition for hospitals is not stated on its site.")):
+        assert gate(_with_text(_run_with_a_money_fact(tmp_path / str(len(text)) / place, []), place, text)) == [], text
+
+
+def test_a_semicolon_ends_a_sentence_for_the_money_check(tmp_path):
+    run = _with_text(_run_with_a_money_fact(tmp_path, []), "step",
+                     "Investor Q put in more funding; the sources do not say what Example Robotics must show next.")
+    assert gate(run) == []
+
+
+def test_a_reasoning_text_that_says_the_price_is_missing_without_a_fact_is_still_refused(tmp_path):
+    run = _with_text(_run_with_a_money_fact(tmp_path, []), "step", "No source gives the price it paid.")
+    assert gate(run) == [Problem("analysis.json", "messages[0].chain[1].text", f"{ANY_TEXT}: F1")]
+
+
+def test_a_not_found_that_no_financial_terms_were_disclosed_is_still_refused(tmp_path):
+    run = _run_with_a_money_fact(tmp_path, ["No financial terms were disclosed."])
+    assert gate(run) == [Problem("analysis.json", "not_found[0]", f"{REFUSED}: F1")]

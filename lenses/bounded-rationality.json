@@ -1,0 +1,22 @@
+{
+  "id": "bounded-rationality",
+  "name": "Good enough instead of best",
+  "idea": "An encyclopedia entry states that the work set the task of replacing the global rationality of economic man with rational behaviour that fits the information and computing capacity people actually have. It states that the author's early work proposed satisficing instead of maximising expected utility; the entry describes it as searching until an option meets or exceeds an aspiration level.",
+  "suggests": "Look at how a company's managers chose among options: whether they stopped at the first one that met a target, and where that target came from.",
+  "limits": "The entry states that, as little was known then about how people decide, the work relied on a lay person's rough sense of how humans choose. It adds that the author at first thought of such procedures as a poor approximation of global rationality.",
+  "competing_idea": "The entry states that in economics it remains commonplace to treat bounded rationality as optimisation under constraints, on which view such agents are utility maximisers once every constraint is taken into account.",
+  "questions": [
+    "When the company chose this course, did it compare all the options or stop at the first that met its target?",
+    "What information and time did the decision-makers actually have when they chose?",
+    "How was the target, or aspiration level, set, and has it moved since?"
+  ],
+  "originals": [
+    {
+      "reference": "Gregory Wheeler, \"Bounded Rationality\", The Stanford Encyclopedia of Philosophy, first published 30 November 2018, substantive revision 13 December 2024",
+      "about": "Herbert A. Simon, \"A Behavioral Model of Rational Choice\", The Quarterly Journal of Economics, Vol. 69 No. 1, February 1955, pp. 99-118",
+      "level": "secondary_source_read",
+      "link": "https://plato.stanford.edu/entries/bounded-rationality/"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

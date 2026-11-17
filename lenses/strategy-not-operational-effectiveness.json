@@ -1,0 +1,22 @@
+{
+  "id": "strategy-not-operational-effectiveness",
+  "name": "Being different, not only better",
+  "idea": "A column says the work defined strategy as building a unique, valuable position that involves a different set of activities. It also says the work noted that strategy means making trade-offs, stressed fit among a company's activities, and argued that ten years of relentless effort at operational effectiveness had pushed many industries toward competitive convergence.",
+  "suggests": "Look at whether a company's plans make it different from its rivals or only better at what they all do, which activities it chooses not to do, and how well its activities support each other.",
+  "limits": "The column says the work's definition reinforced strategy's separation from operations, as if effective companies could take operations' quality for granted. It says the work properly dismissed the pursuit of operational effectiveness that lacks a clear link to competitive differentiation but underestimated the importance of building distinctive, strategically relevant capabilities via operations.",
+  "competing_idea": "Another view, which the column calls a competing framework, is the resource-based view. The column says that where the industrial-organization school of the work's author treats the choice of industry as paramount, this view puts capabilities at the centre of strategy, stresses building them, and notes that path dependencies may narrow a firm's choices as it invests over time.",
+  "questions": [
+    "Does the planned move make the company different from its rivals, or only better at what they all do?",
+    "Which activities or customers has the company chosen not to serve, and does the move keep that choice?",
+    "How well do the company's activities support each other, and which capabilities would it have to build first?"
+  ],
+  "originals": [
+    {
+      "reference": "Tim Laseter, \"An Essential Step for Corporate Strategy\", strategy+business, 24 November 2009",
+      "level": "secondary_source_read",
+      "about": "Michael E. Porter, \"What Is Strategy?\", Harvard Business Review, November\u2013December 1996",
+      "link": "https://www.strategy-business.com/article/09402"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

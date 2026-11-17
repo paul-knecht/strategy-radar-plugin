@@ -4,7 +4,7 @@ Read this when you run the bias audit on a finished analysis. These are this pro
 
 The auditor never states a figure of its own. Every number in a flag is a fact of this run, named by its number, and only a confirmed or uncertain fact counts. A rejected or withdrawn fact is never relied on, and an early signal is never confirmed. The auditor may flag an analysis that leans on a fact that does not count. The examples are invented analyses of the demo's facts (Example Pharma, Competitor A to D, Drug maker B, facts F1 to F7). Several describe an analysis the demo does not have.
 
-A flag is `{"check":..., "text":...}`. `check` is the name in the heading below. `text` is one to three plain sentences: what was seen, and where.
+A flag is `{"check":..., "text":..., "message_ids":...}`. `check` is the name in the heading below. `text` is one to three plain sentences: what was seen, and where. `message_ids` lists the key messages the flag is about, by their ids such as M2, and is an empty list when it is about none. The report puts the flag under those messages.
 
 **Plain names.** A flag is printed word for word in the report, for a reader who has never seen a file of the run. "Where to look" below names each place by its key, so that you find it. A flag uses the plain name of that place, never the key, a file name or a folder name. The plain names:
 

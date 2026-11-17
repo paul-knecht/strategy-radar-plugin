@@ -1,0 +1,34 @@
+{
+  "id": "generic-strategies",
+  "name": "Competing on cost or on uniqueness",
+  "idea": "A textbook, crediting the work, names two dimensions as central to a business's strategy: an edge through low costs or through something unique, and serving customers in general or only a segment. It says four generic strategies follow: cost leadership, differentiation and a focused form of each, and that a firm neither unique nor cheap enough is stuck in the middle and generally does poorly.",
+  "suggests": "Look at whether a company tries to win on low cost or on features customers value, whether it serves the broad market or a narrow segment, and whether a planned move keeps it clearly on one of these paths.",
+  "limits": "The textbook says viewing strategy through generic strategies has limitations: a firm may not match every characteristic its generic strategy entails, and depending on the industry, adjusting the usual recipe may be essential to success.",
+  "competing_idea": "The textbook also sets out a best-cost strategy: in rare cases a firm offers both low prices and unique features customers want. It says this is difficult to execute, partly because creating unique features and explaining them generally raises costs, but that firms which carry it out effectively are often very successful.",
+  "questions": [
+    "Does the company seek its edge through lower costs or through features that customers value and will pay for?",
+    "Does the company serve customers in general or a narrow segment, and does the planned move change that?",
+    "Is there a risk that the company ends up neither cheap enough nor distinctive enough to win customers?"
+  ],
+  "originals": [
+    {
+      "reference": "Mastering Strategic Management, v. 1.0, Saylor Academy, 2012 (an open textbook adapted without attribution, as its original creator requested), section \"Understanding Business-Level Strategy through \"Generic Strategies\"\"",
+      "level": "secondary_source_read",
+      "about": "Michael E. Porter, Competitive Strategy: Techniques for Analyzing Industries and Competitors, New York: Free Press, 1980, and later work that built on it",
+      "link": "https://saylordotorg.github.io/text_mastering-strategic-management/s09-01-understanding-business-level-s.html"
+    },
+    {
+      "reference": "Mastering Strategic Management, v. 1.0, Saylor Academy, 2012, section \"Stuck in the Middle\"",
+      "level": "secondary_source_read",
+      "about": "Michael E. Porter, Competitive Strategy: Techniques for Analyzing Industries and Competitors, New York: Free Press, 1980, and later work that built on it",
+      "link": "https://saylordotorg.github.io/text_mastering-strategic-management/s09-06-stuck-in-the-middle.html"
+    },
+    {
+      "reference": "Mastering Strategic Management, v. 1.0, Saylor Academy, 2012, section \"Best-Cost Strategy\"",
+      "level": "secondary_source_read",
+      "about": "Michael E. Porter, Competitive Strategy: Techniques for Analyzing Industries and Competitors, New York: Free Press, 1980, and later work that built on it",
+      "link": "https://saylordotorg.github.io/text_mastering-strategic-management/s09-05-best-cost-strategy.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

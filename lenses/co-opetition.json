@@ -1,0 +1,34 @@
+{
+  "id": "co-opetition",
+  "name": "Competing and cooperating at once",
+  "idea": "A review says the work holds that firms can grow more competitive by cooperating, and sees the parties as interdependent, each move shaping the other's, and asks readers to weigh added value and complementarity. A textbook says the work suggests cooperation suits creating a pie, and adds that firms tend to cooperate in activities far in the value chain from customers and compete close to them.",
+  "suggests": "Look at where a company works with firms it also competes against, which activities it shares and which it keeps to itself, and whether a planned move enlarges the market for all or takes share from rivals.",
+  "limits": "The review says the work never really makes clear what sets game theory apart from good business sense, and that readers who want science will likely be let down. An encyclopedia entry names difficulties of co-opetition: how control is distributed, equity in risk, complementary needs, and trust.",
+  "competing_idea": "The usual view, as the textbook puts it, treats competition and cooperation as separate processes. The encyclopedia entry adds that a cartel is not co-opetition: its goal is to limit competition, while co-opetition aims to use the firms' complementary resources to lower costs and manage new innovation possibilities.",
+  "questions": [
+    "With which rivals does the company also cooperate, and in which activities?",
+    "Does the planned move enlarge the market for everyone, or does it mainly take share from rivals?",
+    "How are control, risk and trust shared in the company's cooperation with competitors?"
+  ],
+  "originals": [
+    {
+      "reference": "Barbara Presley Noble, review of Co-opetition, strategy+business, 1 July 1996",
+      "level": "secondary_source_read",
+      "about": "Adam M. Brandenburger and Barry J. Nalebuff, Co-opetition, New York: Doubleday, 1996",
+      "link": "https://www.strategy-business.com/article/17483"
+    },
+    {
+      "reference": "Mastering Strategic Management, v. 1.0, Saylor Academy, 2012 (an open textbook adapted without attribution, as its original creator requested), section \"Making Cooperative Moves\"",
+      "level": "secondary_source_read",
+      "about": "Adam M. Brandenburger and Barry J. Nalebuff, Co-opetition, New York: Doubleday, 1996",
+      "link": "https://saylordotorg.github.io/text_mastering-strategic-management/s10-03-making-cooperative-moves.html"
+    },
+    {
+      "reference": "\"Coopetition\", Wikipedia, revision 1384322516 of 7 November 2026",
+      "level": "secondary_source_read",
+      "about": "The idea of co-opetition, which the entry links to Brandenburger and Nalebuff's book Co-opetition (1996)",
+      "link": "https://en.wikipedia.org/w/index.php?title=Coopetition&oldid=1384322516"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

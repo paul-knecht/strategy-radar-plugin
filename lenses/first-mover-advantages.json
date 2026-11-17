@@ -1,0 +1,22 @@
+{
+  "id": "first-mover-advantages",
+  "name": "Does going first pay off",
+  "idea": "A magazine article says that the work was a critical literature review that popularized the term first-mover advantages, demanding proof of them. Its authors, it says, suggested studying three apparent ways pioneers gain: technology leadership, shutting rivals out of scarce resources and customer loyalty. It adds their advice to use profits, not market share alone, to indicate an advantage.",
+  "suggests": "Look at whether a company that moves first in a market could gain through technology leadership, through tying up scarce resources or through customer loyalty, and use profit rather than market share alone to indicate whether it gained.",
+  "limits": "The article says the work also raised drawbacks of pioneering that had largely been dismissed, such as much higher startup costs than followers bear and possible obsolescence as technology advances. It says a later review raised problems similar to those the original raised: inconsistent data, no agreed time period for judging success, biased samples and differing definitions of key terms.",
+  "competing_idea": "The article says work in the field moved from the effects of being first to the conditions under which pioneering might pay better than following. It reports a 2015 study finding that entering in a certain window of opportunity gains advantages more reliably than simply being first. Separately, it says the work's authors, in a 1996 retrospective, asked for more studies on fast followers.",
+  "questions": [
+    "Which of the three sources of advantage (technology, scarce resources, customer loyalty) could a first move give this company, and which could a follower still win?",
+    "What would the move have to earn in profit, not only in share, to be worth going first?",
+    "Is this the moment of a window of opportunity for entering, or is the company only trying to be first?"
+  ],
+  "originals": [
+    {
+      "reference": "\"How first-mover advantage, once unquestioned, lost its grip on entrepreneurs and business researchers\", UCLA Anderson Review, 24 June 2026",
+      "level": "secondary_source_read",
+      "about": "Marvin B. Lieberman and David B. Montgomery, \"First-mover advantages\", Strategic Management Journal, 9(S1), 41-58, 1988",
+      "link": "https://anderson-review.ucla.edu/how-first-mover-advantage-once-unquestioned-lost-its-grip-on-entrepreneurs-and-business-researchers/"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

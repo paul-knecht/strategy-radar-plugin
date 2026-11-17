@@ -1,0 +1,22 @@
+{
+  "id": "responses-to-institutional-pressure",
+  "name": "Responses to institutional pressure",
+  "idea": "A review article says the work's model sets five strategic responses against five institutional factors, from passivity to active resistance: acquiescence, adopting what outside constituents require; compromise, partial conformity by balancing or bargaining; avoidance, trying to prevent the need to conform; defiance, openly rejecting a demand; and manipulation, trying to alter the requirements.",
+  "suggests": "Look at how a company answers the rules, standards and expectations it faces: whether it complies, bargains, sidesteps, openly refuses or tries to change them.",
+  "limits": "The review notes that the work looks at the outside features of institutional demands, and that a later model built on it adds how those demands are represented inside the organization.",
+  "competing_idea": "That later model, as the review reports it, argues that the nature of the conflict between demands interacts with how far each is represented inside the organization, shaping how the conflict is experienced and influencing the strategies mobilized.",
+  "questions": [
+    "Which outside demands does the company simply comply with, and which does it bargain over, avoid or openly reject?",
+    "Where does it try to change the rules or expectations themselves, and through which channels?",
+    "Do the demands the company faces conflict with one another, and how strongly is each represented among its own people?"
+  ],
+  "originals": [
+    {
+      "reference": "Viviana Gutierrez Rincon, \"Beyond the internal dynamics of organizational responses to conflicting institutional demands\", Estudios Gerenciales (Universidad Icesi), Vol. 30 No. 133, October-December 2014 (an open-access review article)",
+      "level": "secondary_source_read",
+      "about": "Christine Oliver, \"Strategic Responses to Institutional Processes\", Academy of Management Review, Vol. 16 No. 1, January 1991, pp. 145-179",
+      "link": "https://repositorioacademico.icesi.edu.co/revistas/index.php/estudios_gerenciales/article/view/1890"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

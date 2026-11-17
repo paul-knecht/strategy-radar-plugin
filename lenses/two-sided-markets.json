@@ -1,0 +1,22 @@
+{
+  "id": "two-sided-markets",
+  "name": "Platforms serving two sides",
+  "idea": "An encyclopedia article states that a two-sided market is a platform between two distinct user groups that give each other network benefits; when one group cares how many users the other has, that is a cross-side network effect. It reports a rule found in one firm's case: subsidise the more price-sensitive side and charge the side whose demand grows more as the other side grows.",
+  "suggests": "Look at whether a company brings together two groups that value each other, which side it charges and which it subsidises, and how many users each side already has.",
+  "limits": "The article states that network effects alone, cross-side or same-side, do not make a firm a multi-sided platform. It adds that the end value of two-sided pricing depends on the market and may not cover its costs, and that a platform should take more care when the product it gives away has appreciable unit costs.",
+  "competing_idea": "Another view the article sets out and argues against: pricing each side without regard to network effects, seeking the biggest revenue under each side's demand curve. The article states that in two-sided networks such logic can be misguided, since adoption on one side drives adoption on the other.",
+  "questions": [
+    "Which two groups does the platform bring together, and how much does each value the size of the other?",
+    "Which side pays and which side is subsidised, and does the subsidised side respond more to price?",
+    "Does the company's pricing take account of how growth on one side raises demand on the other?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Two-sided market\", Wikipedia, The Free Encyclopedia, revision 1385019671 of 11 November 2026",
+      "level": "secondary_source_read",
+      "about": "Jean-Charles Rochet and Jean Tirole, \"Platform Competition in Two-Sided Markets\", Journal of the European Economic Association, Vol. 1 No. 4, 2003, pp. 990-1029; Thomas Eisenmann, Geoffrey G. Parker and Marshall W. Van Alstyne, \"Strategies for Two-Sided Markets\", Harvard Business Review, October 2006",
+      "link": "https://en.wikipedia.org/w/index.php?title=Two-sided_market&oldid=1385019671"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

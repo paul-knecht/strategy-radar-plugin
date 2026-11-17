@@ -1,0 +1,28 @@
+{
+  "id": "corporate-strategy-tests",
+  "name": "Three tests for diversifying",
+  "idea": "A textbook states, citing the work, that a diversification move needs to clear three tests. It asks how attractive the industry is, as entering one without strong profit potential may be risky; how much entry will cost, as the firm must be able to recoup it; and whether the new unit and the firm will be better off, as diversification should be avoided unless one side gains a competitive advantage.",
+  "suggests": "Look at a company's move into a new industry through three questions: how profitable that industry is, whether the price of getting in can be earned back, and what advantage the new business and the rest of the company gain from belonging together.",
+  "limits": "The textbook warns that the gains executives hope to enjoy from moving into related businesses are sometimes never achieved.",
+  "competing_idea": "The same textbook describes portfolio planning, which it says helps executives assess a firm's prospects in each industry and allocate resources across them; it also describes a matrix that sorts a firm's businesses as high or low by market share and industry growth, and says that, in that matrix, profits from cash cows should be diverted to more promising businesses.",
+  "questions": [
+    "How profitable is the industry the company is entering, and how risky would entering it be?",
+    "Can the company earn back what it pays to get in, for example the price of an acquisition?",
+    "What advantage do the new business and the rest of the company gain from being together, and which side gains it?"
+  ],
+  "originals": [
+    {
+      "reference": "Mastering Strategic Management, Saylor Academy, section 8.3 \"Diversification Strategies\" (an open textbook)",
+      "level": "secondary_source_read",
+      "about": "Michael E. Porter, \"From Competitive Advantage to Corporate Strategy\", Harvard Business Review, May 1987",
+      "link": "https://saylordotorg.github.io/text_mastering-strategic-management/s12-03-diversification-strategies.html"
+    },
+    {
+      "reference": "Mastering Strategic Management, Saylor Academy, section 8.5 \"Portfolio Planning and Corporate-Level Strategy\" (an open textbook)",
+      "level": "secondary_source_read",
+      "about": "portfolio planning and its share and growth matrix; the textbook cites no work for it",
+      "link": "https://saylordotorg.github.io/text_mastering-strategic-management/s12-05-portfolio-planning-and-corpora.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

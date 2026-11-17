@@ -1,0 +1,22 @@
+{
+ "id": "endorsement-by-prominent-backers",
+ "name": "Who stands behind a young firm",
+ "idea": "A magazine article on a study of young venture-backed firms states that when a new venture is hard to judge from its own record, investors look for other cues. It quotes an author as saying the results support the argument that young firms with well-known partners do better than similar firms that lack them; the study used, among other measures, speed to a public offering and value at it.",
+ "suggests": "Look at who has invested in or partnered with the company, how well known they are, and whether the company has a record of its own that outsiders can judge instead.",
+ "limits": "The article states that the effect was predicted to be larger the greater the uncertainty about a company's quality. It quotes an author as saying that the role of partner prominence in how outsiders judge a firm's quality shrinks as the firm ages and builds a track record. The article states that the study's sample was 301 young venture-backed biotechnology firms.",
+ "competing_idea": "The article also states that a young firm may benefit from its prominent partners' high-quality resources, not only their reputation, and that the authors believe the two work in tandem.",
+ "questions": [
+  "Who has invested in or partnered with the company, and how prominent are they?",
+  "Is the company young and unproven enough for its partners' standing to matter?",
+  "Do the partners bring resources the company needs, or only their name?"
+ ],
+ "originals": [
+  {
+   "reference": "\"Building a Name\", Chicago Booth Review, dated 1 March 1999 on the page",
+   "level": "secondary_source_read",
+   "about": "Toby Stuart, Ha Hoang and Ralph Hybels, \"Interorganizational Endorsements and the Performance of Entrepreneurial Ventures\", Administrative Science Quarterly, Vol. 44 No. 2, 1999, pp. 315-349",
+   "link": "https://www.chicagobooth.edu/review/building-name"
+  }
+ ],
+ "checked_on": "2026-11-17"
+}

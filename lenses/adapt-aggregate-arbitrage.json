@@ -1,0 +1,28 @@
+{
+  "id": "adapt-aggregate-arbitrage",
+  "name": "Adapt, aggregate or arbitrage",
+  "idea": "A textbook states that the work's framework offers three generic approaches to creating value across borders. It describes adaptation as tailoring parts of the business model to local requirements or preferences, aggregation as seeking economies of scale or scope, typically by standardizing much of the offer, arbitrage as exploiting differences between markets, usually by spreading supply stages.",
+  "suggests": "Look at which of the three a company's move abroad mainly serves: tailoring its offer to a local market, gaining scale by standardising across countries, or using differences between countries, such as in costs, by placing a stage of its supply chain there.",
+  "limits": "The textbook states that there are inherent tensions between the three approaches, so pursuing two or all three requires considerable organizational and managerial flexibility, and that most companies would do well to concentrate on one or two of them.",
+  "competing_idea": "The same textbook sets out another framework: companies that have globalized have typically moved to one of four structures, international, multidomestic, global or transnational, each placed in a matrix of global aggregation and local adaptation.",
+  "questions": [
+    "Does this move abroad mainly adapt the company's offer to local buyers, standardise it across countries for scale, or use differences between countries?",
+    "If the company pursues more than one of these at once, how does it handle the tension between them?",
+    "Which stage of its supply chain sits where, and which difference between countries does that placement use?"
+  ],
+  "originals": [
+    {
+      "reference": "Fundamentals of Global Strategy, Saylor Academy, chapter 3 \"Generic Strategies for Global Value Creation\": its introduction and sections 3.1, 3.3 and 3.4 (an open textbook)",
+      "level": "secondary_source_read",
+      "about": "Pankaj Ghemawat, \"Redefining Global Strategy: Crossing Borders in a World where Differences Still Matter\", Harvard Business Press, 2007",
+      "link": "https://saylordotorg.github.io/text_fundamentals-of-global-strategy/s05-01-ghemawat-s-aaa-global-strategy.html"
+    },
+    {
+      "reference": "Fundamentals of Global Strategy, Saylor Academy, section 10.4 \"Organization as Strategy\" (an open textbook)",
+      "level": "secondary_source_read",
+      "about": "the matrix of global aggregation and local adaptation, as the textbook section sets it out",
+      "link": "https://saylordotorg.github.io/text_fundamentals-of-global-strategy/s12-04-organization-as-strategy.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

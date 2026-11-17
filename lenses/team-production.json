@@ -1,0 +1,28 @@
+{
+  "id": "team-production",
+  "name": "Firms as monitored teams",
+  "idea": "An encyclopedia entry states that the work proposed that firms exist because producing in teams matters and the output of each member is hard to monitor. By the entry's account, the work argued that effective firms need people who do the monitoring and hold the residual claim; the entry adds that these get a share of the profits and so have an incentive to monitor well.",
+  "suggests": "Look at where a company's work is done in teams whose individual effort is hard to see, who watches that effort, and whether the watchers share in the profit it produces.",
+  "limits": "The entry notes that the people who monitor and hold the residual claim are often, but not always, the owners.",
+  "competing_idea": "Another view, from a popular account of later prize-winning research: a 1982 article showed that when a team divides all its income among its members, effort is generally too low. The account adds that an outside owner can raise incentives, as the members' total pay no longer has to add up to the income they generate.",
+  "questions": [
+    "Where does the company's output depend on joint work whose individual contributions are hard to measure?",
+    "Who monitors that joint work, and does that person or group share in the profit it produces?",
+    "Would a change in who holds the residual profit change how closely the team's effort is watched?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Harold Demsetz\", The Concise Encyclopedia of Economics, ed. David R. Henderson, Econlib (Liberty Fund), undated online entry",
+      "level": "secondary_source_read",
+      "about": "Armen A. Alchian and Harold Demsetz, \"Production, Information Costs, and Economic Organization\", American Economic Review, Vol. 62 No. 5, 1972, pp. 777-795",
+      "link": "https://www.econlib.org/library/Enc/bios/Demsetz.html"
+    },
+    {
+      "reference": "\"Popular information: The Prize in Economic Sciences 2016\", NobelPrize.org (Nobel Prize Outreach), 2016, section \"Strong incentives versus balanced incentives\"",
+      "level": "secondary_source_read",
+      "about": "Bengt Holmstrom, \"Moral Hazard in Teams\", Bell Journal of Economics, Vol. 13 No. 2, 1982, pp. 324-340",
+      "link": "https://www.nobelprize.org/prizes/economic-sciences/2016/popular-information/"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

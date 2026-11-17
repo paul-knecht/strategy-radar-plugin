@@ -1,0 +1,22 @@
+{
+  "id": "behavioural-theory-of-the-firm",
+  "name": "The firm as a coalition",
+  "idea": "A review article states that the work develops the idea of organisations as shifting political coalitions, in which people with different goals take part in decisions. It states that the work offers a partial settling of conflict through decentralised decisions, attention to one goal after another, and changes in spare resources. When one goal is met, it states, decision-makers turn to the next.",
+  "suggests": "Look at which groups inside a company push different goals, and at how it handles them: by splitting decisions among units, taking goals one at a time, or spending spare resources.",
+  "limits": "The review states that the theory leaves unclear when spare resources go to calming internal conflict and when they go elsewhere, for example to innovation. It names as an omission of the wider school that its ways of easing conflict are assumed to work alike for cooperation and for coordination.",
+  "competing_idea": "An earlier view, the review states, treats organisations as cooperative systems for collective action toward a common purpose; the wider school accepts this only in part, and adds that they are also systems of subunits whose heads have conflicting goals.",
+  "questions": [
+    "Which groups inside the company want different things from this decision, and which coalition carries it?",
+    "Is the company attending to its goals one at a time, and which goal has its attention now because performance on it fell short?",
+    "Does the company hold spare resources, and does it use them to keep the peace between units or to fund new projects?"
+  ],
+  "originals": [
+    {
+      "reference": "Vibha Gaba and John Joseph, \"Content and process: organizational conflict and decision making\", Frontiers in Psychology, Vol. 14, 14 November 2023, review article, doi:10.3389/fpsyg.2023.1227966",
+      "about": "Richard M. Cyert and James G. March, A behavioral theory of the firm, Englewood Cliffs, N.J.: Prentice-Hall, 1963, 332 p.",
+      "level": "secondary_source_read",
+      "link": "https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2023.1227966/full"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

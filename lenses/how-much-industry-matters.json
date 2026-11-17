@@ -1,0 +1,34 @@
+{
+  "id": "how-much-industry-matters",
+  "name": "How much of profit variance the industry explains",
+  "idea": "A record of a 1991 article, with its abstract, says the study splits the variance in business units' rate of return into industry, time, corporate-parent and business-specific factors. It reports almost no corporate effect, a small steady industry effect and a very large steady business-unit effect, and says the results imply that business-specific sources of rents matter most, industry far less.",
+  "suggests": "Before relying on an industry's average profit, ask how much of the differences in profit across businesses is explained by industry membership and how much by each business's own factors, and look at both.",
+  "limits": "An encyclopedia entry says that measuring effects by variance uses squared distances, so large effects are amplified and small ones shrunk. As an example, it says business effects exceed year effects by a factor of about 45 using variance but only about 8 using standard deviation.",
+  "competing_idea": "A record of a 1997 article, which reprints its abstract, says the shares of variance in the profitability of U.S. public corporations explained by the year, the industry, the corporate parent and the business itself are 2, 19, 4 and 32 percent, and that industry effects count for less in manufacturing but for more in sectors such as services and retail trade.",
+  "questions": [
+    "How much of the differences in profit across businesses like this one is explained by the industry, and how much by the business itself?",
+    "Does the sector matter here: does industry explain a larger or a smaller portion of profit variance than in manufacturing?",
+    "Would the answer change if effects were measured another way, for example by standard deviation rather than variance?"
+  ],
+  "originals": [
+    {
+      "reference": "IDEAS (RePEc) bibliographic record of an article, \"How much does industry matter?\", Strategic Management Journal, 12(3), March 1991, with its abstract",
+      "level": "secondary_source_read",
+      "about": "Richard P. Rumelt, \"How much does industry matter?\", Strategic Management Journal, 12(3), 167-185, March 1991",
+      "link": "https://ideas.repec.org/a/bla/stratm/v12y1991i3p167-185.html"
+    },
+    {
+      "reference": "IDEAS (RePEc) bibliographic record of an article, \"How Much Does Industry Matter, Really?\", Strategic Management Journal, 18(S1), July 1997, with its abstract",
+      "level": "secondary_source_read",
+      "about": "Anita M. McGahan and Michael E. Porter, \"How much does industry matter, really?\", Strategic Management Journal, 18(S1), 15-30, July 1997",
+      "link": "https://ideas.repec.org/a/bla/stratm/v18y1997is1p15-30.html"
+    },
+    {
+      "reference": "\"Performance effects\", Wikipedia",
+      "level": "secondary_source_read",
+      "about": "The research on how much industry, year, corporate-parent and business effects explain of profit variance, including the 1991 and 1997 articles above",
+      "link": "https://en.wikipedia.org/wiki/Performance_effects"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

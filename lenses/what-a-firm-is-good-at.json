@@ -1,0 +1,26 @@
+{
+  "id": "what-a-firm-is-good-at",
+  "name": "What a firm is good at",
+  "idea": "Each activity needs an organisation with fitting capabilities; activities using the same capabilities are similar, and those that must be matched in level or specification are complementary. Firms mostly keep to similar activities and can direct inside those that are both. Dissimilar activities to be co-ordinated generally fall to different firms, which agree plans ahead or rely on the market.",
+  "suggests": "Look at which activities a company keeps together and whether they draw on the same know-how, and at which matched activities it leaves to partners and how it agrees plans with them.",
+  "limits": "The work says activities grouped in one firm tend strongly to be similar but need not always be, and that chance leaves its mark on every business. It also expects many cases where choosing between directing, co-operating and buying is difficult but not very important.",
+  "competing_idea": "Another view: a firm tends to grow until organising one more transaction inside costs as much as using the open market or another firm.",
+  "questions": [
+    "Which capabilities does this activity call for, and does the company already use them elsewhere?",
+    "Which closely matched activities does the company leave to partners, and how do they agree plans?",
+    "Does this move into a new activity build on what the company already does well, or does it rest on another reason?"
+  ],
+  "originals": [
+    {
+      "reference": "G. B. Richardson, \"The Organisation of Industry\", The Economic Journal, Vol. 82 No. 327, Sept. 1972, pp. 883-896",
+      "level": "original_read",
+      "link": null
+    },
+    {
+      "reference": "R. H. Coase, \"The Nature of the Firm\", Economica, November 1937, pp. 386-405",
+      "level": "original_read",
+      "link": null
+    }
+  ],
+  "checked_on": "2026-11-15"
+}

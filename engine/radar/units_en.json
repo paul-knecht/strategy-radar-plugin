@@ -1,0 +1,24 @@
+{
+  "names": {
+    "m²": ["m2", "sqm", "sq m", "square metres", "square meters", "square metre", "square meter", "m^2"],
+    "ft²": ["ft2", "sq ft", "sqft", "square feet", "square foot", "square-foot", "ft^2"],
+    "USD million": ["usd m", "usd mn", "million usd", "usd millions", "$m", "$mn", "$ million", "$ m", "us$m", "us$mn", "us$ million", "us$ m"],
+    "USD billion": ["usd bn", "usd b", "billion usd", "usd billions", "$bn", "$b", "$ billion", "$ bn", "us$bn", "us$b", "us$ billion", "us$ bn"],
+    "EUR million": ["eur m", "eur mn", "million eur", "eur millions", "€m", "€mn", "€ million", "€ m"],
+    "EUR billion": ["eur bn", "eur b", "billion eur", "eur billions", "€bn", "€b", "€ billion", "€ bn"],
+    "CHF million": ["chf m", "chf mn", "million chf", "chf millions"],
+    "CHF billion": ["chf bn", "chf b", "billion chf", "chf billions"],
+    "GBP million": ["gbp m", "gbp mn", "million gbp", "gbp millions", "£m", "£mn", "£ million", "£ m"],
+    "GBP billion": ["gbp bn", "gbp b", "billion gbp", "gbp billions", "£bn", "£b", "£ billion", "£ bn"],
+    "lines": ["line", "filling lines", "filling line", "production lines", "production line", "prefilled syringe lines", "prefilled syringe line", "pre-filled syringe lines", "pre-filled syringe line"],
+    "litres": ["liters", "liter", "litre", "l"],
+    "million litres": ["million liters"]
+  },
+  "families": {
+    "area": {"base": "m²", "factors": {"m²": "1", "ft²": "0.09290304"}},
+    "usd": {"base": "USD million", "factors": {"USD million": "1", "USD billion": "1000"}},
+    "eur": {"base": "EUR million", "factors": {"EUR million": "1", "EUR billion": "1000"}},
+    "chf": {"base": "CHF million", "factors": {"CHF million": "1", "CHF billion": "1000"}},
+    "gbp": {"base": "GBP million", "factors": {"GBP million": "1", "GBP billion": "1000"}}
+  }
+}

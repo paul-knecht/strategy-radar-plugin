@@ -11,9 +11,11 @@ import unicodedata
 from datetime import date
 from pathlib import Path
 
-from . import __version__, calc, context, diff, fetch, pack, setup_env, store, verify
+from . import (__version__, calc, context, diff, fetch, join, lens_view, pack, parts, projects, recommend, setup_env,
+               store, verify)
 from .explain import explain
 from .gate import gate
+from .lenses import check_lenses
 from .report.build import GateRefused, build_report
 from .schema import Problem, check_data, check_proposal
 from .status import list_runs, run_status
@@ -87,18 +89,20 @@ def _cmd_init_run(args) -> int:
     if args.acknowledged_words is not None and args.mode != "private":
         raise UsageError("--acknowledged-words goes with --mode private and --acknowledge-data-flow")
     pack_file = args.pack_file if args.pack_file is not None else _shipped_pack(args.pack)
+    companies, screening = None, False
     if pack_file is not None:   # a pack with any problem starts no run
         data, problems = _read_pack(Path(pack_file))
         if problems:
             _emit(_problems_and_explanations(problems))
             return 1
         pack_name, illustrative = data["id"], illustrative or data["illustrative"] is True
+        companies, screening = pack.companies_of(data), data.get("screening") is True
     try:
         run_dir = store.init_run(
             Path(args.root), args.question, pack_name, run_id=args.run_id,
             illustrative=illustrative, mode=args.mode,
             acknowledged=args.acknowledge_data_flow, home_company=args.home_company,
-            acknowledged_words=args.acknowledged_words)
+            acknowledged_words=args.acknowledged_words, companies=companies, screening=screening)
     except store.PrivateModeNotAcknowledged as exc:
         _emit({"error": str(exc), "notice": store.PRIVATE_NOTICE_TEXT})   # the plugin shows `notice`, never `error`
         return 2
@@ -165,6 +169,28 @@ def _cmd_add_facts(args) -> int:
     return 1 if refused else 0
 
 
+def _cmd_join_proposals(args) -> int:
+    sources = args.sources.split(",")
+    if not all(join.SOURCE_ID.fullmatch(source_id) for source_id in sources) or len(set(sources)) < len(sources):
+        raise UsageError("--sources must be source ids such as S3,S4, each once, separated by commas")
+    merges = []
+    if args.merges is not None:
+        _require_file(Path(args.merges))
+        try:
+            merges = json.loads(Path(args.merges).read_text(encoding="utf-8"))
+            join.check_merges(merges)
+        except (OSError, ValueError, RecursionError) as exc:
+            raise UsageError(f"cannot read the merges: {exc}")
+    try:
+        joined = join.join(Path(args.run), sources, merges)
+    except join.JoinRefused as refused:   # nothing was written
+        _emit(_problems_and_explanations(refused.problems))
+        return 1
+    store._write_json(Path(args.out), joined)   # whole or not at all
+    _emit({"written": len(joined), "folded": sum(len(merge["fold"]) for merge in merges), "out": args.out})
+    return 0
+
+
 def _cmd_add_based_on(args) -> int:
     _emit({"ok": True, "based_on": store.add_based_on(Path(args.run), args.source, args.on)})
     return 0
@@ -229,15 +255,14 @@ _LINE_END = re.compile("\r\n|[\r\n" + chr(0x2028) + chr(0x2029) + "]")   # a lin
 _NOTE_LIMIT = 2000
 
 
-def _note_from_stdin() -> str:
-    """The text of `record-support --note-stdin`: standard input as UTF-8 text. Standard input that is a terminal,
-    and text that is not valid UTF-8, are wrong use."""
+def _stdin_text(missing: str, terminal: str, not_utf8: str) -> str:
+    """Standard input as UTF-8 text. No standard input, standard input that is a terminal (nobody waits for typing)
+    and text that is not valid UTF-8 are wrong use, each said in the caller's words."""
     stream = sys.stdin
     if stream is None:
-        raise UsageError("there is no standard input to read the note from")
+        raise UsageError(missing)
     if stream.isatty():
-        raise UsageError("the note is expected on standard input, and standard input is a terminal. "
-                         "Send the note as plain text on standard input, or give it with --note.")
+        raise UsageError(terminal)
     buffer = getattr(stream, "buffer", None)
     try:
         if buffer is not None:
@@ -246,8 +271,16 @@ def _note_from_stdin() -> str:
             text = stream.read()
             text.encode("utf-8")
     except UnicodeError:
-        raise UsageError("the note on standard input is not valid UTF-8 text. Send it as plain text.")
+        raise UsageError(not_utf8)
     return text
+
+
+def _note_from_stdin() -> str:
+    """The text of `--note-stdin` of `record-support` and `record-link-check`."""
+    return _stdin_text("there is no standard input to read the note from",
+                       "the note is expected on standard input, and standard input is a terminal. "
+                       "Send the note as plain text on standard input, or give it with --note.",
+                       "the note on standard input is not valid UTF-8 text. Send it as plain text.")
 
 
 def _clean_note(text: str, where: str) -> str:
@@ -264,13 +297,17 @@ def _clean_note(text: str, where: str) -> str:
     return note
 
 
-def _cmd_record_support(args) -> int:
+def _note_of(args) -> str:
+    """The cleaned note of `--note` or `--note-stdin`, exactly one of them."""
     if (args.note is None) != args.note_stdin:
         raise UsageError("give either --note or --note-stdin")
     if args.note_stdin:
-        note = _clean_note(_note_from_stdin(), "the note on standard input")
-    else:
-        note = _clean_note(args.note, "the note")
+        return _clean_note(_note_from_stdin(), "the note on standard input")
+    return _clean_note(args.note, "the note")
+
+
+def _cmd_record_support(args) -> int:
+    note = _note_of(args)
     verify.record_support(Path(args.run), args.fact, args.passed == "true", args.by, note)
     _emit({"ok": True})
     return 0
@@ -375,6 +412,157 @@ def _cmd_check_pack(args) -> int:
            "pack": None if data is None else pack.summary(data),
            "window": None if months is None else pack.window(months, args.today or date.today())})
     return 1 if problems else 0
+
+
+def _cmd_check_lenses(args) -> int:
+    problems = check_lenses(Path(args.lenses), real=args.real)
+    _emit(_problems_and_explanations(problems))
+    return 1 if problems else 0
+
+
+def _cmd_list_lenses(args) -> int:
+    try:
+        listing = lens_view.list_lenses(Path(args.lenses))
+    except lens_view.LensFolderUnreadable as unreadable:
+        raise UsageError(str(unreadable))
+    _emit(listing)
+    return 0
+
+
+def _cmd_lens_view(args) -> int:
+    try:
+        view = lens_view.run_view(Path(args.run), Path(args.lenses))
+    except lens_view.LensFolderUnreadable as unreadable:
+        raise UsageError(str(unreadable))
+    _emit(view)
+    return 0
+
+
+RECOMMENDATION_KEYS = ("entries", "note")
+
+
+def _cmd_record_lens_recommendation(args) -> int:
+    what = "the lens recommendation"
+    if args.list_stdin:
+        text = _stdin_text(f"there is no standard input to read {what} from",
+                           f"{what} is expected on standard input, and standard input is a terminal. Send it as "
+                           "plain lines on standard input, or name a file with --file.",
+                           f"{what} on standard input is not valid UTF-8 text. Send it as plain text.")
+        try:
+            entries, note = recommend.parse_list_lines(text)
+        except ValueError as malformed:
+            raise UsageError(str(malformed))
+        data = {"entries": entries, "note": note}
+    else:
+        data = _recommendation_file(args.file, what)
+    _require_utf8(data, what)
+    try:
+        recommend.record_recommendation(Path(args.run), Path(args.lenses), data["entries"], data.get("note"), args.by)
+    except recommend.RecommendationRefused as refused:   # nothing was written
+        _emit({"recorded": False, **_problems_and_explanations(refused.problems)})
+        return 1
+    _emit({"recorded": True, **_problems_and_explanations([])})
+    return 0
+
+
+def _recommendation_file(file: str, what: str) -> dict:
+    """The JSON object of `--file` (a path, or '-' for standard input), with exactly its keys; a usage error
+    otherwise."""
+    try:
+        if file == "-":
+            text = _stdin_text(f"there is no standard input to read {what} from",
+                               f"{what} is expected on standard input, and standard input is a terminal. Send it as "
+                               "JSON text on standard input, or name a file with --file.",
+                               f"{what} on standard input is not valid UTF-8 text. Send it as plain JSON text.")
+        else:
+            text = Path(file).read_text(encoding="utf-8")
+        data = json.loads(text, object_pairs_hook=_object_without_repeats)   # a key given twice is refused
+    except (OSError, ValueError, RecursionError) as exc:
+        raise UsageError(f"cannot read {what}: {exc}")
+    if not isinstance(data, dict) or "entries" not in data or not set(data) <= set(RECOMMENDATION_KEYS):
+        raise UsageError(f'{what} must be one JSON object with "entries" (a list) and, if wanted, "note"')
+    return data
+
+
+def _part_number(text: str) -> int:
+    """The number of `--part`: a positive whole number written plainly, such as 2."""
+    if not re.fullmatch(r"[1-9][0-9]*", text):
+        raise argparse.ArgumentTypeError(f"a part is a positive whole number, such as 2, not {text!r}")
+    return int(text)
+
+
+def _emit_part(found: list[dict], asked: int) -> int:
+    """Print part `asked` of `found`; a part that is not there is a problem (exit 1) that names how many there are."""
+    if asked > len(found):
+        _emit(_problems_and_explanations([Problem(None, "part", parts.no_such_part(asked, len(found)))]))
+        return 1
+    _emit(found[asked - 1])
+    return 0
+
+
+def _cmd_lens_advisor_input(args) -> int:
+    try:
+        found = recommend.advisor_parts(Path(args.run), Path(args.lenses))
+    except lens_view.LensFolderUnreadable as unreadable:
+        raise UsageError(str(unreadable))
+    return _emit_part(found, args.part)
+
+
+def _cmd_lens_link_context(args) -> int:
+    try:
+        packets = recommend.link_packets(Path(args.run), Path(args.lenses))
+    except lens_view.LensFolderUnreadable as unreadable:
+        raise UsageError(str(unreadable))
+    _emit({"packets": packets})
+    return 0
+
+
+def _cmd_record_link_check(args) -> int:
+    note = _note_of(args)
+    recommend.record_link_check(Path(args.run), args.lens, args.fact, args.verdict, args.by, note)
+    _emit({"ok": True})
+    return 0
+
+
+def _cmd_project_grouper_input(args) -> int:
+    return _emit_part(projects.grouper_parts(Path(args.run)), args.part)
+
+
+def _cmd_record_projects(args) -> int:
+    what = "the projects"
+    if args.list_stdin:
+        text = _stdin_text(f"there is no standard input to read {what} from",
+                           f"{what} are expected on standard input, and standard input is a terminal. Send them as "
+                           "plain lines on standard input, or name a file with --file.",
+                           f"{what} on standard input are not valid UTF-8 text. Send them as plain text.")
+        try:
+            given = projects.parse_list_lines(text)
+        except ValueError as malformed:
+            raise UsageError(str(malformed))
+    else:
+        given = _projects_file(args.file, what)
+    _require_utf8(given, what)
+    try:
+        projects.record_projects(Path(args.run), given, args.by)
+    except projects.ProjectsRefused as refused:   # nothing was written
+        _emit({"recorded": False, **_problems_and_explanations(refused.problems)})
+        return 1
+    _emit({"recorded": True, **_problems_and_explanations([])})
+    return 0
+
+
+def _projects_file(file: str, what: str) -> list:
+    """The projects of `--file`: one JSON object with exactly the key "projects", a list of objects with exactly a
+    name (a text) and a non-empty list of fact ids (texts); a usage error otherwise."""
+    try:
+        data = json.loads(Path(file).read_text(encoding="utf-8"), object_pairs_hook=_object_without_repeats)
+    except (OSError, ValueError, RecursionError) as exc:
+        raise UsageError(f"cannot read {what}: {exc}")
+    given = data.get("projects") if isinstance(data, dict) and set(data) == {"projects"} else None
+    if not (projects._well_formed(given) and all(isinstance(project["name"], str) for project in given)):
+        raise UsageError(f'{what} must be one JSON object {{"projects": [...]}}, each project {{"name", "fact_ids"}} '
+                         "with its name as text and its fact ids as a list of at least one text")
+    return given
 
 
 def _cmd_demo(args) -> int:
@@ -500,6 +688,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--file", required=True, help="a JSON list of proposals ('-' reads stdin)")
     p.set_defaults(func=_cmd_add_facts)
 
+    p = sub.add_parser("join-proposals", help="join the extractors' saved answers into one list for add-facts, "
+                                              "unchanged; a merges file names the proposals to fold")
+    p.add_argument("--run", required=True)
+    p.add_argument("--sources", required=True, help="the source ids whose answers proposals/<id>.json are joined, "
+                                                    "separated by commas, such as S3,S4")
+    p.add_argument("--merges", metavar="FILE", help='a JSON list of {"keep": "S29#1", "fold": ["S21#2"]}')
+    p.add_argument("--out", required=True, metavar="FILE", help="the list file to write, such as proposals/all.json")
+    p.set_defaults(func=_cmd_join_proposals)
+
     p = sub.add_parser("checkpoint", help="record a checkpoint answer")
     p.add_argument("--run", required=True)
     p.add_argument("--name", required=True, choices=store.CHECKPOINTS)
@@ -619,6 +816,83 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--file", required=True, help="the pack, for example packs/demo.json")
     p.add_argument("--today", type=_iso_date, help="the last day of the time window (YYYY-MM-DD); today if left out")
     p.set_defaults(func=_cmd_check_pack)
+
+    p = sub.add_parser("check-lenses", help="check every lens in a folder by the rule the gate uses; exit 1 if there "
+                                            "are problems")
+    p.add_argument("--lenses", required=True, help="the folder of the lens files")
+    p.add_argument("--real", action="store_true",
+                   help="also require the day each lens was checked and refuse an illustrative reference, as for a "
+                        "lens that ships with the plugin")
+    p.set_defaults(func=_cmd_check_lenses)
+
+    p = sub.add_parser("list-lenses", help="print every lens in a folder, grouped by theme, with its level in plain words")
+    p.add_argument("--lenses", required=True, help="the folder of the lens files")
+    p.set_defaults(func=_cmd_list_lenses)
+
+    p = sub.add_parser("record-lens-recommendation",
+                       help="check the lens advisor's list by its form and record it; exit 1 if it is refused")
+    p.add_argument("--run", required=True)
+    p.add_argument("--lenses", required=True, help="the folder of the lens files")
+    p.add_argument("--by", required=True, help="who made the list; only the lens advisor may record it")
+    which_list = p.add_mutually_exclusive_group(required=True)
+    which_list.add_argument("--file", help='a JSON object {"entries": [...], "note": ...} (\'-\' reads stdin)')
+    which_list.add_argument("--list-stdin", action="store_true",
+                            help="read the list from standard input in plain lines, key: value, a blank line between "
+                                 "entries, so no curly bracket goes into the command; give this or --file")
+    p.set_defaults(func=_cmd_record_lens_recommendation)
+
+    p = sub.add_parser("lens-view", help="print what the first stop shows: the lens advisor's list as recorded, whether it "
+                                         "is out of date, the readers' marks, and every other lens; changes nothing")
+    p.add_argument("--run", required=True)
+    p.add_argument("--lenses", required=True, help="the folder of the lens files")
+    p.set_defaults(func=_cmd_lens_view)
+
+    p = sub.add_parser("lens-advisor-input", help="print what the lens advisor reads: the question, the frame, every "
+                                                  "lens and the facts that count, in parts; changes nothing")
+    p.add_argument("--run", required=True)
+    p.add_argument("--lenses", required=True, help="the folder of the lens files")
+    p.add_argument("--part", type=_part_number, default=1, help="the part to print, 1 when not given; part 1 says "
+                                                                 "how many parts there are")
+    p.set_defaults(func=_cmd_lens_advisor_input)
+
+    p = sub.add_parser("lens-link-context", help="print what the link readers read: each suggested lens beside each "
+                                                 "of its facts, without the advisor's reasons; changes nothing")
+    p.add_argument("--run", required=True)
+    p.add_argument("--lenses", required=True, help="the folder of the lens files")
+    p.set_defaults(func=_cmd_lens_link_context)
+
+    p = sub.add_parser("record-link-check", help="record a link reader's verdict on one lens and one of its facts")
+    p.add_argument("--run", required=True)
+    p.add_argument("--lens", required=True, help="the lens of the link, for example firm-boundaries")
+    p.add_argument("--fact", required=True, help="the fact of the link, for example F3")
+    p.add_argument("--verdict", required=True, choices=recommend.VERDICTS,
+                   help="bears when the fact bears on one of the lens's questions, doubt when it does not or it is unclear")
+    p.add_argument("--by", required=True, help="the link reader; only lens-link-reader and lens-link-reader-quick are taken")
+    p.add_argument("--note", help="why, in a sentence; a doubt needs one; give this or --note-stdin")
+    p.add_argument("--note-stdin", action="store_true",
+                   help="read the note as plain text from standard input, so it never goes onto the command line; "
+                        "give this or --note")
+    p.set_defaults(func=_cmd_record_link_check)
+
+    p = sub.add_parser("project-grouper-input", help="print what the project grouper reads: the question and every "
+                                                     "capacity move that counts, its company and countries tidied; "
+                                                     "in parts; changes nothing")
+    p.add_argument("--run", required=True)
+    p.add_argument("--part", type=_part_number, default=1, help="the part to print, 1 when not given; part 1 says "
+                                                                 "how many parts there are")
+    p.set_defaults(func=_cmd_project_grouper_input)
+
+    p = sub.add_parser("record-projects",
+                       help="check the project grouper's grouping of the capacity moves and record it; exit 1 if it is "
+                            "refused")
+    p.add_argument("--run", required=True)
+    p.add_argument("--by", required=True, help="who made the grouping; only the project grouper may record it")
+    which_list = p.add_mutually_exclusive_group(required=True)
+    which_list.add_argument("--file", help='a JSON object {"projects": [{"name": ..., "fact_ids": [...]}]}')
+    which_list.add_argument("--list-stdin", action="store_true",
+                            help="read the projects from standard input in plain lines, project: NAME and facts: F1, "
+                                 "F2, a blank line between projects; give this or --file")
+    p.set_defaults(func=_cmd_record_projects)
 
     p = sub.add_parser("demo", help="build the invented demo run, all of it or up to a stage; the folder must not exist")
     p.add_argument("--root", required=True, help="the folder the demo run folder is made in")
@@ -779,6 +1053,9 @@ def _expand_from_json(parser, argv: list[str]) -> list[str]:
 REPORT_DAMAGE = ("gate", "check-data")
 
 
+STDIN_FILE = ("add-fact", "add-facts", "record-lens-recommendation")   # the commands where --file - reads stdin
+
+
 def _check_named_paths(args) -> None:
     """Before a command does anything: every run it names is a run, every file it names is a file, and the lens folder
     is a folder. Otherwise it is wrong use (one plain line, exit code 2), and nothing is made, locked or asked for."""
@@ -791,7 +1068,7 @@ def _check_named_paths(args) -> None:
                     raise
     for name in ("file", "pack_file"):
         value = getattr(args, name, None)
-        if value is None or (value == "-" and name == "file" and args.command in ("add-fact", "add-facts")):
+        if value is None or (value == "-" and name == "file" and args.command in STDIN_FILE):
             continue
         _require_file(Path(value))
     lenses = getattr(args, "lenses", None)

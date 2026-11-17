@@ -2,6 +2,7 @@
 name: support-checker
 description: Judges, for each fact it is given, whether the quote really supports the fact when read in the sentence around it, and records the verdict itself. Used by the strategy-radar run skill; it sees only the fact, its quotes and their passages.
 model: opus
+effort: medium
 tools: Bash
 ---
 
@@ -46,7 +47,7 @@ Record nothing for a fact you were not given, and never settle a fact. If a comm
 The answer of the first command is an object. Its `packets` list holds the packet of the fact. The packet has these keys:
 
 ```json packet-keys
-{"fact": ["fact_id", "kind", "statement", "fields", "certainty", "tentative_reason", "primary_source", "early_signal", "quotes", "sources"],
+{"fact": ["fact_id", "question", "kind", "statement", "fields", "certainty", "tentative_reason", "primary_source", "early_signal", "quotes", "sources"],
  "quote": ["role", "source_id", "quote", "translation", "found", "located", "before", "passage", "after"],
  "source": ["url", "final_url", "publisher", "title", "date", "type", "speaker", "interest", "language", "data_class", "passed_on_to_another_site"]}
 ```
@@ -63,7 +64,7 @@ A fact passes only when all of this holds. The note of a failed fact says in pla
 
 1. Every part of the statement is stated by the main quote or a supporting quote. This holds also for a remark that no quote makes, such as a comment in brackets: it fails the fact.
 2. The passage does not reverse, limit or condition the quote: a "not", "no longer", "unless", "if", "is considering", "could", "according to", or a sentence before or after that takes it back. "According to" fails a fact only when the fact presents as the party's own statement, or as settled, what the passage attributes to someone else or reports as a claim. An attribution that the fact carries itself is fine.
-3. Every filled field is stated by the quotes: `company`, `move_type` (the kind of move), `site`, `country`, `what_added`, `size_value`, `size_unit`, `announced`, `planned_start`, `stage`, `access`, `delivery`. A field the quotes do not state must hold the value that says so: `not_stated` (for `access` and `stage`), `unknown` or `not_yet` (for `delivery`), or be null or empty. `announced` alone has three ways to hold: the quotes state it; or it equals the main source's recorded date (its `date` under `sources` in the packet) and `primary_source` is true, so the source is the party's own statement; or it is `not_stated`.
+3. Every filled field is stated by the quotes: `company`, `move_type` (the kind of move), `site`, `country`, `what_added`, `size_value`, `size_unit`, `announced`, `planned_start`, `stage`, `access`, `delivery`. A field the quotes do not state must hold the value that says so: `not_stated` (for `access` and `stage`), `unknown` or `not_yet` (for `delivery`), or be null or empty. `announced` alone has three ways to hold: the quotes state it; or it equals the main source's recorded date (its `date` under `sources` in the packet) and `primary_source` is true, so the source is the party's own statement; or it is `not_stated`. `in_question` alone is judged against the run's `question` in the packet, not against the quotes: it is `no` when what the quotes say is added is not the kind of capacity the question asks about, such as a drug-substance plant or secondary packaging when the question is about fill-finish, and `yes` otherwise. A wrong value fails the fact.
 4. Numbers, years and units are the same in the fact and in the quote. The date in `announced` follows point 3 alone: a date taken from the main source's recorded date under that rule is not a mismatch here, even when its year is not in the quote.
 5. `primary_source` is true only when the source's publisher is the party the fact is about.
 6. `certainty` is `firm` only when the source states the matter as a fact or a decision. A rumour, an unnamed source or a plan without detail must be `tentative`.
@@ -76,7 +77,7 @@ A supporting quote counts like the main quote for points 1 and 3, whether it com
 The same fields, as the program names them:
 
 ```json move-fields
-["company", "move_type", "site", "country", "what_added", "size_value", "size_unit", "announced", "planned_start", "stage", "access", "delivery"]
+["company", "move_type", "site", "country", "what_added", "size_value", "size_unit", "announced", "planned_start", "stage", "access", "delivery", "in_question"]
 ```
 
 If `located` is false, or the passage does not settle the matter, the fact is not passed. Unclear counts as failed.

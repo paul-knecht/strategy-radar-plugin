@@ -1,0 +1,22 @@
+{
+  "id": "knowledge-based-view",
+  "name": "Knowledge as the key resource",
+  "idea": "An encyclopedia article states that the knowledge-based view treats knowledge as an essentially important, scarce and valuable resource of a firm, and assumes that individuals, not organisations, create and retain it. It says the view's proponents argue that, as such resources are usually complex and hard to imitate, sources of knowledge can be seen as the main sources of lasting advantage.",
+  "suggests": "Look at what knowledge a company's advantage rests on, which people hold it, and how hard it would be for a rival to acquire the same knowledge.",
+  "limits": "The article states that whether the view is a theory at all has been much debated; one notable proponent wrote that it is, formally, no theory of the firm.",
+  "competing_idea": "Another view, which the article says this one builds on: the resource-based view. The article reports the knowledge view's proponents arguing that it does not go far enough, as it treats knowledge as a generic resource without special characteristics.",
+  "questions": [
+    "Which knowledge does the company's advantage depend on, and is it written down or held by people?",
+    "How hard would it be for a rival to build or hire the same knowledge?",
+    "What happens to that knowledge when key people leave?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Knowledge-based theory of the firm\", Wikipedia, The Free Encyclopedia, revision 1326705035 of 10 December 2025",
+      "level": "secondary_source_read",
+      "about": "Robert M. Grant, \"Toward a knowledge-based theory of the firm\", Strategic Management Journal, Vol. 17 No. S2, 1996, pp. 109-122",
+      "link": "https://en.wikipedia.org/w/index.php?title=Knowledge-based_theory_of_the_firm&oldid=1326705035"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

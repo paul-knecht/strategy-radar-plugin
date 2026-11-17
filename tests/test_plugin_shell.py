@@ -8,8 +8,10 @@ from pathlib import Path
 import pytest
 
 import radar
-from plugin_helpers import (PLUGIN_FOLDERS, ROOT, TEXT_SUFFIXES, body, cli_options, fenced_json, fenced_text, front_matter, has_claude, plugin_text_files,
-                            radar_calls, unknown_calls)
+from radar import lenses, store
+from radar.report.model import load_labels
+from plugin_helpers import (PLUGIN_FOLDERS, ROOT, TEXT_SUFFIXES, body, cli_options, company_names_in, shipped_text_files, fenced_json, fenced_text, front_matter, has_claude,
+                            plugin_text_files, radar_calls, unknown_calls)
 
 
 def test_the_manifest_names_the_plugin_and_matches_the_engine_version():
@@ -29,9 +31,43 @@ def test_the_licence_is_mit_with_the_authors_name():
     assert text.startswith("MIT License") and "Copyright (c) 2026 Paul Knecht" in text
 
 
-def test_the_lens_readme_says_the_library_is_not_part_of_this_version():
-    text = (ROOT / "lenses" / "README.md").read_text(encoding="utf-8").lower()
-    assert "not part of this version" in text and "two invented lenses" in text
+def test_the_lens_readme_says_what_a_lens_holds_what_it_rests_on_and_how_it_is_checked():
+    # Plan 2b, Task 8: the eighty-three lenses ship; the README says what a lens file holds and what its level means.
+    text = (ROOT / "lenses" / "README.md").read_text(encoding="utf-8")
+    flat = " ".join(text.split())
+    labels = load_labels()
+    for level in store.LENS_LEVELS:
+        assert f"**{labels['level_' + level]}** (`{level}`)" in flat, level
+    for key in (*lenses.KEYS, *lenses.ORIGINAL_KEYS, *lenses.OPTIONAL_KEYS):
+        assert f"`{key}`" in flat, key
+    for needed in ("exactly these eight parts", "the lens is written from the model's general knowledge of the work and was not checked against it",
+                   "A lens's own level is the lowest level among its originals",
+                   "rests on what its works or slides state, not on whether the idea is true",
+                   "`suggests` is our own application of the idea", "It makes no claim about the work",
+                   "are licensed", "stay on the author's computer", "None of it is in this repository",
+                   "an alternative that the same work sets out and controls for", "two other lenses, invented for practice",
+                   "which keeps each text short", "## The four levels", "## The `about` part of an original",
+                   "Reference confirmed is the lowest, then course slides, then secondary source read, then original read",
+                   "The program requires `about` exactly for this level and refuses it on any other level",
+                   "Rests on: the original, read", "the original itself was not read",
+                   "by the independent review of each lens and by a program that compares the lens texts with the copies "
+                   "of the originals"):
+        assert needed in flat, needed
+    assert 'names the first after "Rests on:" and each further one after "It also rests on"' in text   # several originals
+    assert ("check-lenses", {"--lenses", "--real"}) in radar_calls(text) and unknown_calls(text) == []
+    assert "not part of this version" not in flat and "no passage of a work" not in flat
+
+
+def test_the_readme_says_what_a_run_on_a_real_pack_uses_and_what_is_not_done_yet():
+    # Plan 2b fix round 1: the eighty-three lenses are for a pack for a real company; the status says what is not done.
+    text = " ".join((ROOT / "README.md").read_text(encoding="utf-8").split())
+    row = next(line for line in (ROOT / "README.md").read_text(encoding="utf-8").splitlines()
+               if line.startswith("| `/strategy-radar:new-pack`"))
+    assert "A run on a pack for a real company uses the eighty-three lenses" in row and "A run on it uses" not in row
+    assert ("Real runs on public websites have been tried in only a few runs so far, among them one screening run on "
+            "a startup; that run used a pack whose competitors and pages the person named, so the web search of "
+            "`/strategy-radar:screen` has not yet run in a real session. Not done yet: sample runs.") in text
+    assert "Still to come" not in text
 
 
 def test_no_plugin_file_leans_on_another_plugin():
@@ -40,14 +76,32 @@ def test_no_plugin_file_leans_on_another_plugin():
         assert "superpowers" not in text and "academic-research-skills" not in text, path
 
 
-def test_no_plugin_file_names_the_two_target_companies_before_their_packs_exist():
-    # Real company content arrives with plan 2b, verified. Until then the plugin's own files stay invented.
-    # The names are built from pieces so that this file does not trip itself if it is ever scanned.
-    names = ["vet" + "ter", "rolls" + "-" + "royce"]
-    for path in plugin_text_files():
-        text = path.read_text(encoding="utf-8").lower()
-        for name in names:
-            assert name not in text, path
+def test_no_shipped_file_names_a_company_of_the_authors_own_runs():
+    # Packs and runs for real companies stay on the author's computer, so no file of the public copy names them.
+    # The helper builds the names from pieces, so that no test file holds them, and finds every spelling.
+    for path in shipped_text_files():
+        assert company_names_in(path.read_text(encoding="utf-8")) == [], path
+
+
+def test_the_name_scan_reaches_every_shipped_folder_and_knows_the_names():
+    found = {path.relative_to(ROOT).parts[0] for path in shipped_text_files()}
+    assert {"README.md", "tests", "engine", "lenses", "docs", "skills"} <= found
+    assert not any("superpowers" in path.parts for path in shipped_text_files())
+    assert company_names_in("Example Robotics and Investor Q, a novel wiring") == []
+    import plugin_helpers
+    assert len(plugin_helpers._NAME_DIGESTS) == 28 and all(len(d) == 64 for d in plugin_helpers._NAME_DIGESTS)
+
+
+def test_the_name_scan_reports_a_digest_of_an_invented_name_as_a_whole_word_only(monkeypatch):
+    import hashlib
+    import plugin_helpers
+    digest = lambda name: hashlib.sha256(name.encode("utf-8")).hexdigest()
+    monkeypatch.setattr(plugin_helpers, "_NAME_DIGESTS", frozenset({digest("example forbidden name"), digest("zzword")}))
+    monkeypatch.setattr(plugin_helpers, "_MAX_NAME_WORDS", 3)
+    for spelling in ("example forbidden name", "Example Forbidden Name", "EXAMPLE-FORBIDDEN-NAME", "example  forbidden\nname"):
+        assert company_names_in(f"A note on {spelling}, in passing.") == [spelling], spelling
+    assert company_names_in("de zzword and Zzword's") == ["zzword", "Zzword"]
+    assert company_names_in("zzwords, azzword, example forbidden names, example, forbidden name") == []
 
 
 def test_the_plugin_file_finder_finds_the_demo_pack_and_every_existing_folder_contributes():

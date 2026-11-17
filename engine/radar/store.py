@@ -27,18 +27,25 @@ EARLY_SIGNAL_SOURCE_TYPES = ("permit", "job_posting", "regulator_record")   # a 
 MOVE_TYPES = ("new_site", "expansion", "acquisition", "partnership", "closure")
 ACCESS = ("captive", "open", "not_stated")
 DELIVERY = ("on_time", "delayed", "cancelled", "not_yet", "unknown")
+IN_QUESTION = ("yes", "no")   # whether a move adds the kind of capacity the run's question asks about
 STATUSES = ("proposed", "confirmed", "uncertain", "rejected")
+CONNECTION_TIES = ("buyer", "seller", "customer", "partner")   # how a party a fact names is tied to the fact's company
+UNCERTAIN_REASONS = ("tentative", "early_signal", "single_source")   # why a fact is uncertain, in this order
 COUNTING = ("confirmed", "uncertain")   # the statuses a fact may be relied on with
 CERTAINTY = ("firm", "tentative")
 ANSWERED_BY = ("person", "test", "unattended")
 DATA_CLASSES = ("public", "licensed", "internal")
+# The note a saved web page gets when it holds little running text; a source without a note has no `text_note` key.
+LITTLE_RUNNING_TEXT = "little_running_text"
+TEXT_NOTES = (LITTLE_RUNNING_TEXT,)
 RUN_MODES = ("public", "private")
 STAGES = ("announced", "under_construction", "operating", "cancelled", "not_stated")
 SUPPORT_LEVELS = ("strong", "partial", "weak")
 CALC_OPERATIONS = ("sum", "count", "share")
 CHECKPOINTS = ("lenses", "final_report")
 CONFIDENCE = ("high", "medium", "low")
-LENS_LEVELS = ("original_read", "reference_confirmed")
+MEMO_PARTS = ("company", "market", "competition", "team", "traction", "risks")   # a screening memo's parts, in order
+LENS_LEVELS = ("original_read", "course_slides", "secondary_source_read", "reference_confirmed")
 FRAMING = ("company", "user")
 STEP_KINDS = ("fact", "reasoning", "conclusion")
 AUDIT_CHECKS = ("framing", "outside_view", "uncertainty", "competitor_response", "evidence_symmetry",
@@ -201,7 +208,8 @@ NO_ACKNOWLEDGED_WORDS = ("A private run needs the person's own reply to the priv
 def init_run(root: Path, question: str, pack: str, run_id: str | None = None,
              illustrative: bool = False, mode: str = "public", acknowledged: bool = False,
              home_company: str | None = None, now: datetime | None = None,
-             acknowledged_words: str | None = None) -> Path:
+             acknowledged_words: str | None = None, companies: list[dict] | None = None,
+             screening: bool = False) -> Path:
     """Make the run folder. A private run needs the acknowledgement of the data flow and, with it, the person's own
     reply to the notice (`acknowledged_words`), stored word for word. The program cannot tell who wrote the reply."""
     if mode not in RUN_MODES:
@@ -237,7 +245,7 @@ def init_run(root: Path, question: str, pack: str, run_id: str | None = None,
     (run_dir / "copies" / ".gitignore").write_text("*\n", encoding="utf-8")   # saved copies never enter git
     # a private run is ignored whole; a public one is committed, without what the program keeps beside the records
     (run_dir / ".gitignore").write_text("*\n" if mode == "private" else PUBLIC_GITIGNORE, encoding="utf-8")
-    save_run(run_dir, {
+    record = {
         "run_id": run_id,
         "question": question,
         "pack": pack,
@@ -253,7 +261,12 @@ def init_run(root: Path, question: str, pack: str, run_id: str | None = None,
         "excluded": [],
         "sources_created": 0,
         "facts_created": 0,
-    })
+    }
+    if companies is not None:
+        record["companies"] = companies
+    if screening:   # only a screening run has the key, so every earlier run reads as before
+        record["screening"] = True
+    save_run(run_dir, record)
     return run_dir
 
 
@@ -464,6 +477,8 @@ def proposed_fact(proposal: dict, fact_id: str | None = None) -> dict:
         "tentative_reason": None,
         "early_signal": False,
         "fields": None,
+        "about_company": None,
+        "connections": [],
     }
     fact.update(proposal)
     fact.pop("withdrawn", None)

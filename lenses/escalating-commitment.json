@@ -1,0 +1,22 @@
+{
+  "id": "escalating-commitment",
+  "name": "Escalating commitment to a failing course",
+  "idea": "An encyclopedia entry defines escalation of commitment as continuing to invest in a chosen course as signs mount that the choice was wrong or the project is unlikely to succeed, and states that the work first described it. It reports the author's study where students committed most further resources when their own initial decision turned out badly. It gives self-justification as one explanation.",
+  "suggests": "Look at projects a company keeps funding after setbacks, and ask whether the case for the next outlay would convince someone who had no part in the first decision.",
+  "limits": "The entry reports that decision risk, information on opportunity costs and the gathering of information have been found to go with less escalation, not more.",
+  "competing_idea": "Another explanation, reported in the entry, holds that prospect theory explains escalating commitment to a failing course without any need for self-justification.",
+  "questions": [
+    "Which projects has the company kept funding after missed targets, and how much has gone into each since the first warning signs?",
+    "Did the people who decide on further funding also make the original decision?",
+    "What information on alternatives and on the cost of stopping was in front of the decision makers?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Escalation of commitment\", Wikipedia, the free encyclopedia, article as last edited on 5 April 2026 (revision 1347237057)",
+      "level": "secondary_source_read",
+      "about": "Barry M. Staw, \"Knee-deep in the big muddy: a study of escalating commitment to a chosen course of action\", Organizational Behavior and Human Performance, Vol. 16 No. 1, June 1976, pp. 27-44",
+      "link": "https://en.wikipedia.org/wiki/Escalation_of_commitment"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

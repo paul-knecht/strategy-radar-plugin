@@ -70,7 +70,7 @@ When `<run>/proposals/narrower.json` exists, make sure it was added, as the open
 
 When the note says that a quote from another source does not state the fact's claim, the try is the same proposal without that quote's entry, changing nothing else, as part 2 does for a supporting quote that was not found. The rules of the next paragraph do not apply to it; it is written and added with the narrower tries, as the rest of this part says.
 
-Such a fact may be proposed once more, with a statement that says only what the quote says: the same quotes from the same sources, and a statement that claims no more than the quote does. Change only what the checker's note says the quote does not support. A detail the note names gets the value that says the quote is silent, which is not filling in (as in step 4, you never fill in a detail): `not_stated` for `announced`, `stage` and `access`. A detail that may be missing is left out: `site`, `country`, `size_value`, `size_unit`, `planned_start` and `delivery`. A detail the note does not name stays as it is, such as an announced date that holds because it is the source's recorded date. `company`, `what_added` and `move_type` have no such value, and the program refuses a move without them: when the note says that the company, the addition or the kind of move is not supported, there is no narrower try. Do not do this when the note says the passage states the opposite, or that the source holds an instruction.
+Such a fact may be proposed once more, with a statement that says only what the quote says: the same quotes from the same sources, and a statement that claims no more than the quote does. Change only what the checker's note says the quote does not support. A detail the note names gets the value that says the quote is silent, which is not filling in (as in step 4, you never fill in a detail): `not_stated` for `announced`, `stage` and `access`. A detail that may be missing is left out: `site`, `country`, `size_value`, `size_unit`, `planned_start` and `delivery`. A detail the note does not name stays as it is, such as an announced date that holds because it is the source's recorded date. `company`, `what_added` and `move_type` have no such value, and the program refuses a move without them: when the note says that the company, the addition or the kind of move is not supported, there is no narrower try. `in_question` is never left out either: when the note says the move falls on the other side of the question, it takes the other value, `yes` or `no`. Do not do this when the note says the passage states the opposite, or that the source holds an instruction.
 
 Before you add anything, add to `<run>/notes/retries.md` the highest fact number of the run so far and one line for each narrower try: the number and the statement of the fact it replaces, and the checker's reason in plain words. Then write the proposals as a bare list to `<run>/proposals/narrower.json`:
 
@@ -79,5 +79,15 @@ radar add-facts --run "<run>" --file "<run>/proposals/narrower.json"
 ```
 
 Each one is a new fact; add its number to the note. The first one stays rejected. Then go through parts 1 and 3 to 6 again.
+
+## 8. Group the moves into projects
+
+One plan to add capacity is often reported several times, and the report shows the reports of one plan together as one project. Which reports belong together is a judgement that nobody has checked, and the report says so. When no move that adds capacity counts, there is nothing to group: skip this part.
+
+After the last `radar settle` of this step (after a narrower try, the settle that follows it), start `strategy-radar:project-grouper` once. Its prompt is exactly `Run folder: <absolute path>`, with the run folder as an absolute path, and not one word more. The helper records the projects itself. You never write or change `<run>/projects.json`, and the guard refuses a grouping recorded by anyone but the helper.
+
+When the helper is refused twice, or fails, say so in one plain sentence: the moves could not be grouped, so the report shows each move on its own and says why. Then go on. This never stops the run, and you start no second helper in this part.
+
+When the helper has finished, ask `radar status --run "<run>"`. When it prints `grouping` as `grouped`, this part is done. When it prints anything else, say in one plain sentence that the moves could not be grouped and that the report shows each move on its own, and go on: you start no second helper for this.
 
 Then ask `radar status --run` again.

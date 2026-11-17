@@ -7,10 +7,14 @@ reasons, audit checks) are never shown: each is replaced by its label from `labe
 import re
 
 from .. import store
-from . import visuals
-from .model import (PROBABILITY_SCALE, access_reason_text, checkpoint_parts, count_label, fact_notes, label,
-                    load_labels, reason_note, reason_text, split_early_signals, unit_for)
+from . import projects_view, visuals
+from .model import (PROBABILITY_SCALE, access_reason_text, checkpoint_parts, count_label, fact_notes, field_label,
+                    helpers_line, label, link_sentences, load_labels, reason_note, reason_text, split_early_signals,
+                    unit_for)
+from .numbers import shown
+from .projects_view import ACCESS_SHOWN
 
+EXTRA_COMPANIES = ("other", "none")   # the two company entries that are not one company
 _SPECIAL = re.compile(r"([\\`*_\[\]<>|])")
 _LINE_BREAKS = re.compile(r"\s*[\r\n\x0b\x0c\x85\u2028\u2029]+\s*")
 _NUMBER_MARKER = re.compile(r"^(\d+)([.)])")
@@ -86,24 +90,119 @@ def _status_line(model: dict, labels: dict) -> str:
              labels["read_until"].format(date=esc(model["sources_read_until"])),
              count_label(labels, "facts_checked", counts["confirmed"] + counts["uncertain"]).format(
                  n=counts["confirmed"] + counts["uncertain"]),
-             labels["uncertain"].format(n=counts["uncertain"]),
+             labels["status_single_source"].format(n=counts["single_source"]),
+             labels["uncertain"].format(n=counts["uncertain"] - counts["single_source"]),
              count_label(labels, "rejected", counts["rejected"]).format(n=counts["rejected"])]
     if counts["not_accessible"]:
         parts.append(f"{labels['not_accessible']}: {counts['not_accessible']}")
     return " · ".join(parts)
 
 
-def _summary(model: dict, labels: dict) -> list[str]:
-    lines = [f"## {labels['sec_summary']}", ""]
-    if not model["messages"] and not model["facts"]:
-        return lines + [labels["no_facts"], ""]
+def _company_title(company: dict, labels: dict) -> str:
+    """A company's heading: its name, or for the two entries that are not one company, their label."""
+    if company.get("key") in EXTRA_COMPANIES:
+        return labels[f"companies_{company['key']}"]
+    return esc(company.get("name"))
+
+
+def _company_name(company: dict, labels: dict) -> str:
+    """A company by its own name, with the own-company mark; where it has no name, its heading."""
+    return (esc(company["name"]) if company.get("name") else _company_title(company, labels)) + _home_mark(company, labels)
+
+
+def _home_mark(company: dict, labels: dict) -> str:
+    return f" ({labels['home_company']})" if company.get("home") else ""
+
+
+def _shown_status(fact: dict, labels: dict) -> str:
+    """The status a fact is shown with: "One source only" where that is the only reason it is not confirmed, else its
+    own status."""
+    shown = fact.get("shown_status") or fact.get("status")
+    return labels.get(f"shown_{shown}", labels.get(f"status_{shown}", str(shown)))
+
+
+def _grouping_note(model: dict, labels: dict) -> str:
+    """What the answer rests on: the note that the grouping is a model's judgement, or, where the moves are not grouped,
+    why each move counts as its own project."""
+    state = model["projects"]["state"]
+    return labels["answer_note"] if state == "grouped" else labels[f"answer_ungrouped_{state}"]
+
+
+def _n(count, labels: dict) -> str:
+    """A count with thousands separators."""
+    return shown(str(count), labels["thousands_separator"])
+
+
+def _answer(model: dict, labels: dict) -> list[str]:
+    answer = model["core_answer"]
+    if answer is None:
+        return []
+    lines = [f"## {labels['sec_answer']}", ""]
+    lines += [f"- {labels[f'answer_{access}']}: {_n(answer[access], labels)}" for access in ACCESS_SHOWN] + [""]
+    lines += [count_label(labels, "answer_total", answer["total"]).format(n=_n(answer["total"], labels)), ""]
+    if answer["outside"]:   # the sentence names the moves, so a reader finds them in the facts
+        sentence = count_label(labels, "answer_outside", answer["outside"]).format(n=_n(answer["outside"], labels))
+        refs = _refs([fact for fact in model["facts"] if projects_view.outside(fact)], labels)
+        lines += [f"{sentence.rstrip('.')} ({refs}).", ""]
+    return lines + [_grouping_note(model, labels), "", labels["answer_rule"], ""]
+
+
+def _companies(model: dict, labels: dict) -> list[str]:
+    if not model["companies"]:
+        return []
+    lines = [f"## {labels['sec_companies']}", ""]
+    for entry in model["companies"]:
+        answer = entry.get("core_answer")
+        head = f"- **{_company_title(entry, labels)}**{_home_mark(entry, labels)}: "
+        if entry.get("only_connections"):
+            lines.append(head + labels["company_only_connections"])
+            continue
+        if answer is None:   # no project: its number of facts, not a project count of zero
+            facts = entry.get("facts") or 0
+            lines.append(head + count_label(labels, "company_facts", facts).format(n=_n(facts, labels)))
+            continue
+        counts = ", ".join(f"{labels[f'answer_{access}']}: {_n(answer[access], labels)}" for access in ACCESS_SHOWN)
+        total = count_label(labels, "answer_total", answer["total"]).format(n=_n(answer["total"], labels))
+        lines.append(f"{head}{total}; {counts}")
+    return lines + [""]
+
+
+def _message_sources(message: dict, labels: dict) -> str:
+    """The sources a message rests on, by publisher with the source id; the company's own statement is marked."""
+    entries = []
+    for source in message.get("sources") or []:
+        publisher = source.get("publisher")
+        marks = ([esc(source.get("id"))] if publisher else []) + ([labels["own_statement"]] if source.get("own") else [])
+        name = esc(publisher or source.get("id"))
+        entries.append(f"{name} ({', '.join(marks)})" if marks else name)
+    return f"**{labels['message_sources']}**: {', '.join(entries)}" if entries else ""
+
+
+def _messages(model: dict, labels: dict) -> list[str]:
+    lines = [f"## {labels['sec_messages']}", ""]
+    if not model["messages"]:
+        return lines + [labels["no_facts"] if not model["facts"] else labels["none_messages"], ""]
     for message in model["messages"]:
         used = {fact["id"]: fact for step in message.get("chain") or [] for fact in step["facts"]}
         note = labels.get(f"confidence_{message.get('confidence')}", "")
         if used:
             note = f"{note} {labels['based_on']}: {', '.join(_ref(fact, labels) for fact in used.values())}".strip()
-        lines += [f"- **{esc(message.get('text'))}**", f"  {note}", ""]
+        lines += [f"- **{esc(message.get('text'))}**", ""]
+        for text in (note, _message_sources(message, labels)):
+            lines += [f"  {text}", ""] if text else []
+        if message.get("flags"):
+            lines += [f"  **{labels['message_checks']}**", ""]
+            lines += [f"  - {_flag(flag, labels)}" for flag in message["flags"]] + [""]
     return lines
+
+
+def _flag(flag: dict, labels: dict) -> str:
+    return f"{esc(label(labels, 'audit_', flag.get('check'), store.AUDIT_CHECKS))}: {esc(flag.get('text'))}"
+
+
+def _fact_block(first_line: str, fact: dict, labels: dict) -> list[str]:
+    """A fact's bullet, then its quote and its source."""
+    return [first_line, ""] + _quote_block(fact, labels) + ["", f"  {_source_line(fact.get('source'), labels)}", ""]
 
 
 def _facts(model: dict, labels: dict) -> list[str]:
@@ -111,26 +210,30 @@ def _facts(model: dict, labels: dict) -> list[str]:
     if not model["facts"]:
         return lines + [labels["no_facts"], ""]
     others, early = split_early_signals(model["facts"])
+    current = None
     for fact in others:
+        company = fact.get("company") if isinstance(fact.get("company"), dict) else None
+        if company is not None and company["key"] != current:
+            current = company["key"]
+            lines += [f"### {_company_title(company, labels)}{_home_mark(company, labels)}", ""]
+        # a company outside the pack is named on its own line, since its heading is "Other companies"
+        named = f"{esc(company['name'])}: " if company and company["key"] == "other" and company.get("name") else ""
         reason = reason_text(fact, labels)
-        status = label(labels, "status_", fact.get("status"), store.STATUSES)
-        lines += [f"- {esc(fact.get('statement'))}{_class_note(fact.get('data_class'), labels)}"
-                  f" — {esc(fact.get('source_id'))}, {esc(status)}" + (f", {esc(reason)}" if reason else ""), ""]
-        lines += _quote_block(fact, labels) + [""]
-        lines += [f"  {_source_line(fact.get('source'), labels)}", ""]
+        status = esc(_shown_status(fact, labels))
+        lines += _fact_block(f"- {named}{esc(fact.get('statement'))}{_class_note(fact.get('data_class'), labels)}"
+                             f" — {esc(fact.get('source_id'))}, {status}" + (f", {esc(reason)}" if reason else ""),
+                             fact, labels)
     if early:
         lines += [f"### {labels['sec_early_signals']}", "", labels["early_signals_note"], ""]
         for fact in early:   # named by the shared fact reference, which carries the uncertain and class labels
             reason = reason_text(fact, labels)
-            lines += [f"- {esc(fact.get('statement'))} — {_ref(fact, labels)}, {esc(fact.get('source_id'))}"
-                      + (f", {esc(reason)}" if reason else ""), ""]
-            lines += _quote_block(fact, labels) + [""]
-            lines += [f"  {_source_line(fact.get('source'), labels)}", ""]
+            lines += _fact_block(f"- {esc(fact.get('statement'))} — {_ref(fact, labels)}, {esc(fact.get('source_id'))}"
+                                 + (f", {esc(reason)}" if reason else ""), fact, labels)
     return lines
 
 
 def _total(calculation: dict, labels: dict) -> str:
-    unit, result = calculation.get("unit"), esc(calculation.get("result"))
+    unit, result = calculation.get("unit"), esc(shown(calculation.get("result"), labels["thousands_separator"]))
     if calculation.get("operation") == "share":
         text = f"{esc(calculation.get('label'))}: {result}%"
     else:
@@ -155,29 +258,67 @@ def _count_table(heading: str, columns: list[str], rows: list[tuple[str, list[di
     return lines + [""]
 
 
-def _competitors(model: dict, labels: dict) -> list[str]:
-    if not model["competitors"] and not model["calculations"]:
-        return []
-    lines = [f"## {labels['sec_competitors']}", ""]
-    for company in model["competitors"]:
-        mark = f" ({labels['home_company']})" if company["home"] else ""
-        lines += [f"### {esc(company['company'])}{mark}", ""]
-        for move in company["moves"]:
-            stage = labels.get(f"stage_{move['fields'].get('stage')}", labels["stage_not_stated"])
-            announced = move["fields"].get("announced")
-            when = (f", {labels['date_announced_not_stated']}" if announced == "not_stated"
-                    else f", {esc(announced)}" if announced else "")
-            lines.append(f"- {stage}: {esc(move.get('statement'))} ({_ref(move, labels)}{when})")
-        if company["moves"]:
-            lines.append("")
-        if company["baseline"]:
-            lines += [f"#### {labels['baseline']}", ""]
-            # no wording of its own: each fact's checked statement, named by the shared fact reference
-            lines += [f"- {_with_refs(fact.get('statement'), [fact], labels)}" for fact in company["baseline"]] + [""]
+def _spread(item: dict, labels: dict) -> str:
+    """What the reports of a project say, per value with how many say it (the count only for more than one report), on
+    one line: site, country, stage, planned start and what was added."""
+    several = len(item["facts"]) > 1
+    shown = []
+    for name, key, field in (("site", "field_site", None), ("countries", "field_country", None),
+                             ("stage", "field_stage", "stage"), ("planned_start", "field_planned_start", "planned_start"),
+                             ("what", "field_what_added", None)):
+        values = [esc(field_label(field, value, labels) if field else value) + (f" ({number})" if several else "")
+                  for value, number in item["spread"].get(name) or []]
+        if values:
+            shown.append(f"{labels[key]}: {', '.join(values)}")
+    return " · ".join(shown)
+
+
+def _counts(counts: dict, labels: dict) -> str:
+    pills = [(counts["confirmed"], labels["project_confirmed"]), (counts["single_source"], labels["status_single_source"]),
+             (counts["uncertain"], labels["project_uncertain"])]
+    return ", ".join(text.format(n=number) for number, text in pills if number)
+
+
+def _report(fact: dict, labels: dict) -> str:
+    """One report of a project: its stage and statement, its size as stated, its reference with the announcement date,
+    and its source with the date."""
+    fields = fact.get("fields") if isinstance(fact.get("fields"), dict) else {}
+    stage = labels.get(f"stage_{fields.get('stage')}", labels["stage_not_stated"])
+    announced = fields.get("announced")
+    when = (f", {labels['date_announced_not_stated']}" if announced == "not_stated"
+            else f", {esc(announced)}" if announced else "")
+    source = fact.get("source") if isinstance(fact.get("source"), dict) else {}
+    size = visuals.stated_size(fact, labels["thousands_separator"])
+    return (f"- {stage}: {esc(fact.get('statement'))}" + (f" ({esc(size)})" if size else "")
+            + f" ({_ref(fact, labels)}{when}) — "
+            + _join([esc(source.get("publisher") or fact.get("source_id")), esc(fact.get("date"))]))
+
+
+def _projects(model: dict, labels: dict) -> list[str]:
+    items = model["projects"]["items"]
+    baselines = [group for group in model["competitors"] if group["baseline"]]
     grid = visuals.move_counts(model["facts"])
+    delivery = visuals.delivery_counts(model["facts"])
+    if not (items or baselines or grid or delivery or model["calculations"]):
+        return []
+    lines = [f"## {labels['sec_projects']}", ""]
+    if items and model["projects"]["state"] != "grouped":
+        lines += [_grouping_note(model, labels), ""]
+    for item in items:
+        company = item["company"]
+        lines += [f"### {esc(item['name'])}", "",
+                  " · ".join(part for part in (_company_name(company, labels), labels[f"answer_{item['access']}"],
+                                               _counts(item["counts"], labels)) if part), ""]
+        spread = _spread(item, labels)
+        lines += [spread, ""] if spread else []
+        lines += [f"**{labels['col_reports']}**", ""] + [_report(fact, labels) for fact in item["facts"]] + [""]
+    for group in baselines:
+        mark = f" ({labels['home_company']})" if group["home"] else ""
+        lines += [f"### {esc(group['company'])}{mark} — {labels['baseline']}", ""]
+        # no wording of its own: each fact's checked statement, named by the shared fact reference
+        lines += [f"- {_with_refs(fact.get('statement'), [fact], labels)}" for fact in group["baseline"]] + [""]
     if grid:
         lines += _count_table(labels["sec_grid"], [labels[f"move_{move}"] for move in store.MOVE_TYPES], grid, labels)
-    delivery = visuals.delivery_counts(model["facts"])
     if delivery:
         lines += _count_table(labels["sec_delivery"], [labels[f"delivery_{outcome}"] for outcome in visuals.DELIVERY_OUTCOMES],
                               delivery, labels)
@@ -188,6 +329,30 @@ def _competitors(model: dict, labels: dict) -> list[str]:
             lines.append(_total(calculation, labels) + note)
         lines.append("")
     return lines
+
+
+def _connections(model: dict, labels: dict) -> list[str]:
+    if not model["connections"]:
+        return []
+    columns = ("col_company", "col_tie", "col_party", "col_status", "col_fact")
+
+    def line(cells: list[str]) -> str:
+        return "|" + "|".join(f" {text} " for text in cells) + "|"
+
+    lines = [f"## {labels['sec_connections']}", "", line([labels[key] for key in columns]),
+             line(["---"] * len(columns))]
+    for connection in model["connections"]:
+        fact, company = connection["fact"], connection["company"]
+        description = connection.get("description")
+        if connection.get("party_name"):
+            party = esc(connection["party_name"]) + (f" ({esc(description)})" if description else "")
+        else:
+            party = (esc(labels["party_not_named"].format(description=description)) if description
+                     else labels["party_not_named_plain"])
+        tie = label(labels, "tie_", connection.get("tie"), store.CONNECTION_TIES)
+        lines.append(line([_company_name(company, labels), esc(tie), party, esc(_shown_status(fact, labels)),
+                           _ref(fact, labels)]))
+    return lines + [""]
 
 
 def _demand(model: dict, labels: dict) -> list[str]:
@@ -254,8 +419,7 @@ def _checks(model: dict, labels: dict) -> list[str]:
     if not model["audit_flags"]:
         return []
     return [f"## {labels['sec_checks']}", ""] + \
-        [f"- {esc(label(labels, 'audit_', flag.get('check'), store.AUDIT_CHECKS))}: {esc(flag.get('text'))}"
-         for flag in model["audit_flags"]] + [""]
+        [f"- {_flag(flag, labels)}" for flag in model["audit_flags"]] + [""]
 
 
 def _not_confirmed(model: dict, labels: dict) -> list[str]:
@@ -306,7 +470,10 @@ def _thinking(model: dict, labels: dict) -> list[str]:
         lines += [f"- {esc(question)}" for question in lens.get("questions") or []] + [""]
         for original in lens.get("originals") or []:
             level = labels.get(f"level_{original.get('level')}", esc(original.get("level")))
-            lines.append(f"- {_join([esc(original.get('reference')), level, _link(original.get('link')) if original.get('link') else ''])}")
+            about = f"{labels['original_about']} {esc(original['about'])}" if original.get("about") else ""
+            lines.append(f"- {_join([esc(original.get('reference')), about, level, _link(original.get('link')) if original.get('link') else ''])}")
+        if lens.get("rests_on"):
+            lines.append(f"- {esc(lens['rests_on'])}")
         lines.append("")
     return lines
 
@@ -322,6 +489,8 @@ def _sources(model: dict, labels: dict) -> list[str]:
             notes.append(labels.get(f"class_{source['data_class']}", esc(source["data_class"])))
         if source.get("access") == "not_accessible":
             notes.append(f"{labels['not_accessible']}: {esc(access_reason_text(source.get('access_reason'), labels))}")
+        elif source.get("text_note") == store.LITTLE_RUNNING_TEXT:   # saved, but its article may be missing
+            notes.append(f"{labels['little_running_text']}: {labels['text_note_little_running_text']}")
         if source.get("saved_by") == "hand":
             notes.append(labels["saved_by_hand"])
         if notes:
@@ -345,6 +514,39 @@ def _sources(model: dict, labels: dict) -> list[str]:
     return lines
 
 
+def _recommendation(found, labels: dict) -> list[str]:
+    """The lens recommendation as it was made, labelled as advice that nobody checked; or, when the run holds none,
+    the fixed sentence that says so. A damaged one shows what can still be read, with each damaged part marked."""
+    lines = [f"### {labels['rec_heading']}", ""]
+    if not found:
+        return lines + [labels["rec_none"], ""]
+    if found.get("damaged") and not found.get("entries") and not found.get("note"):
+        return lines + [labels["rec_damaged"], ""]
+    lines += [f"**{labels['rec_label']}**", ""]
+    if found.get("damaged"):
+        lines += [labels["rec_damaged_parts"], ""]
+        lines += [f"- {esc(flag)}" for flag in found.get("flags") or []]
+        lines += [""] if found.get("flags") else []
+    if found.get("stale"):
+        lines += [labels["rec_stale"], ""]
+    if found.get("note"):
+        lines += [esc(found["note"]), ""]
+    for entry in found.get("entries") or []:
+        facts = ", ".join(_ref(link["fact"], labels) for link in entry["links"])
+        lines.append(f"- **{esc(entry['name'])}**")
+        lines += [f"  - {esc(flag)}" for flag in entry.get("flags") or []]
+        lines += [f"  - {labels['rec_part']}: {esc(entry['question_part'])}"] if entry["question_part"] is not None else []
+        lines += [f"  - {labels['rec_why']}: {esc(entry['why'])}"] if entry["why"] is not None else []
+        lines += [f"  - {labels['rec_facts']}: {facts}"] if facts else []
+        lines += [f"  - {labels['rec_missing']}: {esc(entry['missing'])}"] if entry["missing"] is not None else []
+        for link in entry["links"]:
+            lines.append(f"  - {_ref(link['fact'], labels)}: "
+                         + " ".join(esc(sentence) for sentence in link_sentences(link, labels)))
+        lines.append("")
+    line = helpers_line(found, labels) if found.get("entries") else ""
+    return lines + ([esc(line), ""] if line else [])
+
+
 def _how_made(model: dict, labels: dict) -> list[str]:
     how = model["how_made"]
     lines = [f"## {labels['sec_how_made']}", ""]
@@ -362,6 +564,13 @@ def _how_made(model: dict, labels: dict) -> list[str]:
             name = label(labels, "checkpoint_", item.get("name"), store.CHECKPOINTS)
             lines.append(f"- {esc(name)}: " + ": ".join(esc(part) for part in checkpoint_parts(item, labels)))
         lines.append("")
+    if model["projects"]["items"]:
+        lines += [f"### {labels['how_counting']}", "", _grouping_note(model, labels), "", labels["answer_rule"], ""]
+    dropped = how.get("names_dropped") or {}
+    if dropped.get("companies") or dropped.get("parties"):
+        lines += [labels["names_dropped"].format(companies=dropped.get("companies", 0),
+                                                 parties=dropped.get("parties", 0)), ""]
+    lines += _recommendation(how.get("recommendation"), labels)
     lines += [model["compliance"], "", f"### {labels['sec_legend']}", ""]
     lines += [f"- {labels[f'confidence_{level}']}" for level in ("high", "medium", "low")] + [""]
     lines += [f"- {span}%: {labels[key]}" for _, span, key in PROBABILITY_SCALE] + [""]
@@ -428,7 +637,7 @@ def render_markdown(model: dict) -> str:
         lines += [f"**{labels['illustrative']}**", ""]
     lines += [_status_line(model, labels), "", labels["built_on"].format(date=esc(model["built_on"])), "",
               labels["disclaimer_private"] if model["confidential"] else labels["disclaimer"], ""]
-    for section in (_summary, _facts, _competitors, _demand, _options, _judgement, _predictions, _checks,
-                    _not_confirmed, _thinking, _sources, _how_made, _changes):
+    for section in (_answer, _companies, _messages, _facts, _projects, _connections, _demand, _options, _judgement,
+                    _predictions, _checks, _not_confirmed, _thinking, _sources, _how_made, _changes):
         lines += section(model, labels)
     return "\n".join(lines).rstrip("\n") + "\n"

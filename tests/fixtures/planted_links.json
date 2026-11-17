@@ -1,0 +1,257 @@
+{
+  "illustrative": true,
+  "note": "Illustrative: every lens, fact and link here is invented for measuring the two link readers. No real work, company or event is meant. Each link says whether it is right (the fact bears on one of the lens's three questions) or wrong, and whether the difference is plain or subtle. It is never shown to a reader; the measurement script reads it.",
+  "lenses": [
+    {
+      "id": "illustrative-one-supplier",
+      "name": "Illustrative lens: depending on one supplier",
+      "idea": "Illustrative: a firm that gets a key input from one supplier is exposed to that supplier's choices.",
+      "suggests": "Illustrative: look at how much of a key input comes from one supplier and what switching would take.",
+      "questions": [
+        "How much of a firm's key input comes from one supplier?",
+        "Could the firm switch to another supplier, and at what cost?",
+        "Does the supplier sell to rivals who could be served first?"
+      ]
+    },
+    {
+      "id": "illustrative-waiting-and-capacity",
+      "name": "Illustrative lens: waiting lines and spare capacity",
+      "idea": "Illustrative: where a line is nearly full, buyers wait, and a firm may add capacity or lose buyers.",
+      "suggests": "Illustrative: look at how full a line is, how long buyers wait and whether capacity is being added.",
+      "questions": [
+        "How full is the firm's line now?",
+        "How long do buyers wait for a new order?",
+        "Is more capacity being added, and when?"
+      ]
+    },
+    {
+      "id": "illustrative-reaction-to-entry",
+      "name": "Illustrative lens: how firms already in a market react to a newcomer",
+      "idea": "Illustrative: firms already in a market may answer a newcomer with price, volume or contract terms.",
+      "suggests": "Illustrative: look at who entered, how big it is and how the firms already there answered.",
+      "questions": [
+        "Who entered the market, and how big is the newcomer?",
+        "Did the firms already there answer with price, volume or contract terms?",
+        "How long did the newcomer keep its first customers?"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "id": "F1",
+      "statement": "Competitor A buys 90 percent of its glass vials from one supplier.",
+      "status": "confirmed"
+    },
+    {
+      "id": "F2",
+      "statement": "Competitor A signed a five-year supply contract with that supplier, at a fixed price for the first two years.",
+      "status": "confirmed"
+    },
+    {
+      "id": "F3",
+      "statement": "The one supplier of vials also sells to Competitor B and Competitor C.",
+      "status": "uncertain"
+    },
+    {
+      "id": "F4",
+      "statement": "Competitor B's new filling line is booked at 95 percent for the next year.",
+      "status": "confirmed"
+    },
+    {
+      "id": "F5",
+      "statement": "Competitor B told customers that new orders now wait about nine months.",
+      "status": "confirmed"
+    },
+    {
+      "id": "F6",
+      "statement": "Competitor C announced a filling plant in another country, to start in 2028.",
+      "status": "uncertain"
+    },
+    {
+      "id": "F7",
+      "statement": "Competitor C's chief executive will speak at an industry fair next spring.",
+      "status": "confirmed"
+    },
+    {
+      "id": "F8",
+      "statement": "Competitor A cut the price of its main product by 8 percent after Competitor D entered the market.",
+      "status": "confirmed"
+    },
+    {
+      "id": "F9",
+      "statement": "Competitor D entered the market with a small filling line that serves two customers.",
+      "status": "confirmed"
+    },
+    {
+      "id": "F10",
+      "statement": "Competitor A moved its head office to a new building in the same city.",
+      "status": "confirmed"
+    },
+    {
+      "id": "F11",
+      "statement": "Competitor B hired 40 people for its second plant.",
+      "status": "uncertain"
+    },
+    {
+      "id": "F12",
+      "statement": "Competitor A bought vials from a second supplier, for one trial batch only.",
+      "status": "uncertain"
+    },
+    {
+      "id": "F13",
+      "statement": "After Competitor D entered, Competitor B kept its prices and offered longer contracts instead.",
+      "status": "confirmed"
+    },
+    {
+      "id": "F14",
+      "statement": "Competitor D's first customer left it after four months.",
+      "status": "uncertain"
+    }
+  ],
+  "links": [
+    {
+      "lens": "illustrative-one-supplier",
+      "fact": "F1",
+      "right": true,
+      "kind": "plain"
+    },
+    {
+      "lens": "illustrative-one-supplier",
+      "fact": "F2",
+      "right": true,
+      "kind": "plain"
+    },
+    {
+      "lens": "illustrative-one-supplier",
+      "fact": "F3",
+      "right": true,
+      "kind": "subtle"
+    },
+    {
+      "lens": "illustrative-one-supplier",
+      "fact": "F12",
+      "right": true,
+      "kind": "subtle"
+    },
+    {
+      "lens": "illustrative-one-supplier",
+      "fact": "F7",
+      "right": false,
+      "kind": "plain"
+    },
+    {
+      "lens": "illustrative-one-supplier",
+      "fact": "F10",
+      "right": false,
+      "kind": "plain"
+    },
+    {
+      "lens": "illustrative-one-supplier",
+      "fact": "F4",
+      "right": false,
+      "kind": "subtle"
+    },
+    {
+      "lens": "illustrative-one-supplier",
+      "fact": "F6",
+      "right": false,
+      "kind": "subtle"
+    },
+    {
+      "lens": "illustrative-waiting-and-capacity",
+      "fact": "F4",
+      "right": true,
+      "kind": "plain"
+    },
+    {
+      "lens": "illustrative-waiting-and-capacity",
+      "fact": "F5",
+      "right": true,
+      "kind": "plain"
+    },
+    {
+      "lens": "illustrative-waiting-and-capacity",
+      "fact": "F6",
+      "right": true,
+      "kind": "plain"
+    },
+    {
+      "lens": "illustrative-waiting-and-capacity",
+      "fact": "F11",
+      "right": true,
+      "kind": "subtle"
+    },
+    {
+      "lens": "illustrative-waiting-and-capacity",
+      "fact": "F7",
+      "right": false,
+      "kind": "plain"
+    },
+    {
+      "lens": "illustrative-waiting-and-capacity",
+      "fact": "F10",
+      "right": false,
+      "kind": "plain"
+    },
+    {
+      "lens": "illustrative-waiting-and-capacity",
+      "fact": "F1",
+      "right": false,
+      "kind": "subtle"
+    },
+    {
+      "lens": "illustrative-waiting-and-capacity",
+      "fact": "F8",
+      "right": false,
+      "kind": "subtle"
+    },
+    {
+      "lens": "illustrative-reaction-to-entry",
+      "fact": "F9",
+      "right": true,
+      "kind": "plain"
+    },
+    {
+      "lens": "illustrative-reaction-to-entry",
+      "fact": "F8",
+      "right": true,
+      "kind": "plain"
+    },
+    {
+      "lens": "illustrative-reaction-to-entry",
+      "fact": "F13",
+      "right": true,
+      "kind": "plain"
+    },
+    {
+      "lens": "illustrative-reaction-to-entry",
+      "fact": "F14",
+      "right": true,
+      "kind": "subtle"
+    },
+    {
+      "lens": "illustrative-reaction-to-entry",
+      "fact": "F10",
+      "right": false,
+      "kind": "plain"
+    },
+    {
+      "lens": "illustrative-reaction-to-entry",
+      "fact": "F7",
+      "right": false,
+      "kind": "plain"
+    },
+    {
+      "lens": "illustrative-reaction-to-entry",
+      "fact": "F5",
+      "right": false,
+      "kind": "subtle"
+    },
+    {
+      "lens": "illustrative-reaction-to-entry",
+      "fact": "F3",
+      "right": false,
+      "kind": "subtle"
+    }
+  ]
+}

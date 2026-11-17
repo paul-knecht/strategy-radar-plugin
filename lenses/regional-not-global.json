@@ -1,0 +1,26 @@
+{
+  "id": "regional-not-global",
+  "name": "Regional rather than global",
+  "idea": "The work argues that most of the world's largest multinational enterprises are not global but regional: they make most of their sales in their home region of the triad of North America, Europe and Asia, and only a few have a broad presence across all three regions. It concludes that strategy for such firms is mainly a matter of regions rather than of one world market.",
+  "suggests": "Look at where a company's sales actually come from: how much from its home region and how much from each other major region, and whether its plans treat the world as one market or region by region.",
+  "limits": "The work argues that a small number of firms are truly global, with a balanced presence across the regions, so that, on its account, the regional pattern describes most large firms but not all of them.",
+  "competing_idea": "Another view holds that markets are becoming global: technology makes customers everywhere want the same things, so firms that sell standardised products worldwide at low prices will win over those that adapt to each country.",
+  "questions": [
+    "What share of the company's sales comes from its home region, and what share from each other major region?",
+    "Is the company's growth plan aimed at its home region, or at regions where it is still weak?",
+    "Does the company run its business region by region, or as one worldwide operation?"
+  ],
+  "originals": [
+    {
+      "reference": "Alan M. Rugman and Alain Verbeke, \"A perspective on regional and global strategies of multinational enterprises\", Journal of International Business Studies, vol. 35, no. 1, January 2004, pp. 3-18",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.1057/palgrave.jibs.8400073"
+    },
+    {
+      "reference": "Theodore Levitt, \"The Globalization of Markets\", Harvard Business Review, May 1983",
+      "level": "reference_confirmed",
+      "link": "https://hbr.org/1983/05/the-globalization-of-markets"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

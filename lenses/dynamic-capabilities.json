@@ -1,0 +1,22 @@
+{
+  "id": "dynamic-capabilities",
+  "name": "Dynamic capabilities",
+  "idea": "A review chapter states that the work proposed dynamic capabilities as abilities, peculiar to each firm, to combine, build up and rework its resources inside and outside the firm: higher-order capabilities that let a firm change its operational routines. The chapter states that a 2007 revision sorted them into three processes: sensing, seizing and transforming.",
+  "suggests": "Look at how a company spots changes in its markets and technologies, how it commits resources to act on them, and how it rebuilds its assets and routines afterwards.",
+  "limits": "The chapter states that the theory has drawn substantial critique for conceptual ambiguity, hard measurement and tautological reasoning: studies often credit superior performance to these capabilities after the fact without adequately specifying how they are identified on their own. It adds that the theory deals poorly with spontaneous, improvised responses.",
+  "competing_idea": "Another view the chapter reports: dynamic capabilities are identifiable best-practice routines, which challenges the earlier idea that they are unique to each firm.",
+  "questions": [
+    "How does the company notice shifts in its markets and technologies, and how early?",
+    "When it sees an opportunity, how quickly does it commit resources and change its products or business model?",
+    "Which of its assets, structures and routines has it actually rebuilt in recent years, and which have stayed fixed?"
+  ],
+  "originals": [
+    {
+      "reference": "Hamed Nayernia, \"Dynamic Capabilities Theory: A review\", in S. Papagiannidis (ed.), TheoryHub Book, Newcastle University, 2026, ISBN 9781739604400 (CC BY-NC-ND 4.0)",
+      "level": "secondary_source_read",
+      "about": "David J. Teece, Gary Pisano and Amy Shuen, \"Dynamic capabilities and strategic management\", Strategic Management Journal, Vol. 18 No. 7, 1997, pp. 509-533; and David J. Teece, \"Explicating dynamic capabilities: the nature and microfoundations of (sustainable) enterprise performance\", Strategic Management Journal, Vol. 28 No. 13, 2007, pp. 1319-1350",
+      "link": "https://open.ncl.ac.uk/theories/19/dynamic-capabilities-theory/"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

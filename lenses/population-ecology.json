@@ -1,0 +1,22 @@
+{
+  "id": "population-ecology",
+  "name": "Selection among organizations",
+  "idea": "An encyclopedia entry credits the work with the first explicit statement of population-ecology theory. A key prediction of organizational ecology, it says, is that change is so disruptive it raises mortality. As firms can adapt only so far, it adds, most of the wider changes in the landscape of organizations come from entry and selective replacement.",
+  "suggests": "Look at whether an industry's makeup is shifting because firms adapt or because newcomers replace those that fail, and at what a company risks when it attempts a deep change.",
+  "limits": "The entry reports niche theory's finding that specialization is generally favored where the environment is stable or certain, while in uncertain environments generalism is not always the best choice.",
+  "competing_idea": "The entry notes that before the mid-1970s most organizational studies research looked at how organizations adapt. It sets organizational ecology's more Darwinian view against the more Lamarckian one of a work in evolutionary economics, a literature that sees routines, not organizational forms, as what the environment selects.",
+  "questions": [
+    "How many firms have entered and left this industry in recent years, and is change coming from newcomers or from incumbents adapting?",
+    "How far would the planned change disrupt the company's established ways of working, and how did similar firms fare that tried it?",
+    "Which firms in the industry have failed or been replaced in recent years, and what set the survivors apart?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Organizational ecology\", Wikipedia, the free encyclopedia, article as last edited on 9 July 2026 (revision 1363355991)",
+      "level": "secondary_source_read",
+      "about": "Michael T. Hannan and John Freeman, \"The Population Ecology of Organizations\", American Journal of Sociology, Vol. 82 No. 5, March 1977, pp. 929-964",
+      "link": "https://en.wikipedia.org/wiki/Organizational_ecology"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

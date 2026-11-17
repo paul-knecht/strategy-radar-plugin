@@ -73,8 +73,8 @@ def test_a_full_run_stops_twice_and_builds_the_report(tmp_path):
     assert (run / "report" / "report.html").is_file()
     report, labels = (run / "report" / "report.md").read_text(encoding="utf-8"), load_labels()
     assert "Illustrative only" in report
-    for part in ("sec_summary", "sec_facts", "sec_competitors", "sec_options", "sec_checks", "sec_not_confirmed",
-                 "sec_thinking", "sec_sources", "sec_how_made"):                                 # design 6: the required parts
+    for part in ("sec_answer", "sec_messages", "sec_facts", "sec_projects", "sec_options", "sec_checks",
+                 "sec_not_confirmed", "sec_thinking", "sec_sources", "sec_how_made"):                                 # design 6: the required parts
         assert labels[part] in report, part
     assert run_status(run, demo.LENSES)["next"] is None
     assert INJECTED_WORDS not in report

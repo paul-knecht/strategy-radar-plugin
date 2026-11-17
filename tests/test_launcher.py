@@ -80,6 +80,7 @@ def test_the_launcher_text_is_the_agreed_text():
     assert BIN_RADAR.read_bytes().decode("utf-8") == EXPECTED_LAUNCHER
 
 
+@pytest.mark.skipif(not (ROOT / ".git").exists(), reason="a copy without its git history has no git index")
 def test_the_launcher_is_executable_in_the_git_index():
     done = subprocess.run(["git", "ls-files", "-s", "bin/radar"], capture_output=True, text=True, cwd=ROOT)
     assert done.stdout.split()[0] == "100755", done.stdout + done.stderr

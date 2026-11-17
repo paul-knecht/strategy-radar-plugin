@@ -1,0 +1,26 @@
+{
+  "id": "related-or-unrelated-diversification",
+  "name": "Related or unrelated diversification",
+  "idea": "The work argues that the way a firm diversifies matters for how well it performs. It classes firms by how closely their businesses are related, from single-business firms to unrelated conglomerates, and finds that firms whose businesses share common skills, resources or markets tend to perform better than firms that spread into unrelated businesses.",
+  "suggests": "Look at how a company's businesses are linked: whether they draw on one common strength, such as a technology, a production skill or a set of customers, or stand apart from each other, and what a new business would share with the existing ones.",
+  "limits": "The work argues that not all related diversification does equally well: firms whose businesses all draw on one common core strength tend to do better than firms whose businesses are only linked to one another step by step, each drifting further from the original base.",
+  "competing_idea": "Another view holds that what matters is not relatedness as such but whether the corporation adds value to each business it owns: a move into a new business should pass tests of the industry's attractiveness, of a cost of entry that can be earned back, and of a gain for the new unit or the firm.",
+  "questions": [
+    "Do the company's businesses share a common strength, such as a technology, a production skill or a set of customers?",
+    "Does a new business draw on that core strength, or does it lead further away from it?",
+    "What does the company add to each business it owns that the business could not get on its own?"
+  ],
+  "originals": [
+    {
+      "reference": "Richard P. Rumelt, \"Strategy, Structure, and Economic Performance\", Division of Research, Graduate School of Business Administration, Harvard University, 1974",
+      "level": "reference_confirmed",
+      "link": "https://books.google.com/books?id=f1WqAAAAIAAJ"
+    },
+    {
+      "reference": "Michael E. Porter, \"From Competitive Advantage to Corporate Strategy\", Harvard Business Review, May 1987",
+      "level": "reference_confirmed",
+      "link": "https://hbr.org/1987/05/from-competitive-advantage-to-corporate-strategy"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

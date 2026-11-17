@@ -1,0 +1,22 @@
+{
+  "id": "three-models-of-a-decision",
+  "name": "Three models of a decision",
+  "idea": "An encyclopedia entry says the work offers three lenses on events. In its account, the rational actor model has a government weigh its goals by utility and pick the highest payoff; the organizational process model has leaders split a crisis along existing lines, effectively limited to existing plans; the third reads actions as best understood as the result of bargaining among top leaders.",
+  "suggests": "Look at a company's or a rival's decision three ways: as a calculated choice for the best payoff, as the product of existing routines and plans, and as the outcome of bargaining among its leaders.",
+  "limits": "The entry reports that the author did not claim either of his two added models could fully explain anything, and that he lacked the inside data to apply the third one fully to the crisis he studied.",
+  "competing_idea": "Another view, which the entry says the author found dominant, analyses states by assuming they weigh every option and act rationally to get the most utility. The entry places the book in a running debate between backers of rational expectations theories and those seeking other explanations.",
+  "questions": [
+    "What goal would make this decision the best choice for the organization as a whole?",
+    "Which existing plans, routines or departments shaped the options that were actually on the table?",
+    "Which leaders gained or lost from the decision, and how did their bargaining shape it?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Essence of Decision\", Wikipedia, the free encyclopedia, article as last edited on 7 November 2026 (revision 1384240465)",
+      "level": "secondary_source_read",
+      "about": "Graham T. Allison, Essence of Decision: Explaining the Cuban Missile Crisis, Boston: Little, Brown and Company, 1971, 338 pp.",
+      "link": "https://en.wikipedia.org/wiki/Essence_of_Decision"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

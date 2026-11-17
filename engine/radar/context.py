@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 
 from .quotes import find_quote
-from .store import read_facts, read_sources
+from .store import load_run, read_facts, read_sources
 from .textnorm import is_cjk
 from .verify import (_read_copy, content_digest, is_early_signal, is_withdrawn, quote_found, site_of,
                      supporting_entries, text_id)
@@ -170,6 +170,7 @@ def packet(run_dir: Path, fact_id: str, sentences: int = 1) -> dict:
         quotes.append(_quote_entry(role, source_id, quote, translation, text, sentences))
     return {
         "fact_id": fact_id,
+        "question": load_run(run_dir).get("question"),   # what a move's in_question is judged against
         "kind": fact.get("kind"),
         "statement": fact.get("statement"),
         "fields": fact.get("fields"),

@@ -1,4 +1,5 @@
 """The invented demo run as a command: `radar demo`, its stages, its variants and its third planted error."""
+import re
 import json
 import subprocess
 import sys
@@ -363,8 +364,9 @@ def test_the_demo_pack_points_to_the_same_invented_sites_as_the_demo(tmp_path):
 # --- ruling DH1: the demo's facts meet the plugin's own evidence rules ---------------------------------------------
 
 # The checker judges these four from what the quotes say, not by their words: the kind of move, the stage, captive or
-# open, and what became of the plan (point 3 of agents/support-checker.md).
-JUDGED_BY_RULE = ("move_type", "stage", "access", "delivery")
+# open, and what became of the plan (point 3 of agents/support-checker.md); whether the move is inside the question
+# is judged against the run's question.
+JUDGED_BY_RULE = ("move_type", "stage", "access", "delivery", "in_question")
 SILENT = (None, "", "not_stated", "unknown", "not_yet")            # the values that say the quotes are silent
 NUMBER_WORDS = {"1": ("one", "single"), "2": ("two", "zwei"), "3": ("three", "drei")}
 MONTHS = {"01": ("january", "januar"), "03": ("march", "märz"), "05": ("may", "mai"), "07": ("july", "juli"),
@@ -453,7 +455,8 @@ def test_the_plant_sale_rests_on_the_seller_s_report_and_an_independent_second_s
     assert fact["primary_source"] is False                     # the seller's report is not the buyer's own statement
     assert fact["fields"]["announced"] == "not_stated"         # the quote dates the sale, not its announcement
     assert "Drug maker B says Competitor C will use the plant only for its own products" in fact["statement"]
-    [second] = fact["supporting"]
+    own, second = fact["supporting"]   # a quote of the seller's own report that names it, then the second source
+    assert own["source_id"] == fact["source_id"] and "Drug maker B" in own["quote"]
     assert sources[second["source_id"]]["publisher"] not in ("Drug maker B", "Competitor C")
     assert (fact["status"], fact["status_reason"]) == ("confirmed", None)
 
@@ -498,7 +501,7 @@ def test_the_three_planted_errors_are_proposed_as_ruled(tmp_path):
                {"company": "Example Pharma", "move_type": "expansion", "site": "Site Y", "country": "Country Y",
                 "what_added": "a single high-speed unit for prefilled syringes", "size_value": "1",
                 "size_unit": "lines", "announced": "2026-07-02", "planned_start": "2029",
-                "stage": "under_construction", "access": "captive", "delivery": "not_yet"},
+                "stage": "under_construction", "access": "captive", "delivery": "not_yet", "in_question": "yes"},
                "The quote says the line starts filling in 2027, but the fact says 2029."),
         "F10": ("Competitor A plans to offer its new filling lines to other drug makers.",
                 "plan to offer the new lines to other drug makers", "S1", [], None,
@@ -597,3 +600,58 @@ def test_every_quote_the_demo_takes_from_another_source_names_the_company_and_wh
     facts = store.read_facts(run)
     assert all(fact["checks"]["quote"]["passed"] for fact in facts.values()
                if fact["status"] != "rejected" or fact["status_reason"] != "not_found"), "every quote is still found"
+
+
+# --- the new report: companies on general facts, one connection, and the moves grouped into projects ----------------
+
+def test_the_demo_s_moves_are_grouped_into_projects(tmp_path):
+    from radar import projects
+    from radar.report.model import build_model
+    run = demo.build_demo_run(tmp_path)
+    grouped, state = projects.current(run)
+    assert state == "grouped" and run_status(run)["grouping"] == "grouped"
+    facts = store.read_facts(run)
+    moves = {fact_id for fact_id, fact in facts.items()
+             if fact["kind"] == "capacity_move" and fact["status"] in store.COUNTING}
+    assert sorted(fact_id for project in grouped for fact_id in project["fact_ids"]) == sorted(moves)
+    assert len(grouped) == 5 and len(moves) == 6                 # the plant sale and the rumour about it share one
+    # the grouper's form of a name: "<company>, <site or programme>"
+    assert all(re.fullmatch(r"(Competitor [A-D]|Example Pharma), .+", project["name"]) for project in grouped)
+    model = build_model(run, demo.LENSES)
+    assert model["projects"]["state"] == "grouped" and len(model["projects"]["items"]) == 5
+    assert model["core_answer"]["total"] == 5
+
+
+@pytest.mark.parametrize("stage", ["checked", "complete"])
+def test_the_grouping_is_recorded_once_the_facts_are_final(tmp_path, stage):
+    from radar import projects
+    run = demo.build_demo_run(tmp_path, stage=stage)
+    assert projects.current(run)[1] == "grouped"
+    for stage_before in ("sources", "extracted"):
+        assert projects.current(demo.build_demo_run(tmp_path / stage_before, stage=stage_before))[1] == "none"
+
+
+@pytest.mark.parametrize("variant", [{"changed": True}, {"private": True}, {"tampered": True}])
+def test_every_variant_of_the_demo_has_a_grouping_that_fits(tmp_path, variant):
+    from radar import projects
+    assert projects.current(demo.build_demo_run(tmp_path, **variant))[1] == "grouped"
+
+
+def test_the_demo_shows_drug_maker_b_as_the_named_seller_to_competitor_c(tmp_path):
+    from radar.report.model import build_model
+    run = demo.build_demo_run(tmp_path)
+    connections = build_model(run, demo.LENSES)["connections"]
+    assert [(c["company"]["name"], c["party_name"], c["tie"], c["description"]) for c in connections] == \
+        [("Competitor C", "Drug maker B", "seller", None)]
+    assert connections[0]["party_name"] != connections[0]["company"]["name"]   # never a tie to the fact's own company
+    assert "Drug maker B" in connections[0]["fact"]["statement"]
+
+
+def test_the_demo_names_the_company_of_its_general_facts(tmp_path):
+    from radar.report.model import build_model
+    run = demo.build_demo_run(tmp_path)
+    general = {fact_id: fact["about_company"] for fact_id, fact in store.read_facts(run).items()
+               if fact["kind"] == "general"}
+    assert sorted(name for name in general.values() if name) == ["Competitor A", "Competitor B", "Competitor B"]
+    shown = [fact for fact in build_model(run, demo.LENSES)["facts"] if fact["kind"] == "general"]
+    assert [(fact["statement"][:12], fact["company"]["name"]) for fact in shown] == [("Competitor B", "Competitor B")]

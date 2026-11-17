@@ -11,6 +11,12 @@ source but states a different year than the fact, and one quote is word for word
 after "not", so the sentence around it says the opposite. Only a checker that reads the passage can catch the
 third one.
 
+The general facts that are about one company name it (`about_company`), and the plant sale
+carries one connection: Drug maker B's own report says "we sold" the plant to Competitor C, so the fact names
+Drug maker B as the seller (a supporting quote from the same report names the company). At the stages `checked` and `complete`
+the moves that count are grouped into projects (`projects.json`, recorded through `radar record-projects` as the
+project grouper would), so the practice report shows companies, a connection and projects.
+
 The run can be built in four stages, so that a practice tour or a test can start part of the way through:
 `sources`, `extracted`, `checked` and `complete`.
 """
@@ -110,12 +116,12 @@ def _fields(company, move_type, site, country, what_added, size_value, announced
     return {"company": company, "move_type": move_type, "site": site, "country": country,
             "what_added": what_added, "size_value": size_value, "size_unit": size_unit,
             "announced": announced, "planned_start": planned_start, "stage": stage,
-            "access": access, "delivery": delivery}
+            "access": access, "delivery": delivery, "in_question": "yes"}   # every demo move adds filling lines
 
 
 def _fact(kind, statement, quote, source, fields=None, *, primary=True, tentative_reason=None,
-          supporting=None, language="en", translation=None) -> dict:
-    return {"kind": kind, "statement": statement, "quote": quote, "quote_language": language,
+          supporting=None, language="en", translation=None, about_company=None, connections=None) -> dict:
+    return {"kind": kind, "about_company": about_company, "connections": connections or [], "statement": statement, "quote": quote, "quote_language": language,
             "quote_translation": translation, "source_id": source, "supporting": supporting or [],
             "primary_source": primary, "certainty": "tentative" if tentative_reason else "firm",
             "tentative_reason": tentative_reason, "fields": fields}
@@ -185,7 +191,7 @@ def _proposals(source_ids: dict, start: str) -> dict:
             "Competitor B says its contract filling slots at the Country Z site are fully booked through the "
             "end of 2027.",
             "Contract filling slots at the Country Z site are fully booked through the end of 2027.",
-            s["competitor_b_filing"]),
+            s["competitor_b_filing"], about_company="Competitor B"),
         # The seller's report is not the buyer's own statement: the fact says who states what, it is not a primary
         # source, the quote dates the sale and not its announcement, and the trade journal's report of the buyer's
         # own words when the purchase was completed is the independent second source that confirms it.
@@ -201,12 +207,17 @@ def _proposals(source_ids: dict, start: str) -> dict:
             _fields("Competitor C", "acquisition", None, "Country Y", "two filling lines", "2", "not_stated",
                     None, "operating", "captive", delivery="unknown"),
             primary=False,
-            supporting=[{"source_id": s["trade_unnamed"],
+            supporting=[{"source_id": s["drug_maker_b_report"],
+                         "quote": "Drug maker B konzentriert sich weiterhin auf die Entwicklung und Vermarktung von "
+                                  "Medikamenten zur Injektion.",
+                         "quote_translation": "Drug maker B continues to focus on developing and marketing "
+                                              "medicines for injection."},
+                        {"source_id": s["trade_unnamed"],
                          "quote": "Competitor C declined to comment on the report. A spokesperson referred earlier "
                                   "questions to the statement issued when Competitor C completed its purchase of the "
                                   "filling plant in Country Y with its two filling lines, in which the company said "
                                   "the plant would be used for its own products."}],
-            language="de",
+            language="de", connections=[{"party": "Drug maker B", "tie": "seller", "description": None}],
             translation="We sold our filling plant in Country Y to Competitor C in December 2025; it comprises "
                         "two filling lines that are already in operation. Competitor C will use the plant "
                         "exclusively for its own products."),
@@ -230,7 +241,7 @@ def _proposals(source_ids: dict, start: str) -> dict:
             "The three lines at Competitor B's Country Z site have a combined capacity of 54 million vials "
             "a year.",
             "The three lines have a combined capacity of 54 million vials a year.",
-            s["competitor_b_filing"]),
+            s["competitor_b_filing"], about_company="Competitor B"),
         # Planted error 2: the quote is in the source word for word, but it says 2027 and the fact says 2029. Every
         # other detail is stated by its quotes (the same quotes from its own source as Example Pharma's line, and the
         # sentence that makes the line captive), so the year is the one thing wrong.
@@ -256,7 +267,7 @@ def _proposals(source_ids: dict, start: str) -> dict:
             "general",
             "Competitor A plans to offer its new filling lines to other drug makers.",
             "plan to offer the new lines to other drug makers",
-            s["competitor_a_release"]),
+            s["competitor_a_release"], about_company="Competitor A"),
         # Only in the changed variant: a new rumour from the same trade article.
         "d_new": _fact(
             "capacity_move",
@@ -272,7 +283,7 @@ def _proposals(source_ids: dict, start: str) -> dict:
             "Example Pharma's own planning note expects its outside filling contracts to cover less of its "
             "syringe volume in 2027 than they do today.",
             "Our outside filling contracts will cover less of our syringe volume in 2027 than they do today.",
-            s.get("internal_note")),   # only exists in a private run
+            s.get("internal_note"), about_company="Example Pharma"),   # only exists in a private run
     }
 
 
@@ -284,6 +295,21 @@ _SUPPORT_NOTES = {
     "planted_negation": "The sentence around the quote says the opposite: Competitor A does not plan to offer "
                         "the new lines.",
 }
+
+
+def _projects(ids: dict) -> dict:
+    """The moves that count, grouped into projects as the project grouper would send them. Each project is of one
+    company and one country. The plant sale and the report that Competitor C may open a line of that plant are one
+    project (the rumour states no country, which does not count against it). The changed variant has Competitor D's
+    rumour in place of that report."""
+    named = [("Competitor A, Plant North", ["a_north"]),
+             ("Competitor A, Plant South", ["a_south"]),
+             ("Example Pharma, Site Y", ["example_own"]),
+             ("Competitor B, Country Z", ["b_site"]),
+             ("Competitor C, the plant bought from Drug maker B", ["c_buy", "c_open"]),
+             ("Competitor D, a possible new site", ["d_new"])]
+    return {"projects": [{"name": name, "fact_ids": [ids[key] for key in keys if key in ids]}
+                         for name, keys in named if any(key in ids for key in keys)]}
 
 
 def _analysis(ids: dict, start: str) -> dict:
@@ -426,11 +452,13 @@ def _analysis(ids: dict, start: str) -> dict:
         "audit_flags": [
             {"check": "independence",
              "text": "The report that Competitor C may open a line to outside customers rests on one unnamed "
-                     "source. It is marked uncertain and no message depends on it."},
+                     "source. It is marked uncertain and no message depends on it.",
+             "message_ids": []},
             {"check": "evidence_symmetry",
              "text": "Every message rests on what companies chose to publish: their own releases, a filing, an "
                      "annual report and trade reports of them. What companies do not announce is not seen in this "
-                     "run. The evidence for open capacity here is one company's filing and one unnamed report."},
+                     "run. The evidence for open capacity here is one company's filing and one unnamed report.",
+             "message_ids": ["M1", "M2", "M3"]},
         ],
         "not_found": [
             "No source says how much of Competitor A's new capacity could ever serve outside customers.",
@@ -627,6 +655,11 @@ def _build(root: Path, run_id: str, changed: bool, private: bool, tampered: bool
                "--by", "demo support check (illustrative)",
                "--note", _SUPPORT_NOTES.get(name, "The quote states what the fact says."))
     _radar("settle", "--run", run)
+    # The grouping is recorded now that the facts are final: a move added or withdrawn later would outdate it.
+    with tempfile.TemporaryDirectory() as scratch:
+        grouping = Path(scratch) / "projects.json"
+        grouping.write_text(json.dumps(_projects(ids), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        _radar("record-projects", "--run", run, "--by", "project-grouper", "--file", grouping)
     if stage == "checked":
         return run
 

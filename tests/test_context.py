@@ -279,8 +279,9 @@ def test_the_packet_carries_the_fact_and_its_judgement_fields(tmp_path):
     main_quote = packet["quotes"][0]
     assert (main_quote["role"], main_quote["source_id"], main_quote["quote"]) == ("main", "S1", OFFER_QUOTE)
     assert main_quote["translation"] == "A translation."
-    assert set(packet) == {"fact_id", "kind", "statement", "fields", "certainty", "tentative_reason",
+    assert set(packet) == {"fact_id", "question", "kind", "statement", "fields", "certainty", "tentative_reason",
                            "primary_source", "early_signal", "quotes", "sources"}
+    assert packet["question"] == store.load_run(run)["question"]   # in_question is judged against it
     assert set(main_quote) == {"role", "source_id", "quote", "translation", "found", "located",
                                "before", "passage", "after"}
 

@@ -1,0 +1,22 @@
+{
+  "id": "deliberate-and-emergent-strategy",
+  "name": "Deliberate and emergent strategy",
+  "idea": "An open textbook states that the work's author and his colleagues tell apart intended, deliberate, realized and emergent strategy. It reports that realized strategy is only partly related to what was intended, the author suggesting that just 10 to 30 percent of intended strategy is realized, and that its main determinant is what he calls emergent strategy: decisions that arise as managers adapt.",
+  "suggests": "Look at what a company actually did over the past years beside what it announced, and at which of its moves came from plans at the top and which grew from decisions further down or from reactions to events.",
+  "limits": "The section's summary holds that the best strategies come when managers balance the need for design, or planning, with enough flexibility to make use of what emerges.",
+  "competing_idea": "The textbook sets against it the design school, which sees strategy making as mainly rational analysis and deliberate planning. It states that what matters is not which school wins but how the two views complement each other.",
+  "questions": [
+    "Which of the company's announced plans of recent years were carried out, and which were dropped?",
+    "Which of its important moves were never planned, and where in the organization did they start?",
+    "How do its managers balance planning with room to act on what emerges?"
+  ],
+  "originals": [
+    {
+      "reference": "Principles of Management, v. 1.1, Saylor Academy, section 5.3 \"How Do Strategies Emerge?\" (an open textbook; its original authors are not named, at the licensor's request)",
+      "level": "secondary_source_read",
+      "about": "Henry Mintzberg, \"Patterns in Strategy Formation\", Management Science, Vol. 24 No. 9, May 1978, pp. 934-948; and Henry Mintzberg and James A. Waters, \"Of strategies, deliberate and emergent\", Strategic Management Journal, Vol. 6 No. 3, July 1985, pp. 257-272",
+      "link": "https://saylordotorg.github.io/text_principles-of-management-v1.1/s09-03-how-do-strategies-emerge.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

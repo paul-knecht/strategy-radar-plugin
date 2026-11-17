@@ -1,5 +1,6 @@
 """Shared test helpers: build runs, sources and facts that are complete under the record formats."""
 import contextlib
+import json
 import os
 import subprocess
 import sys
@@ -8,9 +9,20 @@ from pathlib import Path
 
 import pytest
 
-from radar import store, verify
+from radar import demo, store, verify
 
 BIN_RADAR = Path(__file__).parent.parent / "bin" / "radar"
+
+
+def lens_folder_with_level(folder, level) -> Path:
+    """A lens folder holding a copy of the demo lens firm-boundaries whose one original is at `level`. Returns the
+    folder."""
+    lens = json.loads((demo.LENSES / "firm-boundaries.json").read_text(encoding="utf-8"))
+    lens["originals"][0]["level"] = level
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "firm-boundaries.json").write_text(json.dumps(lens, indent=2), encoding="utf-8")
+    return folder
 
 
 def radar_env(home, **extra) -> dict:
@@ -96,6 +108,7 @@ def proposal(**over) -> dict:
         "stage": "announced",
         "access": "open",
         "delivery": "not_yet",
+        "in_question": "yes",
     }
     extra = over.pop("fields", {})
     fields = None if extra is None else {**fields, **extra}   # fields=None gives a general fact

@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 from radar import diff, store
 from radar.report import visuals
@@ -95,15 +96,34 @@ def test_move_grid_counts():
 
 def test_move_grid_has_the_five_move_types_in_order_and_empty_cells_for_zero():
     html = visuals.move_grid([fact(1), fact(2), fact(3, move_type="acquisition")])
-    assert texts(html, "th", scope="col") == ["New site", "Expansion", "Acquisition", "Partnership", "Closure"]
-    assert texts(html, "td")[1:] == ["", "2", "1", "", ""]            # the first td is the empty corner cell
+    assert texts(html, "th", scope="col") == ["Company", "New site", "Expansion", "Acquisition", "Partnership", "Closure"]
+    assert texts(html, "td") == ["", "2", "1", "", ""]                  # the corner holds the heading "Company"
     assert texts(html, "th", scope="row") == ["Competitor A"]
 
 def test_move_grid_names_uncertain_and_non_public_facts_in_a_count():
     secret = dict(fact(2, status="uncertain"), data_class="licensed")
     html = visuals.move_grid([fact(1), secret])
-    cell = texts(html, "td")[2]
+    cell = texts(html, "td")[1]
     assert cell.startswith("2") and "1 uncertain" in cell and "1 non-public" in cell
+
+def test_the_grid_has_a_company_heading_and_plain_row_headings(tmp_path):
+    run = make_run(tmp_path)
+    add_source(run, "Competitor C Inc. adds a line. Competitor C builds a site. Another Co opens a plant.")
+    for quote, company in (("Competitor C Inc. adds a line", "Competitor C Inc."),
+                           ("Competitor C builds a site", "competitor c"), ("Another Co opens a plant", "Another Co")):
+        add_fact(run, source_id="S1", primary_source=True, quote=quote, fields={"company": company})
+    finish_run(run, ["F1"])
+    doc = doc_for(run)
+    grid = find(doc, "table", **{"class": "grid"})
+    assert grid
+    html = doc[doc.index('<table class="grid">'):doc.index("</table>", doc.index('<table class="grid">'))]
+    assert texts(html, "th", scope="col")[0] == "Company"                  # the corner says what the rows are
+    assert find(html, "th", **{"class": "corner"}) and find(html, "td", **{"class": "corner"}) == []
+    assert texts(html, "th", scope="row") == ["Another", "Competitor C"]    # one tidy name for "Competitor C Inc."
+    css = (Path(visuals.__file__).parent / "report.css").read_text(encoding="utf-8")
+    rule = re.search(r'\.grid th\[scope="row"\][^{]*\{([^}]*)\}', css).group(1)
+    assert re.search(r"font-weight:\s*(400|normal)", rule) and re.search(r"background:\s*(none|transparent)", rule)
+
 
 def test_move_grid_of_nothing_is_empty():
     assert visuals.move_grid([]) == ""
@@ -144,13 +164,20 @@ def test_bar_widths_are_whole_percentages_of_the_largest_rounded_half_up():
                                   fact(3, size_value="3", size_unit="lines")])
     assert [b["style"] for b in find(html, "div", **{"class": "bar-fill"})] == ["width:13%", "width:100%", "width:38%"]
 
-def test_a_unit_with_one_number_is_listed_not_drawn_and_nothing_is_converted():
+def test_a_unit_with_one_number_is_listed_not_drawn():
     html = visuals.capacity_bars([fact(1, size_value="2", size_unit="lines"),
                                   fact(2, size_value="300", size_unit="EUR million"),
-                                  fact(3, size_value="0.3", size_unit="EUR billion")])
-    assert find(html, "div", **{"class": "bar-fill"}) == []
-    assert "2 lines" in html and "300 EUR million" in html and "0.3 EUR billion" in html
+                                  fact(3, size_value="300", size_unit="USD million")])
+    assert find(html, "div", **{"class": "bar-fill"}) == []        # a currency is never turned into another
+    assert "2 lines" in html and "300 EUR million" in html and "300 USD million" in html
     assert "different units" in html
+
+def test_money_in_one_currency_is_compared_in_one_set_of_bars_with_its_stated_form_shown():
+    html = visuals.capacity_bars([fact(1, size_value="300", size_unit="EUR million"),
+                                  fact(2, size_value="0.15", size_unit="EUR billion")])
+    assert texts(html, "h4") == ["EUR million"]
+    assert [b["style"] for b in find(html, "div", **{"class": "bar-fill"})] == ["width:100%", "width:50%"]
+    assert "150 EUR million (stated: 0.15 EUR billion)" in html and "different units" not in html
 
 def test_a_group_where_every_value_is_zero_draws_empty_bars_not_an_error():
     html = visuals.capacity_bars([fact(1, size_value="0", size_unit="lines"), fact(2, size_value="0", size_unit="lines")])
@@ -201,6 +228,10 @@ def test_totals_name_uncertain_inputs_and_shares_show_a_percent_sign():
                                        whole=[fact(1), fact(2)], includes_uncertain=True)])
     text = find(html, "li", id="C1")[0]["text"]
     assert "25%" in text and "Includes uncertain facts" in text and "Uncertain" in text
+
+def test_a_large_total_gets_thousands_separators():
+    html = visuals.totals([calculation([fact(1)], result="1200000", unit="m²")])
+    assert "Lines announced: 1,200,000 m²" in find(html, "li", id="C1")[0]["text"]
 
 def test_totals_of_nothing_are_empty():
     assert visuals.totals([]) == ""
@@ -311,20 +342,78 @@ def delivered_run(tmp_path):
     finish_run(run, ["F1"])
     return run
 
-def test_competitors_view_holds_the_grid_delivery_table_and_countries(tmp_path):
+def test_projects_view_holds_the_grid_delivery_table_and_countries(tmp_path):
     doc = doc_for(delivered_run(tmp_path))
-    section = doc[doc.index('id="view-competitors"'):doc.index('id="view-timeline"')]
-    for table in ("moves", "grid", "delivery"):
+    section = doc[doc.index('id="view-projects"'):doc.index('id="view-connections"')]
+    for table in ("grid", "delivery"):
         assert find(section, "table", **{"class": table}), table
+    assert find(section, "table", **{"class": "moves"}) == []
     assert find(section, "ul", **{"class": "countries"}) and "Otherland" in section
     for heading in ("Moves by type", "Delivery record", "Sites by country"):
         assert heading in texts(section, "h3"), heading
 
-def test_competitors_view_draws_capacity_bars_when_units_match(tmp_path):
+def test_projects_view_draws_capacity_bars_when_units_match(tmp_path):
     doc = doc_for(delivered_run(tmp_path))                 # F1 is 2 lines, F2 is 3 lines
-    section = doc[doc.index('id="view-competitors"'):doc.index('id="view-timeline"')]
+    section = doc[doc.index('id="view-projects"'):doc.index('id="view-connections"')]
     assert [b["style"] for b in find(section, "div", **{"class": "bar-fill"})] == ["width:67%", "width:100%"]
     assert "Capacity" in texts(section, "h3")
+
+def sized_run(tmp_path, *sizes):
+    """One capacity move per size, each at its own site: `sizes` are (value, unit) pairs."""
+    run = make_run(tmp_path)
+    add_source(run, "Competitor A builds a large hall at Plant One. Competitor A builds a second hall at Plant Two. "
+                    "Competitor A builds a third hall at Plant Three.")
+    for number, (value, unit) in enumerate(sizes, start=1):
+        site = ("One", "Two", "Three")[number - 1]
+        add_fact(run, source_id="S1", primary_source=True,
+                 quote=f"Competitor A builds a {('large', 'second', 'third')[number - 1]} hall at Plant {site}",
+                 fields={"site": f"Plant {site}", "size_value": value, "size_unit": unit})
+    finish_run(run, ["F1"])
+    return run
+
+def bars_of(doc):
+    start = doc.index('class="projects-more"')
+    return doc[start:doc.index('id="view-connections"')]
+
+def test_m2_and_sqm_sizes_are_compared_in_one_set_of_bars(tmp_path):
+    doc = doc_for(sized_run(tmp_path, ("2000", "m2"), ("1500", "sqm"), ("lots", "lines")))
+    html = bars_of(doc)
+    assert texts(html, "h4")[:1] == ["m²"] and texts(html, "h4").count("m²") == 1
+    assert [b["style"] for b in find(html, "div", **{"class": "bar-fill"})] == ["width:100%", "width:75%"]
+    assert "2,000 m²" in html and "1,500 m²" in html and "different units" in html and "lots lines" in html
+
+def test_bare_facts_are_compared_by_their_tidy_unit_too():
+    html = visuals.capacity_bars([fact(1, size_value="2000", size_unit="m2"), fact(2, size_value="1000", size_unit="Sqm")])
+    assert [b["style"] for b in find(html, "div", **{"class": "bar-fill"})] == ["width:100%", "width:50%"]
+
+def test_a_size_in_square_feet_shows_its_square_metres_and_what_was_stated(tmp_path):
+    doc = doc_for(sized_run(tmp_path, ("21528", "ft2"), ("3000", "m²")))
+    html = bars_of(doc)
+    rows = find(html, "li", **{"class": "bar-row"})
+    assert "about 2,000 m² (stated: 21,528 ft²)" in rows[0]["text"] and "3,000 m²" in rows[1]["text"]
+    assert [b["style"] for b in find(html, "div", **{"class": "bar-fill"})] == ["width:67%", "width:100%"]
+    assert texts(html, "h4")[0] == "m²"
+
+def test_a_converted_size_is_rounded_and_large_numbers_get_separators(tmp_path):
+    html = bars_of(doc_for(sized_run(tmp_path, ("160000", "ft2"), ("20000", "m²"))))
+    rows = find(html, "li", **{"class": "bar-row"})
+    assert "about 14,900 m² (stated: 160,000 ft²)" in rows[0]["text"] and "20,000 m²" in rows[1]["text"]
+
+def test_the_stated_size_is_not_repeated_when_nothing_was_converted(tmp_path):
+    html = bars_of(doc_for(sized_run(tmp_path, ("2000", "m2"), ("1500", "sqm"))))
+    assert "stated:" not in html and "about " not in html
+
+def test_sites_are_listed_under_each_of_their_tidy_countries(tmp_path):
+    run = make_run(tmp_path)
+    add_source(run, "Competitor A builds a plant in the USA. Competitor A builds a plant in Germany and France.")
+    add_fact(run, source_id="S1", primary_source=True, quote="Competitor A builds a plant in the USA",
+             fields={"country": "U.S.", "site": "Plant One"})
+    add_fact(run, source_id="S1", primary_source=True, quote="Competitor A builds a plant in Germany and France",
+             fields={"country": "Germany and France", "site": "Plant Two"})
+    finish_run(run, ["F1"])
+    html = bars_of(doc_for(run))
+    assert texts(html, "strong", **{"class": "country-name"}) == ["France", "Germany", "United States"]
+    assert find(html, "ul", **{"class": "countries"})[0]["text"].count("Plant Two") == 2
 
 def test_timeline_view_holds_the_timeline_table(tmp_path):
     doc = doc_for(delivered_run(tmp_path))
@@ -363,7 +452,7 @@ def built_markdown(run):
 def test_markdown_has_the_move_grid_and_delivery_table(tmp_path):
     md = built_markdown(delivered_run(tmp_path))
     labels = load_labels()
-    competitors = md.split("## Competitors")[1].split("\n## ")[0]
+    competitors = md.split("## Projects")[1].split("\n## ")[0]
     assert f"### {labels['sec_grid']}" in competitors and f"### {labels['sec_delivery']}" in competitors
     assert "| Company | New site | Expansion | Acquisition | Partnership | Closure |" in competitors
     assert "| Competitor A |  | 1 |  |  |  |" in competitors

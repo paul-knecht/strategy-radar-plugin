@@ -91,7 +91,7 @@ radar check-pack --file "<pack file>"
 
 Read `pack` (its company and whether it is illustrative). A pack with problems is not offered: show its `explained` entries word for word.
 
-Tell the person which packs exist, by company, and which are illustrative. Say what that means: a run on an illustrative pack is practice with invented data, and its report says so at the top. Today the plugin ships only the invented demo pack, and packs for real companies are not installed yet. For another company, offer `/strategy-radar:new-pack`. A company is never researched from memory, and no run starts without a pack file.
+Tell the person which packs exist, by company, and which are illustrative. Say what that means: a run on an illustrative pack is practice with invented data, and its report says so at the top. Today the plugin ships only the invented demo pack: no pack for a real company ships, and a run on a pack for a real company has been tried on real websites in only a few runs so far. For another company, offer `/strategy-radar:new-pack`; to screen a startup as an investor, offer `/strategy-radar:screen`. A company is never researched from memory, and no run starts without a pack file.
 
 Ask: "Which company do you want to look at?" and list the packs.
 Stop here. End your turn after the question. Do not call any tool, and do not answer for the person. Only the person's next message can answer.

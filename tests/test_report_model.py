@@ -39,11 +39,13 @@ def test_status_line_counts(tmp_path):
                orig_file=None, copy_sha256=None)
     _settle(run, ["F4"])
     model = build_model(run, LENSES)
-    assert model["status_line"] == {"confirmed": 2, "uncertain": 1, "rejected": 1, "sources": 3, "not_accessible": 1}
-    assert ids(model["facts"]) == ["F1", "F3", "F4"]          # confirmed and uncertain, in id order
+    assert model["status_line"] == {"confirmed": 2, "uncertain": 1, "single_source": 1, "rejected": 1, "sources": 3,
+                                    "not_accessible": 1}
+    # confirmed and uncertain, by company (both outside the pack: "other"), then newest source date first, then id
+    assert ids(model["facts"]) == ["F1", "F4", "F3"]
     assert ids(model["rejected"]) == ["F2"]
     assert model["rejected"][0]["status_reason"] == "not_found"
-    assert model["facts"][2]["status"] == "uncertain"
+    assert model["facts"][1]["status"] == "uncertain" and model["facts"][1]["shown_status"] == "single_source"
 
 
 def test_chain_steps_carry_resolved_facts_and_lens(tmp_path):
@@ -84,7 +86,7 @@ def test_competitors_grouped_and_sorted(tmp_path):
              fields={"company": "Aardvark Ltd", "announced": "2026-02-01"})
     _settle(run, ["F4", "F5"])
     competitors = build_model(run, LENSES)["competitors"]
-    assert [c["company"] for c in competitors] == ["Aardvark Ltd", "Competitor A", "Competitor B"]
+    assert [c["company"] for c in competitors] == ["Aardvark", "Competitor A", "Competitor B"]   # tidy names
     a = competitors[1]
     assert a["home"] is False
     assert ids(a["moves"]) == ["F4", "F1"]                    # sorted by fields.announced; spellings grouped
@@ -120,6 +122,9 @@ def test_top_level_keys_and_public_run(tmp_path):
     assert model["question"] == "Who adds capacity?" and model["run_id"] == "run1" and model["pack"] == "demo"
     assert model["mode"] == "public" and model["confidential"] is False and model["illustrative"] is False
     assert model["changes"] is None
+    # F1 is the one move that counts (F2 is rejected): ungrouped, it is a project of its own
+    assert model["projects"]["state"] == "none" and [p["id"] for p in model["projects"]["items"]] == ["project-F1"]
+    assert model["core_answer"]["total"] == 1 and model["connections"] == []
     assert model["compliance"] == "All sources in this report are publicly available."
     assert model["how_made"]["search_log"] == [] and model["how_made"]["excluded"] == []
     assert [c["name"] for c in model["how_made"]["checkpoints"]] == ["lenses", "final_report"]
@@ -266,9 +271,58 @@ def test_a_baseline_company_with_no_name_in_any_move_keeps_the_spelling_it_was_g
     analysis["baselines"] = [{"company": "Aardvark  Ltd", "fact_ids": ["F4"]}]
     store.write_analysis(run, analysis)
     competitors = build_model(run, LENSES)["competitors"]
-    assert [c["company"] for c in competitors] == ["Aardvark Ltd", "Competitor A"]
+    assert [c["company"] for c in competitors] == ["Aardvark", "Competitor A"]   # by its tidy name
 
 
 def test_the_model_with_early_signals_and_baselines_is_plain_data(tmp_path):
     model = build_model(early_signal_run(tmp_path), LENSES)
     assert json.loads(json.dumps(model))
+
+
+def test_how_made_carries_the_recommendation_as_recorded_with_its_marks(tmp_path):
+    from radar import recommend
+    run = ready_run(tmp_path)
+    assert build_model(run, LENSES)["how_made"]["recommendation"] is None
+    entry = {"lens": "firm-boundaries", "question_part": "adds capacity", "why": "Why.", "facts": ["F1"],
+             "missing": "Missing."}
+    recommend.record_recommendation(run, LENSES, [entry], None, recommend.ADVISOR)
+    recommend.record_link_check(run, "firm-boundaries", "F1", "doubt", recommend.READERS[0], "A doubt.")
+    found = build_model(run, LENSES)["how_made"]["recommendation"]
+    assert found["note"] is None and len(found["entries"]) == 1
+    shown = found["entries"][0]
+    assert (shown["lens"], shown["name"], shown["question_part"], shown["why"], shown["missing"]) == (
+        "firm-boundaries", "Where firms draw their boundaries", "adds capacity", "Why.", "Missing.")
+    assert [(link["fact"]["id"], link["doubts"]) for link in shown["links"]] == [("F1", 1)]
+    assert link_sentences(shown) == ["The first reader doubts that this fact bears on the lens: A doubt.",
+                                     "The second reader recorded nothing on this link."]
+    assert [item["helper"] for item in found["helpers"]] == ["the lens advisor", "the first reader", "the second reader"]
+
+
+def link_sentences(entry):
+    return entry["links"][0]["sentences"]
+
+
+def test_a_damaged_record_is_shown_as_damaged_in_the_model_and_a_missing_one_as_none(tmp_path):
+    """Final review I3: a damaged record is not shown, but it is told apart from a missing one."""
+    from radar import recommend
+    run = ready_run(tmp_path)
+    assert build_model(run, LENSES)["how_made"]["recommendation"] is None
+    (run / recommend.RECORD).write_text('{"by": 3}', encoding="utf-8")
+    assert build_model(run, LENSES)["how_made"]["recommendation"] == {
+        "damaged": True, "stale": False, "note": None, "entries": [], "helpers": [], "flags": []}
+
+
+def test_the_model_says_whether_the_record_is_stale_and_which_linked_fact_no_longer_counts(tmp_path):
+    """Final review I3: the same comparison as the first stop's view (`recommend.is_stale`)."""
+    from radar import recommend
+    run = ready_run(tmp_path)
+    entry = {"lens": "firm-boundaries", "question_part": "adds capacity", "why": "Why.", "facts": ["F1"],
+             "missing": "Missing."}
+    recommend.record_recommendation(run, LENSES, [entry], None, recommend.ADVISOR)
+    found = build_model(run, LENSES)["how_made"]["recommendation"]
+    assert (found["damaged"], found["stale"]) == (False, False)
+    assert [link["counts"] for link in found["entries"][0]["links"]] == [True]
+    verify.withdraw_fact(run, "F1", "Taken back for the test.")
+    found = build_model(run, LENSES)["how_made"]["recommendation"]
+    assert (found["damaged"], found["stale"]) == (False, True)
+    assert [link["counts"] for link in found["entries"][0]["links"]] == [False]   # also before a settle

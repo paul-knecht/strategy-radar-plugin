@@ -60,7 +60,7 @@ radar build-report --run "<run>" --lenses "<lenses>"
 
 It prints the files it wrote. Tell the person to open `<run>/report/report.html` in a browser; `report.md` holds the same text, and the two tables are for a spreadsheet. Say that the report is marked as illustrative at the top: it was made with an invented company pack as practice material, and nothing in it is a finding about a real company.
 
-Say where to look: the "Summary", with three key messages and the facts each rests on; "Thinking behind this analysis", where all three key messages are opened, each from its facts through the reasoning to its conclusion; and, in "Checks on this analysis", the part "What we could not confirm", where the three refused facts are listed with their quotes and reasons.
+Say where to look: the top of the page, where "Who is the new capacity for?" gives the answer and "Key messages" lists the three key messages, each with the sources it rests on and the checks made on it; "Thinking behind this analysis", where all three key messages are opened, each from its facts through the reasoning to its conclusion; and, in "Checks on this analysis", the part "What we could not confirm", where the three refused facts are listed with their quotes and reasons.
 
 ## 5. A refused build
 
@@ -78,4 +78,4 @@ The program refuses to build this report and writes nothing. Tell the person tha
 
 ## 6. Next
 
-End by offering `/strategy-radar:start`, which shows which company packs are available and starts a run; do not say a real company can be looked at today.
+End by offering `/strategy-radar:start`, which shows which company packs are available and starts a run; do not say that a run on a real company has been tried on real websites.

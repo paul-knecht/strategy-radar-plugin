@@ -1,0 +1,22 @@
+{
+  "id": "internalising-across-borders",
+  "name": "Keeping know-how inside the firm abroad",
+  "idea": "An encyclopedia entry on internalization theory, which calls the work a seminal work of the theory, states that firms use their knowledge in their own production facilities rather than licensing it to independent local producers, internalising the market in knowledge. It states that the theory claims this makes firms larger and more multinational, since knowledge is a public good.",
+  "suggests": "Look at whether a company uses its know-how abroad in its own facilities rather than licensing it to independent local producers, and at whether the costs of operating in that country outweigh what it gains by keeping the work in-house.",
+  "limits": "The entry states that firms internalise only when they see the benefits as greater than the costs; when the costs of doing business abroad are high, a firm may instead license production or outsource it to an independent firm, or make the product at home and export it.",
+  "competing_idea": "The entry describes another view, the eclectic paradigm, which calls knowledge an ownership advantage and claims that a firm needs such an advantage to become multinational; it states that internalization theorists dispute that it is necessary.",
+  "questions": [
+    "Does the company use its technology or know-how abroad in its own facilities, or license it to independent local producers?",
+    "Would licensing to a local producer, outsourcing or exporting serve the company better, given the costs of doing business in that country?",
+    "Do the risks and costs of operating in the foreign country outweigh what the company gains by keeping the activity in-house?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Internalization theory\", Wikipedia, the free encyclopedia (an open encyclopedia entry, read on 16 November 2026)",
+      "level": "secondary_source_read",
+      "about": "internalization theory, as the entry describes it; the entry calls Peter J. Buckley and Mark Casson, \"The Future of the Multinational Enterprise\" (Palgrave Macmillan UK, 1976) a seminal work of it",
+      "link": "https://en.wikipedia.org/wiki/Internalization_theory"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

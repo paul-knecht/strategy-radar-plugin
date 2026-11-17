@@ -1,0 +1,21 @@
+{
+  "id": "tariffs-subsidies-supply-chains",
+  "name": "Tariff threats and supply chains",
+  "idea": "The work links a sharp fall in home factory jobs to a policy that ended the threat of tariff rises on one country's goods without cutting applied tariffs. Less uncertainty and lower expected tariffs may have raised home firms' incentive to sink costs into a plant or supplier there. It finds plants likelier to close when industries up or down their supply chain were more exposed to that policy.",
+  "suggests": "Look at whether a company's move abroad follows a change in the tariff risk on its trade route, and whether the industries that supply it or buy from it are moving too.",
+  "limits": "The work's results suggest little role for its supply-chain measures in explaining job growth at plants that stay open. It says its results on exposure up and down the supply chain should be read with some caution.",
+  "competing_idea": "An alternative explanation, which the work considers, puts the job losses down to labour-intensive industries losing competitiveness for reasons unrelated to the policy, such as a general move toward offshoring, perhaps encouraged by a recession, or a productivity jump in the other country. The work says its results hold when it allows for a wide range of such explanations.",
+  "questions": [
+    "Has the risk of sudden tariff changes on this company's trade route recently risen or faded, and would that change its case for sinking money into a plant or supplier abroad?",
+    "Are the industries that supply the company or buy from it moving abroad, so that it may be pulled along its supply chain?",
+    "Could the move be explained by something other than trade policy, such as a general shift toward offshoring or productivity gains in the other country?"
+  ],
+  "originals": [
+    {
+      "reference": "Justin R. Pierce and Peter K. Schott, \"The Surprisingly Swift Decline of U.S. Manufacturing Employment\", Finance and Economics Discussion Series 2014-04, Board of Governors of the Federal Reserve System, January 2014 (draft of November 2013)",
+      "level": "original_read",
+      "link": "https://www.federalreserve.gov/econres/feds/the-surprisingly-swift-decline-of-us-manufacturing-employment.htm"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

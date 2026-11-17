@@ -51,6 +51,7 @@ class Turn:
     texts: tuple = ()          # every text the lead sent during the turn, in order; the final one is the last
     denials: tuple = ()        # every permission denial of the turn, as Claude Code reports it
     commands: tuple = ()       # every shell command the lead itself ran in the turn, in order (no helper's)
+    outputs: tuple = ()        # (command, what it printed) for each of those commands whose result came back
 
 
 def _events(stdout: str) -> list:
@@ -99,6 +100,35 @@ def _lead_commands(events: list) -> tuple:
     return tuple(commands)
 
 
+def _result_text(content) -> str:
+    """The text of a tool result: a string, or a list of text blocks joined by line breaks."""
+    if isinstance(content, str):
+        return content
+    blocks = content if isinstance(content, list) else []
+    return "\n".join(str(block.get("text", "")) for block in blocks
+                     if isinstance(block, dict) and block.get("type") == "text")
+
+
+def _lead_outputs(events: list) -> tuple:
+    """Each shell command of the lead's own calls with what its result printed, in the order of the commands. A call
+    is known by its id; a helper's calls and results name the call that started the helper, and are left out."""
+    commands, printed = {}, {}
+    for event in events:
+        message = event.get("message")
+        if event.get("parent_tool_use_id") or not isinstance(message, dict):
+            continue
+        blocks = message.get("content")
+        for block in blocks if isinstance(blocks, list) else []:
+            if not isinstance(block, dict):
+                continue
+            if event.get("type") == "assistant" and block.get("type") == "tool_use" and block.get("name") == "Bash" \
+                    and isinstance((block.get("input") or {}).get("command"), str) and block.get("id"):
+                commands[block["id"]] = block["input"]["command"]
+            elif event.get("type") == "user" and block.get("type") == "tool_result" and block.get("tool_use_id"):
+                printed[block["tool_use_id"]] = _result_text(block.get("content"))
+    return tuple((command, printed[call]) for call, command in commands.items() if call in printed)
+
+
 def _denials(events: list) -> tuple:
     """The denials the results list, then those the stream reports as events of its own (a helper's may reach only
     the stream), each once: a denial is known by the id of the call it refused."""
@@ -132,7 +162,8 @@ def parse_turn(stdout: str) -> Turn:
     session, text = last.get("session_id"), last.get("result")
     failed = last.get("is_error") is not False or not isinstance(session, str) or not isinstance(text, str)
     return Turn(session=session if isinstance(session, str) else "", text=text if isinstance(text, str) else "",
-                failed=failed, texts=_lead_texts(events), denials=_denials(events), commands=_lead_commands(events))
+                failed=failed, texts=_lead_texts(events), denials=_denials(events), commands=_lead_commands(events),
+                outputs=_lead_outputs(events))
 
 
 def denied(*turns: Turn) -> list:
@@ -143,6 +174,11 @@ def denied(*turns: Turn) -> list:
 def lead_commands(*turns: Turn) -> list:
     """Every shell command the lead itself ran in these turns (fix wave I6: who recorded a verdict)."""
     return [command for turn in turns for command in turn.commands]
+
+
+def lead_outputs(*turns: Turn) -> list:
+    """Every (command, what it printed) of the lead's own shell commands in these turns."""
+    return [output for turn in turns for output in turn.outputs]
 
 
 def step_line(number: int) -> str:

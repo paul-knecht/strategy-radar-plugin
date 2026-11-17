@@ -1,0 +1,22 @@
+{
+  "id": "layers-of-responsibility",
+  "name": "Four kinds of responsibility",
+  "idea": "An encyclopedia entry says the work's author defined corporate social responsibility as a four-part framework of economic, legal, ethical and discretionary (philanthropic) elements that society has of organizations, as of a given point in time. It adds that another writer considered the author's description of it as a pyramid of economic, legal, ethical and philanthropic responsibilities.",
+  "suggests": "Check which kind of responsibility each part of the company's plan serves, economic, legal, ethical or philanthropic, and which kinds the plan leaves out.",
+  "limits": "The entry notes that corporate social responsibility has been defined in many ways with little agreement, in part because different interests are represented.",
+  "competing_idea": "The entry reports a different view, held by one writer and others: a corporation exists to maximize shareholder returns, and obeying the law counts as socially responsible behavior.",
+  "questions": [
+    "Which economic, legal, ethical and philanthropic responsibilities does the company face in this decision?",
+    "Which of these responsibilities does the plan meet, and which does it leave out?",
+    "Who would define the company's responsibility differently, and what interest lies behind that view?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Corporate social responsibility\", Wikipedia, the free encyclopedia, article as last edited on 7 November 2026",
+      "level": "secondary_source_read",
+      "about": "Archie B. Carroll, \"The pyramid of corporate social responsibility: Toward the moral management of organizational stakeholders\", Business Horizons, Vol. 34 No. 4, July 1991, pp. 39-48",
+      "link": "https://en.wikipedia.org/wiki/Corporate_social_responsibility"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

@@ -1,0 +1,28 @@
+{
+  "id": "investing-abroad-for-control",
+  "name": "Investing abroad for control",
+  "idea": "An entry states that the scholar this lens is about set direct investment apart from portfolio investment: it gives control over activities abroad, and interest-rate differences do not cause it. The entry gives his main conclusion: it can succeed only while market imperfections can create advantages and conflicts. It adds that control of production lets a firm suppress competition or earn rents.",
+  "suggests": "Look at whether a company's investment abroad buys it control of production there, and at which advantage, such as technology, cheap inputs or access to capital, that control lets it use or protect against local rivals.",
+  "limits": "A second entry states that a firm investing abroad may face political and commercial risks because the foreign environment is unfamiliar; when such costs of doing business abroad are high, it may instead license production or outsource it to an independent firm, or make the product at home and export it.",
+  "competing_idea": "The second entry also states that firms lacking special knowledge may still go multinational, to secure supplies of components or raw materials for quality or continuity, or for tax advantages from transfer pricing.",
+  "questions": [
+    "Does the company's investment abroad give it control of production, or is it a financial stake without control?",
+    "Which advantage of the company, such as technology, cheap inputs or access to capital, does that control let it use against local rivals?",
+    "How large are the risks of operating in an unfamiliar country, and would licensing or exporting avoid them?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Stephen Hymer\", Wikipedia, the free encyclopedia (an open encyclopedia entry, read on 16 November 2026)",
+      "level": "secondary_source_read",
+      "about": "Stephen Herbert Hymer, \"The international operations of national firms: a study of direct foreign investment\", M.I.T. monographs in economics 14, MIT Press, c1976 (his 1960 doctoral thesis)",
+      "link": "https://en.wikipedia.org/wiki/Stephen_Hymer"
+    },
+    {
+      "reference": "\"Internalization theory\", Wikipedia, the free encyclopedia (an open encyclopedia entry, read on 16 November 2026)",
+      "level": "secondary_source_read",
+      "about": "the theory of internalization as the entry sets it out; the entry names no single work for it",
+      "link": "https://en.wikipedia.org/wiki/Internalization_theory"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

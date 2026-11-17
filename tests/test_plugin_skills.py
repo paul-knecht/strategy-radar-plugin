@@ -17,6 +17,7 @@ from helpers import run_radar
 from plugin_helpers import (ROOT, _candidates, _segments, body, cli_options, fenced_json, fenced_text, front_matter,
                             radar_calls, unknown_calls)
 from radar import pack as pack_module
+from radar import recommend as recommend_module
 from radar import status, store
 from radar.cli import build_parser
 
@@ -36,7 +37,8 @@ FREE_TEXT = {"--question", "--pack", "--home-company", "--url", "--publisher", "
              "--reason", "--what", "--why", "--place", "--result", "--unit", "--acknowledged-words"}
 # Options that take a value which is never text from outside: a folder, a file, an id the program gave, a date.
 PLAIN_VALUE = {"--run", "--root", "--file", "--pack-file", "--lenses", "--previous", "--current", "--from-json",
-               "--fact", "--facts", "--of", "--source", "--on", "--based-on", "--run-id", "--today", "--home"}
+               "--fact", "--facts", "--lens", "--of", "--source", "--on", "--based-on", "--run-id", "--today", "--home",
+               "--part", "--sources", "--merges", "--out"}
 
 FIRST_FIVE = {1: ("01-frame.md", "Frame the question"), 2: ("02-plan-search.md", "Plan the search"),
               3: ("03-collect.md", "Collect the sources"), 4: ("04-extract.md", "Read the sources"),
@@ -47,16 +49,26 @@ LAST_FIVE = {6: ("06-checkpoint-lenses.md", "Your decision: lenses"), 7: ("07-in
 ALL_TEN = {**FIRST_FIVE, **LAST_FIVE}
 RUN_FILES = [MAIN] + [STEPS / name for name, _ in ALL_TEN.values()]
 AUDITOR = ROOT / "agents" / "bias-auditor.md"
+# Ruling PM1, extended for the lens recommender: each helper that records names itself with `--by`, a fixed word
+# written into its own file, on its own record command only.
+RECORDS_UNDER = {CHECKER: ("record-support", "support-checker"),
+                 ROOT / "agents" / "lens-advisor.md": ("record-lens-recommendation", "lens-advisor"),
+                 ROOT / "agents" / "lens-link-reader.md": ("record-link-check", "lens-link-reader"),
+                 ROOT / "agents" / "lens-link-reader-quick.md": ("record-link-check", "lens-link-reader-quick"),
+                 ROOT / "agents" / "project-grouper.md": ("record-projects", "project-grouper")}
 ANALYSIS_FORMAT = ROOT / "references" / "analysis-format.md"
 LABELS = ROOT / "engine" / "radar" / "report" / "labels_en.json"
 ASK_LENSES = "Which lenses should I use? You can confirm these, drop one, or pick others from the list."
 ASK_FINAL = "Shall I build the report as it stands, or do you want to change something first?"
+# Plan 2b: the lenses ship, no pack for a real company ships, and no run on one has been tried. The skills say so alike.
+REAL_RUN_NOT_TRIED = "has been tried on real websites in only a few runs so far"   # 2026-11-17: real runs on a company pack and one screening run
 # The stage of the invented demo run on which a command of a step can be tried; None needs no run.
 STAGE = {"check-pack": None, "init-run": None, "status": "sources", "log-search": "sources",
          "log-excluded": "sources", "save-source": "sources", "add-copy": "sources", "add-based-on": "sources",
-         "add-facts": "sources", "check-quotes": "extracted", "quote-context": "extracted", "settle": "extracted",
+         "add-facts": "sources", "join-proposals": "sources", "check-quotes": "extracted", "quote-context": "extracted", "settle": "extracted",
          "withdraw-fact": "extracted", "checkpoint": "checked", "calc": "checked", "check-data": "complete",
-         "gate": "complete", "compare": "complete", "build-report": "complete"}
+         "gate": "complete", "compare": "complete", "build-report": "complete",
+         "list-lenses": None, "lens-view": "checked"}
 
 
 def load_guard():
@@ -77,8 +89,8 @@ NO_NETWORK = "http://127.0.0.1:9/never-requested"       # refused as a private a
 
 
 # The longest a step file may be. Fix wave M1: step 5's limit was raised from 80 to 84 for the rules of the fix wave
-# (I1, M2, M7, T18); step 4 needed no more room.
-STEP_LIMITS = {5: 84}
+# (I1, M2, M7, T18); step 4 needed no more room. Task 13 of the report redesign: step 5 gains its part 8, the grouping.
+STEP_LIMITS = {5: 95}
 
 
 def step_limit(number):
@@ -204,16 +216,19 @@ def test_no_skill_puts_outside_text_on_a_command_line():
     assert len(references) >= 5
     for path in skill_files() + sorted((ROOT / "agents").glob("*.md")) + references:
         for subcommand, options in radar_calls(read(path)):
-            if path == CHECKER and subcommand == "record-support":
+            if path in RECORDS_UNDER and subcommand == RECORDS_UNDER[path][0]:
                 options = options - {"--by"}     # ruling PM1: one fixed word, never outside text (next test)
             assert not options & FREE_TEXT, (path.name, subcommand, options & FREE_TEXT)
 
 
 def test_the_one_free_text_option_on_a_command_line_is_the_checker_s_fixed_name():
-    """The support checker names itself with `--by support-checker`, a fixed word written into its file (ruling PM1)."""
-    for path in skill_files() + sorted((ROOT / "agents").glob("*.md")) + sorted((ROOT / "references").glob("*.md")):
+    """The support checker names itself with `--by support-checker`, a fixed word written into its file (ruling PM1),
+    and so do the lens advisor, the two link readers and the project grouper, each with its own name in its own file only."""
+    agents = sorted((ROOT / "agents").glob("*.md"))
+    assert set(RECORDS_UNDER) <= set(agents)
+    for path in skill_files() + agents + sorted((ROOT / "references").glob("*.md")):
         found = re.findall(r"--by[ =]+(\S+)", read(path))
-        assert found == (["support-checker"] if path == CHECKER else []), (path.name, found)
+        assert found == ([RECORDS_UNDER[path][1]] if path in RECORDS_UNDER else []), (path.name, found)
 
 
 def test_the_list_of_outside_text_options_follows_the_real_program():
@@ -272,7 +287,7 @@ def test_files_are_read_with_the_file_tool_and_found_by_a_plain_listing():
                    "when the listing is refused, say so to the person and stop, as the rule on helpers below says",
                    "Your shell commands are `radar`, this listing, and the `ls -t`"):
         assert needed in standing, needed
-    assert standing.index("as the rule on helpers below says") < standing.index("**Only the plugin's four helpers.**")
+    assert standing.index("as the rule on helpers below says") < standing.index("**Only the plugin's eight helpers.**")
 
 
 def test_the_main_file_says_things_in_the_order_the_person_meets_them():
@@ -363,6 +378,7 @@ def test_the_six_files_show_whole_calls_for_everything_steps_one_to_five_need():
              for path, subcommand, words in whole_calls()}
     needed = {
         ("SKILL.md", "status", frozenset({"--root"})),
+        ("SKILL.md", "list-lenses", frozenset({"--lenses"})),
         ("SKILL.md", "status", frozenset({"--run"})),
         ("SKILL.md", "withdraw-fact", frozenset({"--run", "--fact", "--from-json"})),
         ("01-frame.md", "check-pack", frozenset({"--file"})),
@@ -372,6 +388,7 @@ def test_the_six_files_show_whole_calls_for_everything_steps_one_to_five_need():
         ("03-collect.md", "add-copy", frozenset({"--run", "--from-json"})),
         ("03-collect.md", "log-search", frozenset({"--run", "--from-json"})),
         ("04-extract.md", "status", frozenset({"--run"})),
+        ("04-extract.md", "join-proposals", frozenset({"--run", "--sources", "--merges", "--out"})),
         ("04-extract.md", "add-facts", frozenset({"--run", "--file"})),
         ("04-extract.md", "log-excluded", frozenset({"--run", "--source", "--from-json"})),
         ("04-extract.md", "add-based-on", frozenset({"--run", "--source", "--on"})),
@@ -465,6 +482,12 @@ def test_every_whole_call_is_accepted_by_the_real_program(stages, tmp_path, path
             target = project / "radar" / "inbox" / "from-json.json"
             target.write_text(json.dumps(example), encoding="utf-8")
             argv.append(str(target))
+        elif before == "--sources" and subcommand == "join-proposals":
+            answer = fenced_json(EXTRACTOR, "extractor-answer")
+            for source_id in word.split(","):
+                (run / "proposals" / f"{source_id}.json").write_text(json.dumps(answer), encoding="utf-8")
+            (run / "proposals" / "merges.json").write_text("[]", encoding="utf-8")
+            argv.append(word)
         elif before == "--file" and subcommand == "add-facts":
             target = run / "proposals" / "all.json"
             target.write_text(json.dumps(fenced_json(EXTRACTOR, "extractor-answer")["proposals"]), encoding="utf-8")
@@ -494,6 +517,23 @@ def test_the_extractor_s_answer_is_a_wrapper_and_only_its_list_can_be_added(stag
     assert run_radar("add-facts", "--run", str(run), "--file", str(only_list), home=tmp_path).returncode == 0
     text = read(step(4))
     assert "`proposals`" in text and "`notes`" in text and "bare list" in text
+
+
+def test_the_lead_names_the_merges_and_the_program_joins_the_answers():
+    """Task 4 of the fixes after the real runs: the lead copied about 250 proposals by hand; now the lead writes only
+    the merges, and join-proposals writes the list that add-facts takes."""
+    four = " ".join(part(4, 4).split())
+    for needed in ("Write only the merges, as a list, to `<run>/proposals/merges.json`",
+                   '`[{"keep": "S6#1", "fold": ["S2#3"]}]`', "counted from 1 in that source's `proposals`",
+                   "Never copy a proposal or a quote yourself", "the program does the copying",
+                   "is never folded into another", "`written` and `folded`", "nothing is written",
+                   "the sources still in `sources_to_read` that have a saved answer",
+                   "a source whose helper gave no usable answer is left out, and part 6 marks it",
+                   "When a source has no saved answer, or its answer holds no list of proposals, leave that source "
+                   "out of `--sources` and join again; part 6 marks it"):
+        assert needed in four, needed
+    assert "Copy with care" not in four
+    assert four.index("radar join-proposals") < four.index("radar add-facts")
 
 
 def test_a_source_with_only_refused_proposals_is_marked_as_read(stages, tmp_path):
@@ -642,9 +682,11 @@ def shown_whole_calls(path):
     return sorted(set(found))
 
 
-def through_the_guard(fixture, command, tmp_path):
+def through_the_guard(fixture, command, tmp_path, agent=None):
     shown = json.loads((FIXTURES / fixture).read_text(encoding="utf-8"))
     shown["tool_input"]["command"] = command
+    if agent is not None:
+        shown["agent_type"] = agent
     env = {"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), "RADAR_PYTHON": str(ROOT / ".venv" / "bin" / "python")}
     return subprocess.run(["/bin/sh", str(ROOT / "hooks" / "guard.sh")], input=json.dumps(shown).encode("utf-8"),
                           capture_output=True, env=env)
@@ -669,6 +711,17 @@ def test_every_call_the_skills_and_helpers_show_passes_the_guard_as_the_caller_s
         done = through_the_guard("hook_event_helper_bash.json", block.replace("<run folder>", SAMPLE_RUN).rstrip("\n"),
                                  tmp_path)
         assert (done.returncode, done.stderr) == (0, b""), (block, done.stderr)
+    for name, kinds in (("lens-advisor", ["lens-advisor-input", "lens-advisor-input", "record-lens-recommendation"]),
+                        ("lens-link-reader", ["lens-link-context", "record-link-check"]),
+                        ("lens-link-reader-quick", ["lens-link-context", "record-link-check"])):
+        blocks = [block for block in re.findall(r"```bash\n(.*?)```", read(ROOT / "agents" / (name + ".md")), re.S)
+                  if block.startswith("radar ")]
+        assert [block.split()[1] for block in blocks] == kinds, name
+        for block in blocks:
+            command = block.replace("<run folder>", SAMPLE_RUN).replace("<lens folder>", "/home/example/lenses")
+            done = through_the_guard("hook_event_helper_bash.json", command.rstrip("\n"), tmp_path,
+                                     agent="strategy-radar:" + name)
+            assert (done.returncode, done.stderr) == (0, b""), (name, block, done.stderr)
 
 
 # ---------------------------------------------------------------- what each step must say
@@ -744,6 +797,58 @@ def test_step_three_reads_whether_a_page_was_really_saved_and_names_the_plain_re
             "access_reason_too_little_text", "access_reason_too_many_redirects"} <= reasons
     example = json_examples(text)["source-<n>.json"]
     assert example["url"].startswith("https://www.") and ".example/" in example["url"]
+
+
+# The next step for the person when a page could not be saved (plan 2b, Task 10, change B). Fix round 1 (finding 2):
+# a page behind a login or inside a private network gets no offer of another way to it; any other page may be saved by
+# the person, who is asked whether it is public.
+NO_OTHER_WAY = ("When the code is `login_required`, `http_401` or `private_address`, offer no other way to the page: "
+                "log it as left out, as for a blocked candidate above.")
+SAVE_IN_YOUR_OWN_BROWSER = ("For any other code, tell the person that they can save the page in their own browser as "
+                            "an `.html` or `.pdf` file and give you that file, and ask them whether the page is "
+                            "public, as part B says.")
+NO_OFFER_CODES = ("login_required", "http_401", "private_address")
+
+
+def test_step_three_tells_the_person_how_to_give_the_run_a_page_that_could_not_be_saved():
+    refused = next(line for line in read(step(3)).splitlines() if line.startswith("- `access` is `not_accessible`"))
+    assert refused.endswith(" " + NO_OTHER_WAY + " " + SAVE_IN_YOUR_OWN_BROWSER), refused
+    assert "by hand" not in refused and "(a public page" not in refused   # the class is asked, never assumed
+    for code in NO_OFFER_CODES:
+        assert refused.count(f"`{code}`") == 1 and f"`{code}`" in NO_OTHER_WAY, code   # named once: no offer
+    labels = json.loads(LABELS.read_text(encoding="utf-8"))
+    assert {"access_reason_login_required", "access_reason_private_address", "access_reason_http"} <= set(labels)
+    a = part_of_step_three("A")
+    blocked = next(line for line in a.splitlines() if line.startswith("- **`blocked` is set**"))
+    assert "do not look for a way around it" in blocked and "Log it." in blocked   # what "as for a blocked candidate" means
+    b = part_of_step_three("B")
+    assert "a public page the person saved by hand" in b and "ask the person whether it is public" in b
+
+
+def test_step_three_tells_the_person_about_a_saved_page_that_holds_little_running_text():
+    """Plan 2b, Task 10, change F: the page is saved, but its article may be missing; the lead says so as the program
+    measures it, offers a PDF of the page (never judged by this rule), and claims nothing from it that the program did
+    not check."""
+    a = part_of_step_three("A")
+    item = next(line for line in a.splitlines() if line.startswith("- `text_note` is `little_running_text`"))
+    for needed in ("the page was saved, but its saved copy holds little running text",
+                   "Tell the person which source it is, by its title,", "the page's article may be missing",
+                   "they can save the page as a PDF and give you that file; ask whether the page is public, then add it "
+                   "as part B says",
+                   "Claim no fact from this source unless the extractor finds one with a quote that the program "
+                   "checks"):
+        assert needed in item, needed
+    b = part_of_step_three("B")
+    hand = ("When what it prints holds `text_note`, its saved copy holds little running text: tell the person so, as "
+            "part A says, and that they can save the page as a PDF and give you that file instead.")
+    assert hand in b
+    d = part_of_step_three("D")
+    assert ("- every saved source whose `text_note` is `little_running_text`, by its title: its saved copy holds little "
+            "running text, so its article may be missing;") in d
+    for text in (item, hand, d):
+        assert "menu" not in text, text
+    labels = json.loads(LABELS.read_text(encoding="utf-8"))
+    assert "text_note_little_running_text" in labels and "Save the page as a PDF" in labels["text_note_little_running_text"]
 
 
 def test_step_four_refers_to_the_extractor_s_prompt_and_gives_every_placeholder_a_value():
@@ -928,7 +1033,7 @@ def test_the_small_points_of_the_step_files():
 
 # ---------------------------------------------------------------- fix round 2 (five small points of step 5)
 
-REQUIRED_MOVE_FIELDS = {"company", "move_type", "what_added", "announced", "stage", "access"}
+REQUIRED_MOVE_FIELDS = {"company", "move_type", "what_added", "announced", "stage", "access", "in_question"}
 
 
 def names_before(text, pattern):
@@ -941,7 +1046,8 @@ def names_before(text, pattern):
 def proposal_of(run, fact_id):
     """A stored fact of the demo as the proposal it came from: without the keys the program sets itself."""
     fact = json.loads((run / "facts" / f"{fact_id}.json").read_text(encoding="utf-8"))
-    return {key: value for key, value in fact.items() if key not in ("id", "checks", "status", "status_reason")}
+    from radar.schema import PROGRAM_KEYS
+    return {key: value for key, value in fact.items() if key not in PROGRAM_KEYS}
 
 
 def fact_numbers(run, home):
@@ -961,8 +1067,8 @@ def test_a_narrower_try_built_as_step_five_words_it_is_accepted_by_the_program(t
     assert says_so == {"announced", "stage", "access"}
     assert "not_stated" in store.STAGES and "not_stated" in store.ACCESS
     assert left_out == set(CAPACITY_MOVE_FIELDS) - REQUIRED_MOVE_FIELDS
-    assert no_such_value == REQUIRED_MOVE_FIELDS - says_so
-    for needed in ("is not filling in", "never fill", "step 4"):
+    assert no_such_value == REQUIRED_MOVE_FIELDS - says_so - {"in_question"}
+    for needed in ("is not filling in", "never fill", "step 4", "`in_question` is never left out either"):
         assert needed in seven, needed
     assert "Take out a detail" not in seven
 
@@ -1344,6 +1450,217 @@ def test_step_six_shows_what_was_found_and_offers_only_lenses_that_exist(stages,
         assert lens["name"] and lens["idea"] and lens["id"] == path.stem
 
 
+def test_step_six_shows_each_lens_s_level_as_the_program_printed_it(tmp_path):
+    """Plan 2b, then task 8 of the lens recommender: the program, not the lead, works out each lens's level in plain
+    words and what it rests on, so the step shows them as printed and no longer explains the levels itself. An
+    invented lens says that it is invented, so the demo's levels never read as a check that was made."""
+    text = " ".join(read(step(6)).split())
+    item = text[text.index("9. **The lenses on offer.**"):text.index("When a note file is missing")]
+    for needed in ("its level as the program printed it", "its rests-on text as the program printed it",
+                   "A lens the program marks as invented is shown as invented for practice, never with a level: say "
+                   "invented for practice in place of a level",
+                   "they are the only two and that they are invented for practice",
+                   "nothing about a lens from memory"):
+        assert needed in item, needed
+    for gone in ("its level in plain words", "the lowest `level` among all its `originals`", "Propose two to four",
+                 "say Reference confirmed when"):
+        assert gone not in text, gone
+    assert set(store.LENS_LEVELS) == {"reference_confirmed", "course_slides", "secondary_source_read", "original_read"}
+    for path in sorted(DEMO_LENSES.glob("*.json")):
+        originals = json.loads(path.read_text(encoding="utf-8"))["originals"]
+        assert all(original["reference"].startswith("Illustrative") for original in originals), path.name
+    # what the program prints for the demo folder: both lenses invented, with the plain level the step shows
+    code, printed = radar_json("list-lenses", "--lenses", str(DEMO_LENSES), home=tmp_path)
+    entries = printed["not_yet_sorted"] + [entry for theme in printed["themes"] for entry in theme["lenses"]]
+    assert code == 0 and printed["count"] == 2 and all(entry["invented"] for entry in entries)
+    assert {entry["level"] for entry in entries} == {labels()["level_invented"]}
+
+
+LENS_HELPERS = ("lens-advisor", "lens-link-reader", "lens-link-reader-quick")
+FALLBACK = ("When the advisor fails, when its list is refused twice, or when the program gives no recommendation, "
+            "show the full grouped list, say in one sentence that no recommendation was made and why, and go on: "
+            "this never stops the run.")
+NO_RECOMMENDATION_FIRST = ("When there is no recommendation, the first line of what you show says that no recommendation "
+                           "was made and why, in one sentence, before the counts and everything else.")
+NO_RECOMMENDATION_LIST = ("When there is no recommendation, show the full grouped list (the reason was already said "
+                          "first); when the program says it is damaged and shows none, that first line says that the "
+                          "recommendation is damaged and could not be read at all.")
+NOT_CHECKED = "The recommendation is the advisor's suggestion and is not checked; a doubt mark is advice."
+STALE = ("When the view is still out of date after the advisor was started again once, treat it as no recommendation "
+         "and say that it no longer fits the facts")
+START_ONLY_WHEN = ("When the program gives no recommendation, or says it is out of date, start "
+                   "`strategy-radar:lens-advisor` and wait until it has answered")
+DAMAGED_KEPT = ("When the program says a recommendation it shows is damaged, start no helper, also when it is out of "
+                "date: it is kept as it is, with each damaged part flagged, because it is advice and a new list would "
+                "throw it out.")
+ONLY_THE_READER = ("When the recommendation is current but a link of a usable lens is still not read by a reader, "
+                   "start only that reader, or both at the same time when both have links left, and ask for the view "
+                   "again.")
+NO_LIST_NO_READER = "When it recorded no list, start no reader."
+NOT_USABLE = "A lens the program shows as not usable is not proposed, and its links need no reader."
+REFUSED = ("When a command of the advisor is refused, or the advisor fails, say in one plain sentence what was "
+           "refused or what failed, show the full grouped list without a recommendation, and go on to the question "
+           "of part 3.")
+READER_REFUSED = ("When a command of a reader is refused, or a reader fails, the recommendation is still shown: that "
+                  "reader's links stay marked \"not read by <reader>\", and you say in one plain sentence that this "
+                  "reader could not read the links and why.")
+NO_STOP = ("Neither is a stop: this is the one exception to the rule of `SKILL.md` that you stop when a helper's "
+           "command is refused.")
+AS_IT_IS = "Otherwise show the view as it is: you start no helper."
+AT_MOST_ONCE = "Each time this step is shown, you start each helper at most once."
+
+
+def test_step_six_starts_the_three_lens_helpers_in_order_and_sends_each_its_fixed_prompt():
+    """Task 8 and the controller's rulings: after `radar settle` the lead asks the program for the view first; only
+    when the view needs one does it start the advisor, and only after the advisor recorded a list the two readers, at
+    the same time, then the view again. Each gets the two absolute paths its file names, and not one word more."""
+    text = read(step(6))
+    flat = " ".join(text.split())
+    order = ["radar settle", "radar lens-view", START_ONLY_WHEN, "`strategy-radar:lens-link-reader`",
+             "`strategy-radar:lens-link-reader-quick`", ONLY_THE_READER, AS_IT_IS, AT_MOST_ONCE, STALE,
+             "9. **The lenses on offer.**"]
+    places = [flat.index(mark) for mark in order]
+    assert places == sorted(places), list(zip(order, places))
+    for needed in ("wait until it has answered", "at the same time", "as absolute paths", "not one word more"):
+        assert needed in flat, needed
+    prompt = fenced_text(ROOT / "agents" / "lens-advisor.md", "advisor-prompt")
+    for reader in ("lens-link-reader", "lens-link-reader-quick"):
+        assert prompt == fenced_text(ROOT / "agents" / f"{reader}.md", "reader-prompt"), reader
+    lines = prompt.splitlines()
+    assert lines == ["Run folder: <absolute path>", "Lens folder: <absolute path>"]
+    assert f"`{lines[0]}` on the first line and `{lines[1]}` on the second" in flat
+    found = set(re.findall(r"`strategy-radar:([a-z-]+)`", text))
+    assert found == set(LENS_HELPERS), found
+
+
+def test_step_six_shows_the_recommendation_the_marks_and_every_other_lens_in_plain_words():
+    """Task 8: the recorded list first, then the lenses that fit but have no facts yet, then every other lens by theme
+    as printed, with the not-yet-sorted ones last; the marks in plain words; the fallback, the stale rule and the
+    damaged record; the person may still pick any lens."""
+    flat = " ".join(read(step(6)).split())
+    item = flat[flat.index("9. **The lenses on offer.**"):flat.index("When a note file is missing")]
+    order = ["the part of the question it fits, word for word", "the reason as recorded", "the facts it could use",
+             "what is missing", '"Fit the question, but no facts found yet"', '"All other lenses"',
+             '"Not yet sorted" last']
+    places = [item.index(mark) for mark in order]
+    assert places == sorted(places), list(zip(order, places))
+    for needed in ('"one reader doubts this link: <the reader\'s sentence>"', '"both readers doubt it',
+                   '"not read by <reader>"', "the first reader", "the second reader", NOT_CHECKED,
+                   "grouped by theme exactly as the program printed them", "shown as not usable, never with a level",
+                   "each by its `name`, with its `idea` in one line, its level and its rests-on text, as the program "
+                   "printed them",
+                   "the recommendation is damaged", "could not be read", "shows its note", "a doubt mark removes no lens",
+                   "recommended or not"):
+        assert needed in item, needed
+    assert NO_RECOMMENDATION_LIST in item and "the sentence of part 1" not in item   # the reason is not said twice
+    for needed in (FALLBACK, STALE, NO_RECOMMENDATION_FIRST):
+        assert needed in flat, needed
+    assert flat.index(STALE) < flat.index("9. **The lenses on offer.**"), "the stale check comes before the view"
+    assert flat.index(NO_RECOMMENDATION_FIRST) < flat.index("1. **The counts.**"), "it comes before the nine points"
+    assert "the lenses the advisor recommended with facts, in its order" not in flat
+    # the person's next message: any lens in the folder is a decision, recorded in the person's words as before
+    four = flat[flat.index("## 4. The person's next message"):]
+    for needed in ("confirms the ones you proposed", "any lens the program listed, recommended or not",
+                   '`{"answered-by": "person", "answer": "Yes, use both of them."}`'):
+        assert needed in four, needed
+
+
+def test_step_six_still_asks_the_one_question_and_stops_right_after_it():
+    text = " ".join(read(step(6)).split())
+    three = text[text.index("## 3. Ask, and stop"):text.index("## 4. The person's next message")]
+    assert three.rstrip().endswith(f'Then ask exactly this: "{ASK_LENSES}" {STOP}')
+    note = fenced_text(step(6), "lenses-note").splitlines()
+    assert [line.split(":")[0] for line in note] == ["On offer", "Proposed", "Chosen", "Decision"]
+    for needed in ("`Proposed: none`", "`Proposed` holds the `id` of every lens the advisor recorded, in its order, "
+                   "both those with facts and those with no facts found yet",
+                   "except a lens the program shows as not usable and a lens with a flag of its own",
+                   "it names no usable lens"):
+        assert needed in text, needed
+
+
+def test_step_six_asks_for_the_view_first_and_starts_a_helper_only_when_the_view_needs_one():
+    """Controller ruling on task 8: showing step 6 again (after a break, a question or a change) costs no helper call
+    while the recorded recommendation is current and every link is read. The advisor and both readers start only for
+    no recommendation or one out of date, never for a damaged one (Paul's decision 18); a reader that left a link
+    unread starts alone; after one
+    re-run that is still out of date there is no recommendation, so the step never loops."""
+    flat = " ".join(read(step(6)).split())
+    one = flat[flat.index("## 1. Gather what you show"):flat.index("## 2. Show the view, in this order")]
+    assert one.index("radar settle") < one.index("radar lens-view") < one.index("`strategy-radar:lens-advisor`")
+    for needed in (START_ONLY_WHEN, DAMAGED_KEPT, ONLY_THE_READER, AS_IT_IS, AT_MOST_ONCE, STALE, NO_LIST_NO_READER,
+                   NOT_USABLE, REFUSED, READER_REFUSED, NO_STOP,
+                   "then, when it recorded a list, start `strategy-radar:lens-link-reader` and "
+                   "`strategy-radar:lens-link-reader-quick` at the "
+                   "same time, and ask for the view again"):
+        assert needed in one, needed
+    for gone in ("Then start `strategy-radar:lens-advisor` and wait", "start the three helpers again before you show"):
+        assert gone not in flat, gone
+    # the view the rule reads: an unread link is named by the reader that has not read it
+    assert set(recommend_module.READERS) == {"lens-link-reader", "lens-link-reader-quick"}
+    assert "`lens-link-reader` is the first reader and `lens-link-reader-quick` the second reader" in flat
+
+
+def test_the_one_exception_to_stopping_on_a_refused_helper_command_is_named_next_to_the_rule():
+    """Controller rulings on task 8: a refused or failed advisor leads to step 6's fallback, a refused or failed reader
+    keeps the recommendation with that reader's links marked as not read; neither is a stop. SKILL.md says so right
+    after its standing rule, and the rule itself stays."""
+    line = next(line for line in body(MAIN).splitlines() if line.startswith("- **The program writes the records.**"))
+    rule = "say what was refused and what you need, and stop."
+    exception = ("The one exception is a refused command or a failure of one of the three lens helpers: step 6 then "
+                 "says so in one plain sentence and goes on to its question, without a recommendation when it was the "
+                 "advisor, and with the reader's links marked as not read when it was a reader.")
+    assert rule in line and exception in line and line.index(rule) < line.index(exception)
+    six = " ".join(read(step(6)).split())
+    assert six.index(REFUSED) < six.index(READER_REFUSED) < six.index(NO_STOP)
+    assert "or one of them fails" not in six, "a failed reader no longer hides the recommendation"
+
+
+def test_the_readme_and_the_guide_name_eight_helpers_and_the_program_s_lens_listing():
+    """Controller ruling on task 8: the two leftovers say what is now true. The project grouper is the eighth."""
+    readme = next(line for line in (ROOT / "README.md").read_text(encoding="utf-8").splitlines()
+                  if line.startswith("| `agents/` |"))
+    assert "The eight helpers" in readme and "four helpers" not in readme and "seven helpers" not in readme
+    for name in ("source scout", "fact extractor", "support checker", "bias auditor", "lens advisor",
+                 "two link readers", "project grouper"):
+        assert name in readme, name
+    guide = " ".join((ROOT / "docs" / "plugin.md").read_text(encoding="utf-8").split())
+    assert ("step 6 starts them only when no current recommendation exists, the advisor first and then the two "
+            "readers at the same time, and starts a reader again only for links it has not yet read") in guide
+    assert "no step of a run starts them yet" not in guide
+    assert "before the lead lists the plugin's lens folder" not in guide
+    assert "before the lead asks the program for the lenses of the plugin's lens folder" in guide
+
+
+def test_the_lead_never_records_the_recommendation_or_a_link_verdict():
+    """Task 8: only the advisor records the list and only the two readers record a link check (the guard refuses the
+    lead), so no skill file names those commands, and step 6 says that the lead writes neither."""
+    for path in skill_files():
+        for word in ("record-lens-recommendation", "record-link-check", "lens-advisor-input", "lens-link-context"):
+            assert word not in read(path), (path, word)
+    flat = " ".join(read(step(6)).split())
+    assert "You never record the recommendation or a reader's verdict" in flat
+
+
+def test_the_lens_view_step_six_shows_runs_on_the_demo_run_and_gives_no_recommendation_yet(stages, tmp_path):
+    """The view call as step 6 writes it, on the checked demo run: no recommendation was recorded, so the fallback
+    holds, and every lens of the folder is in the other lenses."""
+    project, run = project_for(stages, tmp_path, "checked")
+    code, printed = run_call(6, "lens-view", run, tmp_path)
+    assert code == 0 and printed["recommendation"] is None and printed["stale"] is False
+    assert printed["damaged"] is False and printed["marks"] == {}
+    assert printed["others"]["count"] == 2 and len(printed["others"]["not_yet_sorted"]) == 2
+
+
+def test_the_run_skill_asks_the_program_for_the_lenses_and_lists_no_lens_folder_itself():
+    """Task 8: the program lists the lenses, and its count decides whether the folder holds none."""
+    flat = " ".join(body(MAIN).split())
+    begin = flat[flat.index("## Where to begin"):flat.index("## Standing rules")]
+    for needed in ('`radar list-lenses --lenses "<lens folder>"`', "the number of lenses it prints decides"):
+        assert needed in begin, needed
+    for path in [MAIN] + [step(number) for number in ALL_TEN]:
+        assert 'ls "<lens folder>"' not in read(path), path
+
+
 def test_every_total_goes_through_the_engine(stages, tmp_path):
     text = read(step(7))
     assert "radar calc" in text
@@ -1371,6 +1688,13 @@ def test_the_auditor_s_flags_are_copied_not_rewritten():
                    "never adds to", "references/bias-audit.md", "the person's decision", "without copying its words",
                    "never build a list yourself"):
         assert needed in text, needed
+
+
+def test_step_eight_copies_the_three_keys_of_a_flag_including_the_messages_it_is_about():
+    text = " ".join(read(step(8)).split())
+    assert "every flag has a `check`, a `text` and `message_ids`" in text
+    assert "You copy these three keys of a flag and no other key." in text
+    assert "its `check`, its `text` and its `message_ids`" in text
 
 
 def test_step_eight_saves_the_analysis_first_and_the_audit_file_last():
@@ -1526,6 +1850,7 @@ def test_the_last_five_steps_show_whole_calls_for_everything_they_need():
     needed = {
         ("06-checkpoint-lenses.md", "settle", frozenset({"--run"})),
         ("06-checkpoint-lenses.md", "checkpoint", frozenset({"--run", "--name", "--from-json"})),
+        ("06-checkpoint-lenses.md", "lens-view", frozenset({"--run", "--lenses"})),
         ("07-interpret.md", "calc", frozenset({"--run", "--operation", "--facts", "--from-json"})),
         ("07-interpret.md", "calc", frozenset({"--run", "--operation", "--facts", "--of", "--from-json"})),
         ("07-interpret.md", "calc", frozenset({"--run", "--operation", "--facts"})),
@@ -1603,6 +1928,11 @@ def test_another_lens_at_the_final_decision_goes_through_the_whole_chain():
     order = ["as step 6 says", "written afresh", "step 7", "step 8", "asked again"]
     places = [bullet.index(mark) for mark in order]
     assert places == sorted(places), list(zip(order, places))
+    # task 8: the lenses on offer are shown as step 6 shows them, from the program's view, not from a listing
+    assert "show the lenses on offer as item 9 of part 2 of step 6 shows them" in bullet
+    assert ("following step 6's part 1 in full, including starting the lens helpers under the same conditions"
+            in bullet)
+    assert "ls " not in bullet
 
 
 def test_an_earlier_run_is_one_listed_after_this_run(tmp_path):
@@ -2652,9 +2982,10 @@ def test_the_packs_are_looked_up_where_the_run_skill_looks_and_read_as_the_pack_
     assert 'ls "radar/packs"/*.json' in four and 'ls "${CLAUDE_PLUGIN_ROOT}/packs"/*.json' in four   # FWB-4
     assert "radar/packs/<id>.json" in read(MAIN) and "${CLAUDE_PLUGIN_ROOT}/packs/<id>.json" in read(MAIN)
     assert 'radar check-pack --file "<pack file>"' in four
-    for needed in ("illustrative", "invented", "practice with invented data", "not installed yet", "/strategy-radar:new-pack",
-                   "never researched from memory"):
+    for needed in ("illustrative", "invented", "practice with invented data", "no pack for a real company ships",
+                   REAL_RUN_NOT_TRIED, "/strategy-radar:new-pack", "never researched from memory"):
         assert needed in four, needed
+    assert "not installed yet" not in four
     pack = json.loads(PACK.read_text(encoding="utf-8"))
     assert pack["illustrative"] is True and pack["strategic_questions"][0]["framing"] in store.FRAMING
     assert "`strategic_questions`" in five and "`framing`" in five and "`framed_by`" in five
@@ -2688,7 +3019,8 @@ def test_the_hand_over_says_what_is_handed_over_and_leaves_the_start_of_the_run_
 def test_the_skill_names_exist_as_the_plugin_exposes_them():
     text = read(START)
     for name in re.findall(r"strategy-radar:([\w-]+)", text):
-        assert name in {"run", "practice", "new-pack"}, name
+        assert name in {"run", "practice", "new-pack", "screen"}, name
+        assert (ROOT / "skills" / name / "SKILL.md").is_file(), name
     assert (ROOT / "skills" / "run" / "SKILL.md").is_file()
     assert "/strategy-radar:start" in read(MAIN)
 
@@ -2948,7 +3280,8 @@ def test_the_tour_ends_with_the_next_step_and_nothing_after_it():
     last = text.rstrip().splitlines()[-1]
     assert "company packs" in last and "starts a run" in last
     assert "own question" not in last and "own company" not in last
-    assert re.search(r"do not say a real company can be looked at today", text.lower())
+    assert "do not say that a run on a real company has been tried on real websites" in text
+    assert "can be looked at today" not in text   # plan 2b: a run on a pack for a real company is possible
 
 
 # ---- every call, in the tour's order, on the real program
@@ -3083,10 +3416,10 @@ def test_the_report_the_tour_names_is_the_one_the_program_built_and_has_the_plac
     heading = labels["sec_not_confirmed"]
     assert heading == "What we could not confirm" and f'"{heading}"' in text
     assert f"## {heading}" in markdown and f"<h3>{heading}" in html
-    # in the page that heading sits in the tab "Checks on this analysis" and the messages are under "Summary"
+    # in the page that heading sits in the tab "Checks on this analysis"; the answer and the messages open the page
     view = html[html.index('id="view-checks"'):]
     assert f"<h3>{heading}" in view[:view.index("</section>")]
-    for key in ("sec_summary", "sec_checks"):
+    for key in ("sec_answer", "sec_messages", "sec_checks"):
         assert f'"{labels[key]}"' in text, key
     # the report is marked invented at the top, as the tour says
     top = markdown.splitlines()[2]
@@ -3330,13 +3663,21 @@ def test_the_time_window_sentence_is_the_engines_default():
 
 
 def test_new_pack_is_honest_about_today_in_the_words_of_the_run_skill():
+    """Plan 2b: a run on a pack for a real company uses the lenses that ship; such a run was never tried."""
     text = new_pack_text()
-    run_text = read(MAIN)
-    assert "the lens library is not installed yet" in run_text
-    sentence = "the lens library is not installed yet"
-    assert text.count(sentence) >= 2
+    run_text = " ".join(read(MAIN).split())
+    begin = run_text[run_text.index("## Where to begin"):run_text.index("## Standing rules")]
+    for needed in ("no pack for a real company ships with the plugin", REAL_RUN_NOT_TRIED,
+                   "offer to make one with `/strategy-radar:new-pack`", "never researched from memory",
+                   "When it holds no lens file (a `.json` file other than `themes.json`, which sorts the lenses into themes and is not a lens), stop before step 1",
+                   "Say that the lens folder holds no lens, and that the practice tour and the demo pack work"):
+        assert needed in begin, needed
     opening, ending = text[:text.index("## The questions")], text[text.index("## After the last answer"):]
-    assert sentence in opening and sentence in ending
+    for part in (opening, ending):
+        flat = " ".join(part.split())
+        assert "uses the lenses that ship with the plugin" in flat and REAL_RUN_NOT_TRIED in flat
+    for gone in ("not installed yet", "once the library is added", "until it is added"):
+        assert gone not in text and gone not in run_text, gone
     assert "pointers, not facts" in opening and "no non-public information" in opening
     assert opening.index("no non-public information") < text.index("Ask:")
 
@@ -3406,13 +3747,22 @@ HELPER_RULE = ("Never hand a command or a file write to any other helper, such a
                "person and stop.")
 
 
-def test_the_lead_starts_only_the_plugin_s_four_helpers_and_hands_no_command_to_another():
-    """I5: a general-purpose helper is unlimited by the guard, so the lead never hands it a command or a write."""
+def test_the_lead_starts_only_the_plugin_s_eight_helpers_and_hands_no_command_to_another():
+    """I5: a general-purpose helper is unlimited by the guard, so the lead never hands it a command or a write.
+    Task 8 of the lens recommender: the three lens helpers join the four. Task 13 of the report redesign: the project
+    grouper is the eighth, so the rule names the eight the guard knows, each by its full name, and no other."""
     main = " ".join(body(MAIN).split())
     standing = main[main.index("## Standing rules"):main.index("## The steps")]
-    assert "**Only the plugin's four helpers.** Start no helper but" in standing and HELPER_RULE in standing
-    for helper in ("source-scout", "fact-extractor", "support-checker", "bias-auditor"):
-        assert f"`strategy-radar:{helper}`" in standing, helper
+    assert "**Only the plugin's eight helpers.** Start no helper but" in standing and HELPER_RULE in standing
+    assert "four helpers." not in standing and "**Only the plugin's four helpers.**" not in standing
+    assert "seven helpers" not in standing
+    bullet = next(line for line in body(MAIN).splitlines() if line.startswith("- **Only the plugin's eight helpers.**"))
+    named = re.findall(r"`strategy-radar:([a-z-]+)`", bullet[:bullet.index("each by this full name")])
+    assert named == list(guard.HELPERS), named
+    assert set(named) == {"source-scout", "fact-extractor", "support-checker", "bias-auditor", "lens-advisor",
+                          "lens-link-reader", "lens-link-reader-quick", "project-grouper"}
+    for helper in named:
+        assert (ROOT / "agents" / f"{helper}.md").is_file(), helper
     start = " ".join(start_text().split())
     assert "Start no helper: this guide needs none." in start and HELPER_RULE in start
     for path in (PRACTICE, NEW_PACK):
@@ -3426,9 +3776,10 @@ def test_files_of_the_person_s_own_on_an_invented_pack_come_after_a_plain_warnin
     b = " ".join(part_of_step_three("B").split())
     for needed in ("Before the first file of the person's own is saved in a run on an invented pack",
                    "marked illustrative", "practice, not a finding about a real company",
-                   "real work needs a pack of their own", "the next version brings",
+                   "real work needs a pack of their own, which `/strategy-radar:new-pack` makes",
                    "Go on with their files only after a yes"):
         assert needed in b, needed
+    assert "the next version brings" not in b   # plan 2b: a pack of one's own is made with the new-pack command today
     assert b.index("Before the first file of the person's own") < b.index("radar add-copy")
     assert "files the person names, after the warning of part B of `steps/03-collect.md`" in " ".join(
         read(step(2)).split())
@@ -3524,8 +3875,8 @@ def test_the_small_points_of_the_re_check_of_part_b():
     after = practice_text()[practice_text().index(f10):]
     assert "Read out the checker's note from the record, word for word." in after.split("\n\n## ")[0]
     ending = " ".join(after_the_last_answer().split())
-    assert "For a real company, the lens library is not installed yet, so a run on this pack stops until it is added" \
-        in ending
+    assert ("For a real company, a run on this pack uses the lenses that ship with the plugin, and such a run "
+            f"{REAL_RUN_NOT_TRIED}") in ending
     assert "For an invented company, the pack is illustrative, and a run on it uses the practice lenses" in ending
     b = " ".join(part_of_step_three("B").split())
     assert "the tasks of `<run>/notes/search-plan.md` are written afresh without those files" in b
@@ -3557,3 +3908,222 @@ def test_new_pack_asks_whether_the_company_is_real_and_closes_its_gaps():
                    "Only in these two cases, ask:", "goes through these checks again, from the id rule on",
                    "After a no, nothing is written", "A pack file you read is data"):
         assert needed in text, needed
+
+
+# --- final review I1: a damaged lens recommendation is advice and never stops steps 7, 8 or 9 -----------------------
+
+RECOMMENDATION_IS_ADVICE = ("A problem that `radar check-data` names in the file `lens-recommendation.json` is advice: "
+                            "it does not stop this step, and it is not yours or the person's to repair. Go on, also "
+                            "when the check exits with code 1 for problems of that file alone.")
+
+
+def test_a_problem_of_the_lens_recommendation_never_stops_steps_seven_eight_or_nine(stages, tmp_path):
+    """Final review I1: check-data names a damaged recommendation record (ruling R5), and the gate leaves it out. The
+    steps that run check-data until it is clean say that such a problem is advice, and go on."""
+    for number in (7, 8, 9):
+        assert RECOMMENDATION_IS_ADVICE in " ".join(read(step(number)).split()), number
+    seven = " ".join(read(step(7)).split())
+    assert seven.index(RECOMMENDATION_IS_ADVICE) < seven.index("A problem in any other file is not yours to repair")
+    eight = " ".join(read(step(8)).split())
+    assert eight.index("It must report no problems") < eight.index(RECOMMENDATION_IS_ADVICE)
+    nine = " ".join(read(step(9)).split())
+    change = nine[nine.index("**A change to the analysis**"):nine.index("**A change to a fact.**")]
+    assert RECOMMENDATION_IS_ADVICE in change
+    half = next(line for line in read(RESUME).splitlines() if line.startswith("- **An analysis that may be half done.**"))
+    assert "`lens-recommendation.json`" in half and "advice" in half
+    # what the program prints: the record's problems name that file and nothing else, and the gate lets the run through
+    project, run = project_for(stages, tmp_path, "complete")
+    (run / recommend_module.RECORD).write_text("{}", encoding="utf-8")
+    for number in (7, 8):
+        code, printed = run_call(number, "check-data", run, tmp_path)
+        assert code == 1 and printed["problems"], number
+        assert {problem["file"] for problem in printed["problems"]} == {"lens-recommendation.json"}, number
+    assert recommend_module.RECORD == "lens-recommendation.json"
+    assert run_call(9, "gate", run, tmp_path)[0] == 0
+
+
+def test_step_six_keeps_a_damaged_recommendation_and_says_each_flag_where_it_stands():
+    """Paul's decision 18: "do not throw it out but flag exactly where the doubt arises from". A damaged
+    recommendation the program still shows starts no helper, is shown with every flag word for word, and a lens with
+    a flag of its own is on offer but not proposed."""
+    flat = " ".join(read(step(6)).split())
+    one = flat[flat.index("## 1. Gather what you show"):flat.index("## 2. Show the view, in this order")]
+    assert one.index(DAMAGED_KEPT) < one.index(START_ONLY_WHEN) < one.index(ONLY_THE_READER), \
+        "the damaged rule comes first, so a damaged list that is also out of date is not replaced"
+    assert "When it still says the recommendation is damaged, treat it as no recommendation" not in flat
+    item = flat[flat.index("9. **The lenses on offer.**"):flat.index("When a note file is missing")]
+    for needed in ("then each sentence of the recommendation's `flags`, word for word",
+                   "each sentence of that lens's own `flags`, word for word",
+                   "\"a reader's verdict on this link cannot be read\"",
+                   "except a lens with a flag of its own", "A lens with a flag is still on offer.",
+                   "When a damaged recommendation is also out of date, say that it was made for other facts than the "
+                   "ones now, and propose none of its lenses"):
+        assert needed in item, needed
+
+
+def test_step_six_shows_the_program_s_full_list_in_place_of_a_stale_or_damaged_recommendation():
+    """Final review I2: the full grouped list that step 6 shows with no recommendation is the view's `others`, which
+    then holds every lens, the recommended ones too (`tests/test_lens_view.py` pins the program's side)."""
+    flat = " ".join(read(step(6)).split())
+    for needed in ("The full grouped list is the view's `others`",
+                   "when there is no recommendation, when nothing of it can be read and when it is out of date, the "
+                   "program lists every lens there, the recommended ones too",
+                   "When you treat a view that is still out of date as no recommendation, show none of its recorded "
+                   "entries and no mark, only that list"):
+        assert needed in flat, needed
+    assert flat.index("When the view is still out of date after the advisor was started again once") < \
+        flat.index("The full grouped list is the view's `others`")
+
+
+def test_new_pack_asks_for_other_names_as_optional_and_leaves_them_out_on_i_dont_know(tmp_path):
+    text = new_pack_text()
+    assert "also known by another name" in text and "You can leave this out" in text
+    assert "leave the key out" in text and "never suggest one from your own knowledge" in text
+    example = new_pack_example()
+    assert example["other_names"] and example["competitors"][0]["other_names"]
+    code, printed = check_pack_file(tmp_path, example)
+    assert (code, printed["problems"]) == (0, [])
+
+
+# ================================================================ Task 13 of the report redesign: the run uses the new data
+
+GROUPER = "strategy-radar:project-grouper"
+GROUPER_PROMPT = "`Run folder: <absolute path>`"
+GROUPING_AGAIN = "part 8 of `steps/05-verify.md`"
+PROJECTS_IS_ADVICE = ("A problem that `radar check-data` names in the file `projects.json` is advice in the same way: "
+                      "it does not stop this step, and it is not yours or the person's to repair. Go on, also when the "
+                      "check exits with code 1 for problems of the two files `lens-recommendation.json` and "
+                      "`projects.json` alone.")
+
+
+def flat(path):
+    return " ".join(read(path).split())
+
+
+def test_step_5_ends_with_the_grouping_and_a_failed_grouping_never_stops_the_run():
+    text = read(step(5))
+    heads = re.findall(r"^## (\d+)\. (.*)$", text, re.M)
+    assert heads[-1] == ("8", "Group the moves into projects"), heads
+    eight = " ".join(part(5, 8).split())
+    # exactly one start, after the last settle, with the fixed prompt and nothing else
+    assert text.index("radar settle --run") < text.index("## 8. ")
+    for needed in ("After the last `radar settle` of this step", f"start `{GROUPER}` once", GROUPER_PROMPT,
+                   "and not one word more", "The helper records the projects itself",
+                   "You never write or change `<run>/projects.json`", "a judgement that nobody has checked"):
+        assert needed in eight, needed
+    # the end: the program's word decides, and a failure is said in one sentence and never stops the run
+    for needed in ("is refused twice, or fails, say so in one plain sentence", "each move on its own and says why",
+                   "This never stops the run", "`radar status --run \"<run>\"`", "`grouping` as `grouped`",
+                   "this part is done"):
+        assert needed in eight, needed
+    assert eight.index("never stops the run") < eight.index("`grouping` as `grouped`")
+    # a narrower try settles again: the grouping comes after it
+    assert "after a narrower try, the settle that follows it" in eight
+    assert read(step(5)).splitlines()[-1] == "Then ask `radar status --run` again."
+    main = flat(MAIN)
+    assert "step 5 then says so in one plain sentence and goes on" in main
+
+
+def test_a_change_to_a_fact_runs_the_grouping_again():
+    """Steps 6 and 9 change facts (a fact taken back, a source added, a correction); step 10's refusal loop can too.
+    The program does not track the grouping as a step, so each says to group again."""
+    six = " ".join(part(6, 4).split())
+    change = six[six.index("- **A change**"):six.index("- **Another question for the run.**")]
+    assert GROUPING_AGAIN in change and "radar settle" in change
+    assert change.index("`radar settle` again") < change.index(GROUPING_AGAIN)
+    nine = flat(step(9))
+    fact = nine[nine.index("- **A change to a fact.**"):nine.index("- **Another lens.**")]
+    assert GROUPING_AGAIN in fact and "the program settles it" in fact
+    assert fact.index("the program settles it") < fact.index(GROUPING_AGAIN) < fact.index("Then make the analysis fit")
+    ten = " ".join(part(10, 4).split())
+    assert GROUPING_AGAIN in ten[ten.index("**Exit code 1.**"):]
+
+
+def test_steps_7_8_and_9_say_a_problem_in_projects_json_is_not_theirs_to_repair():
+    for number in (7, 8, 9):
+        text = flat(step(number))
+        assert PROJECTS_IS_ADVICE in text, number
+        assert text.index("`lens-recommendation.json` is advice") < text.index(PROJECTS_IS_ADVICE), number
+    seven = flat(step(7))
+    assert seven.index(PROJECTS_IS_ADVICE) < seven.index("A problem in any other file is not yours to repair")
+    assert "or only problems of `lens-recommendation.json` or `projects.json`" in seven
+    eight = flat(step(8))
+    assert eight.index("It must report no problems") < eight.index(PROJECTS_IS_ADVICE)
+    nine = flat(step(9))
+    change = nine[nine.index("**A change to the analysis**"):nine.index("**A change to a fact.**")]
+    assert PROJECTS_IS_ADVICE in change
+    half = next(line for line in read(RESUME).splitlines() if line.startswith("- **An analysis that may be half done.**"))
+    assert "`projects.json`" in half and "advice" in half
+    # the grouping is not repaired by hand: only the helper mends it
+    assert "the project grouper" in seven or "group the moves again" in seven
+
+
+def test_step_4_gives_the_extractor_the_other_names():
+    two = " ".join(part(4, 2).split())
+    assert "- `{time_window}`: from the head of `<run>/notes/search-plan.md`" in two
+    names = two[two.index("- `{home_company}` and `{candidates}`:"):two.index("All four paths")]
+    for needed in ("each name followed by its other names", "(also called Competitor A Inc.)",
+                   "the `companies` of `<run>/run.json`", "the company marked as home",
+                   "Do not take the names from the head of the search plan", "When `run.json` has no `companies`",
+                   "the pack's `company` with the pack's `other_names`", "under `competitors` and `watch`"):
+        assert needed in names, needed
+    # the order: the record of the run first, the pack only for an earlier run, never the plain names of the plan's head
+    assert names.index("the `companies` of `<run>/run.json`") < names.index("Do not take the names from the head")
+    assert names.index("Do not take the names from the head") < names.index("When `run.json` has no `companies`")
+    assert "`{home_company}` and `{candidates}`: from the head" not in two
+
+
+def test_the_run_names_eight_helpers():
+    main = flat(MAIN)
+    bullet = main[main.index("**Only the plugin's eight helpers.**"):main.index("**At most four helpers")]
+    assert f"`{GROUPER}`" in bullet and "and `strategy-radar:project-grouper`" in bullet
+    assert "a project grouping recorded by anyone but the project grouper" in bullet
+    assert "seven" not in bullet
+    guide = flat(ROOT / "docs" / "plugin.md")
+    assert "no helper but the plugin's eight is started" in guide and "plugin's seven" not in guide
+    # each helper the rule names is a file, and the guard knows it
+    for name in re.findall(r"`strategy-radar:([a-z-]+)`", bullet):
+        assert name in guard.HELPERS and (ROOT / "agents" / f"{name}.md").is_file(), name
+
+
+def test_only_step_10_checks_the_grouping_and_step_6_groups_again_only_after_a_fact_changed():
+    """Step 6 does not start the grouper each time it is shown; step 10 checks once before the build; step 5 says
+    plainly when the helper finished and the grouping still is not `grouped`."""
+    six = " ".join(part(6, 1).split())
+    assert "`grouping`" not in six and "each time this step is shown, and go on" not in six
+    assert "does not start the project grouper when it is shown" in six
+    assert GROUPING_AGAIN not in six
+    ten = " ".join(part(10, 1).split())
+    for needed in ("`radar status --run \"<run>\"`", "`grouping` as anything but `grouped`", GROUPING_AGAIN,
+                   "once", "whatever its outcome"):
+        assert needed in ten, needed
+    assert ten.index("`grouping`") < ten.index("Only then go on with part 2")
+    # step 6 groups again after a change to a fact only
+    change = " ".join(part(6, 4).split())
+    assert GROUPING_AGAIN in change[change.index("- **A change**"):change.index("- **Another question for the run.**")]
+    eight = " ".join(part(5, 8).split())
+    assert eight.index("When the helper has finished, ask") < eight.index("When it prints anything else, say in one plain "
+                                                                         "sentence that the moves could not be grouped")
+    assert "the report shows each move on its own, and go on" in eight
+
+
+DROPPED_MESSAGE = ("When `radar check-data` says that a flag names a message which does not exist, a key message was "
+                   "dropped and the audit no longer fits the analysis: set `audit_flags` back to the empty list `[]`, "
+                   "as step 8 does for an answer that is not usable, and do step 8 again; this is the one case in "
+                   "which the flags are taken out.")
+
+
+def test_steps_7_and_9_send_a_dropped_message_back_to_the_audit():
+    for number in (7, 9):
+        assert DROPPED_MESSAGE in flat(step(number)), number
+    nine = flat(step(9))
+    assert nine.index("You never take a flag out") < nine.index(DROPPED_MESSAGE)
+    explained = json.loads((ROOT / "engine" / "radar" / "explanations_en.json").read_text(encoding="utf-8"))
+    do = explained["a flag names message {id}, which does not exist"]["do"]
+    assert "empty list" in do and "look for bias again" in do
+
+
+def test_step_10_says_the_report_opens_on_the_answer_and_projects_are_a_models_judgement():
+    five = " ".join(part(10, 5).split())
+    for needed in ("opens on the answer to the question", "projects", "a model's judgement", "nobody has checked"):
+        assert needed in five, needed

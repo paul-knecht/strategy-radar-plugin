@@ -1,0 +1,26 @@
+{
+  "id": "dominant-logic",
+  "name": "The mental map at the top",
+  "idea": "The work argues that top managers run a diversified firm through a dominant logic: a shared mental map of the business and of how to manage it, formed by experience in the core business. It argues that a diversified firm's performance depends on whether its businesses can be run with that logic, so that strategic variety among them, not only their spread of products, sets the limit.",
+  "suggests": "Look at whether a company's businesses can be run with the way of thinking that grew up in its core business, or whether some need a different one.",
+  "limits": "The work allows that a top team can hold more than one dominant logic, though only a limited number, so a firm need not confine itself to businesses that share a single logic.",
+  "competing_idea": "Another view holds that managers use cash beyond what profitable projects need to make diversifying acquisitions, which grow the firm they run but tend to destroy value.",
+  "questions": [
+    "Is the newest business run with the same assumptions and management tools as the core business?",
+    "Do the businesses differ in what it takes to win, even where their products look related?",
+    "Is top management's experience drawn mainly from one business?"
+  ],
+  "originals": [
+    {
+      "reference": "C. K. Prahalad and Richard A. Bettis, \"The dominant logic: A new linkage between diversity and performance\", Strategic Management Journal, Vol. 7 No. 6, November 1986, pp. 485-501",
+      "level": "reference_confirmed",
+      "link": "https://doi.org/10.1002/smj.4250070602"
+    },
+    {
+      "reference": "Michael C. Jensen, \"Agency Costs of Free Cash Flow, Corporate Finance, and Takeovers\", American Economic Review, Vol. 76 No. 2, 1986, pp. 323-329",
+      "level": "reference_confirmed",
+      "link": "https://openalex.org/W3121131820"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

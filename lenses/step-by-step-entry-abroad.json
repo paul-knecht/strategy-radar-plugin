@@ -1,0 +1,22 @@
+{
+  "id": "step-by-step-entry-abroad",
+  "name": "Entering abroad step by step",
+  "idea": "An encyclopedia entry states that, in the model the work modified, firms usually begin abroad with exports and add commitment only after gaining experience. It states that commitment tends to rise as market knowledge grows, that lack of knowledge is the main barrier, and that firms tend to enter first the markets close in psychological distance, as they are seen as more familiar and less risky.",
+  "suggests": "Look at how a company's presence in a foreign market has grown: whether it began with exports and moved to forms that need more commitment as it learned the market, and whether its first markets abroad were close to home in language and culture.",
+  "limits": "The entry states that, in the model, a company's commitment can shrink or fade away if the foreign venture performs unsatisfactorily, and that the model has been criticised as not relevant to firms that sell services.",
+  "competing_idea": "The entry reports a critique: not every enterprise starts with its home market, and many companies, called born globals, are active on international markets from the day they are founded.",
+  "questions": [
+    "Did the company enter this market through exports first, and has its commitment grown as it learned the market?",
+    "How close is the market to the company's home in language, culture, education and political and legal system?",
+    "How has the venture performed so far, and could weak results lead the company to scale back its commitment?"
+  ],
+  "originals": [
+    {
+      "reference": "\"Uppsala model\", Wikipedia, the free encyclopedia (an open encyclopedia entry, read on 16 November 2026)",
+      "level": "secondary_source_read",
+      "about": "Jan Johanson and Jan-Erik Vahlne, \"The Internationalization Process of the Firm - A Model of Knowledge Development and Increasing Foreign Market Commitments\", Journal of International Business Studies, vol. 8, no. 1, March 1977, pp. 23-32",
+      "link": "https://en.wikipedia.org/wiki/Uppsala_model"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

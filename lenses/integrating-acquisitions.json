@@ -1,0 +1,26 @@
+{
+  "id": "integrating-acquisitions",
+  "name": "How much to integrate after buying",
+  "idea": "The work argues that an acquisition creates value mainly after the deal, through how the firms are combined. It weighs the need for strategic interdependence, to move capabilities between them, against the bought firm's need for autonomy, to keep what made it worth buying. The balance, it argues, points to absorbing, preserving, a symbiosis of the two firms, or merely holding.",
+  "suggests": "Look at how a company has combined a firm it bought: what it moved between the two, and what it left alone.",
+  "limits": "The work argues that problems in the decision process before the deal, such as momentum that builds once a deal is in view and unclear expectations, can harm an acquisition before integration starts.",
+  "competing_idea": "Another view holds that the bidder's owners lose at the bid itself, because bidding managers overestimate a target's worth and so pay too much.",
+  "questions": [
+    "Which capabilities was the company meant to transfer between itself and the firm it bought?",
+    "Did the bought firm need to keep its own way of working to keep what made it valuable?",
+    "Was the bought firm absorbed, kept apart, or combined step by step, and does that fit the two needs?"
+  ],
+  "originals": [
+    {
+      "reference": "Philippe C. Haspeslagh and David B. Jemison, Managing acquisitions: creating value through corporate renewal, New York: Free Press, 1991, xi, 416 p.",
+      "level": "reference_confirmed",
+      "link": "https://lccn.loc.gov/90045945"
+    },
+    {
+      "reference": "Richard Roll, \"The Hubris Hypothesis of Corporate Takeovers\", The Journal of Business, Vol. 59 No. 2, April 1986, pp. 197-216",
+      "level": "reference_confirmed",
+      "link": "https://ideas.repec.org/a/ucp/jnlbus/v59y1986i2p197-216.html"
+    }
+  ],
+  "checked_on": "2026-11-16"
+}

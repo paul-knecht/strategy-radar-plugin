@@ -164,6 +164,16 @@ def test_calc_refuses_a_fact_whose_sources_were_linked_after_it_was_settled(tmp_
     assert code == 0 and out == {"result": "2", "includes_uncertain": True, "problems": [], "explained": []}
 
 
+def test_calc_adds_filling_and_plain_lines_but_refuses_an_unrelated_unit(tmp_path, capsys):
+    run = two_source_run(tmp_path)      # F1: size_unit "lines"
+    add_fact(run, source_id="S1", primary_source=False, fields={"size_unit": "Filling Lines"},
+             supporting=[{"source_id": "S2", "quote": "Competitor A will add a second filling line at Plant North"}])
+    verify.check_quotes(run); verify.record_support(run, "F2", True, "support-checker", ""); verify.settle(run)
+    assert run_calc(capsys, run, "--operation", "sum", "--unit", "lines", "--facts", "F1,F2")[1]["result"] == "4"
+    code, out = run_calc(capsys, run, "--operation", "sum", "--unit", "m²", "--facts", "F1,F2")
+    assert code == 1 and out["result"] is None and len(out["problems"]) == 2
+
+
 def test_calc_refuses_a_fact_with_a_fresh_verdict_that_was_not_settled(tmp_path, capsys):
     run = two_source_run(tmp_path)
     verify.record_support(run, "F1", False, "support-checker", "the paper names another plant")
