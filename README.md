@@ -60,7 +60,7 @@ In a Claude Code session with the plugin on:
 | `/strategy-radar:practice` | A short tour of a finished invented run, including the three planted errors the checks catch. Needs no internet. |
 | `/strategy-radar:run` | A run of ten steps with the two decisions that are yours. |
 | `/strategy-radar:new-pack` | Makes a pack file for a company you name. A run on a pack for a real company uses the eighty-three lenses that ship with the plugin; such a run has been tried on real websites in only a few runs so far. |
-| `/strategy-radar:screen` | Starts a screening run on one startup: a first-pass investment memo on its company, market, competition, team, traction and risks. You give its name and website; it proposes the competitors and pages to search from a web search, each with the page where it was found, and you confirm them; this search has not yet run in a real session. Then it hands over to the run. The memo prepares a decision and does not make it. |
+| `/strategy-radar:screen` | Starts a screening run on one startup: a first-pass investment memo on its company, market, competition, team, traction and risks. You give its name and website; it proposes the competitors and pages to search from a web search, each with the page where it was found, and you confirm them; this search has run in two real screening sessions so far. Then it hands over to the run. The memo prepares a decision and does not make it. |
 
 ## Screening a startup
 
@@ -104,7 +104,7 @@ uv run pytest -m model tests/model -q
 
 ## Status
 
-Version 0.4.0. Built with a plan, a review after every task and a final review of the whole branch; the decisions and what was not verified are recorded in `docs/superpowers/plans/2026-11-12-strategy-radar-plugin-ledger.md`. Real runs on public websites have been tried in only a few runs so far, among them one screening run on a startup; that run used a pack whose competitors and pages the person named, so the web search of `/strategy-radar:screen` has not yet run in a real session. Not done yet: sample runs.
+Version 0.4.1. Built with a plan, a review after every task and a final review of the whole branch; the decisions and what was not verified are recorded in `docs/superpowers/plans/2026-11-12-strategy-radar-plugin-ledger.md`. Real runs on public websites have been tried in only a few runs so far, among them three screening runs on startups; the web search of `/strategy-radar:screen` proposed the competitors and pages in two of them. Not done yet: sample runs.
 
 **New in 0.4.0, for older runs:** the money check now reads every text of the analysis, not only what could not be found. Checking an older finished run again may stop there: in each named text, name one of the listed facts that state an amount and say why its amount does not answer, or reword the text, then build again.
 

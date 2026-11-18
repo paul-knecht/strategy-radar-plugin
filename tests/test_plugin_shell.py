@@ -64,9 +64,9 @@ def test_the_readme_says_what_a_run_on_a_real_pack_uses_and_what_is_not_done_yet
     row = next(line for line in (ROOT / "README.md").read_text(encoding="utf-8").splitlines()
                if line.startswith("| `/strategy-radar:new-pack`"))
     assert "A run on a pack for a real company uses the eighty-three lenses" in row and "A run on it uses" not in row
-    assert ("Real runs on public websites have been tried in only a few runs so far, among them one screening run on "
-            "a startup; that run used a pack whose competitors and pages the person named, so the web search of "
-            "`/strategy-radar:screen` has not yet run in a real session. Not done yet: sample runs.") in text
+    assert ("Real runs on public websites have been tried in only a few runs so far, among them three screening runs on "
+            "startups; the web search of `/strategy-radar:screen` proposed the competitors and pages in two of them. "
+            "Not done yet: sample runs.") in text
     assert "Still to come" not in text
 
 

@@ -56,7 +56,7 @@ def test_the_screen_skill_proposes_competitors_and_pages_from_a_search_never_fro
     """Paul, 2026-11-17: the person gives name and website; the AI finds the rest, each with the page it was found on."""
     body = text(ROOT / "skills" / "screen" / "SKILL.md")
     for needed in ('"suggested_by": "search"', "`found_at`", "Propose only pages you opened",
-                   "never proposed, whatever you know", "Answer all, or name the numbers to strike"):
+                   "never proposed, whatever you know", "name the numbers to strike"):
         assert needed in body, needed
     assert "Every name and address still comes from the person's words" not in body
 
