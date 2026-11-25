@@ -3,6 +3,8 @@ import ipaddress
 import json
 import socket
 import ssl
+import subprocess
+import sys
 import threading
 import time
 import urllib.error
@@ -307,8 +309,57 @@ def test_an_empty_store_falls_back_to_the_system_file(tmp_path, monkeypatch, cas
     system_file = tmp_path / "cert.pem"
     if file_exists:
         system_file.write_text("x")
+    monkeypatch.setattr(fetch, "_mac_roots", lambda: "")
     assert fetch.ssl_context(str(system_file)) is fake
     assert fake.loaded == ([{"cafile": str(system_file)}] if loaded else [])
+
+
+@pytest.mark.parametrize("cas, loaded", [(0, True), (5, False)])
+def test_an_empty_store_also_takes_the_roots_the_mac_itself_ships(tmp_path, monkeypatch, cas, loaded):
+    fake = _FakeContext(cas)
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    monkeypatch.delenv("SSL_CERT_DIR", raising=False)
+    monkeypatch.setattr(ssl, "create_default_context", lambda *a, **k: fake)
+    monkeypatch.setattr(fetch, "_mac_roots", lambda: "PEM")
+    fetch.ssl_context(str(tmp_path / "none"))
+    assert fake.loaded == ([{"cadata": "PEM"}] if loaded else [])
+
+
+def test_the_mac_roots_are_empty_where_they_cannot_be_read(monkeypatch):
+    for error in (FileNotFoundError(), subprocess.TimeoutExpired("security", 10),
+                  subprocess.CalledProcessError(1, "security")):
+        def fail(*args, error=error, **kwargs):
+            raise error
+        monkeypatch.setattr(fetch.subprocess, "run", fail)
+        fetch._mac_roots.cache_clear()
+        assert fetch._mac_roots() == ""
+    fetch._mac_roots.cache_clear()
+
+
+def test_roots_that_cannot_be_read_as_certificates_never_stop_fetching(monkeypatch):
+    plain = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    monkeypatch.setattr(ssl, "create_default_context", lambda *a, **k: plain)
+    monkeypatch.setattr(fetch, "_mac_roots", lambda: "-----BEGIN CERTIFICATE-----\nxx\n-----END CERTIFICATE-----\n")
+    assert fetch.ssl_context("/no/such/file") is plain and plain.verify_mode is ssl.CERT_REQUIRED
+
+
+@pytest.mark.parametrize("name", ["SSL_CERT_FILE", "SSL_CERT_DIR"])
+def test_a_certificate_choice_of_the_person_is_not_widened_by_the_mac_roots(tmp_path, monkeypatch, name):
+    fake = _FakeContext(0)
+    monkeypatch.setattr(ssl, "create_default_context", lambda *a, **k: fake)
+    monkeypatch.setattr(fetch, "_mac_roots", lambda: "PEM")
+    monkeypatch.setenv(name, str(tmp_path))
+    fetch.ssl_context(str(tmp_path / "none"))
+    assert fake.loaded == []
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="only a Mac has this keychain")
+def test_the_mac_roots_load_and_certificates_are_still_checked(monkeypatch):
+    plain = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)              # an empty store, checking on
+    monkeypatch.setattr(ssl, "create_default_context", lambda *a, **k: plain)
+    context = fetch.ssl_context("/no/such/file")
+    assert context.cert_store_stats()["x509_ca"] > 50
+    assert context.verify_mode is ssl.CERT_REQUIRED and context.check_hostname is True
 
 
 def test_a_failed_certificate_check_is_named(tmp_path, monkeypatch):

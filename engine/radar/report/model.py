@@ -155,6 +155,12 @@ def checkpoint_parts(item: dict, labels: dict[str, str]) -> list[str]:
     return [answer] if answered and answer.startswith(answered + ":") else [answered, answer]
 
 
+def _unattended_stops(checkpoints) -> list[str]:
+    """The stops whose last recorded decision (the list is append-only) was made without a person."""
+    last = {item.get("name"): item.get("answered_by") for item in checkpoints or [] if isinstance(item, dict)}
+    return [name for name in ("lenses", "final_report") if last.get(name) == "unattended"]
+
+
 def _company_key(company) -> str:
     return normalise(company).casefold() if isinstance(company, str) else ""
 
@@ -524,6 +530,7 @@ def build_model(run_dir: Path, lenses_dir: Path, now: datetime | None = None) ->
         "pack": run.get("pack"),
         "illustrative": bool(run.get("illustrative")),
         "screening": bool(run.get("screening")),
+        "unattended": _unattended_stops(run.get("checkpoints")),
         "sources_read_until": (run.get("sources_read_until") or _latest_save_date(sources)
                                or (run.get("started_at") or "")[:10] or None),
         "built_on": store._stamp(now)[:10],

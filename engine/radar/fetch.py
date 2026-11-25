@@ -4,18 +4,22 @@ The saved text copy is exactly what extract_text returns for the downloaded byte
 no summarising, no editing. Everything downloaded is untrusted data: parsed, never executed.
 Nothing is sent but the user agent and what urllib adds by default (no cookies, no credentials).
 """
+import contextlib
 import http.client
 import ipaddress
 import json
+import os
 import re
 import socket
 import ssl
 import string
+import subprocess
 import time
 import unicodedata
 import urllib.error
 import urllib.request
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from urllib.parse import quote, urldefrag, urljoin, urlsplit
 from urllib.robotparser import RobotFileParser
@@ -75,11 +79,30 @@ class _StopAtRedirects(urllib.request.HTTPRedirectHandler):
     http_error_301 = http_error_303 = http_error_307 = http_error_308 = http_error_302
 
 
+@lru_cache(maxsize=1)
+def _mac_roots() -> str:
+    """The root certificates macOS ships, as PEM text; empty where they cannot be read (any other system)."""
+    try:
+        return subprocess.run(["/usr/bin/security", "find-certificate", "-a", "-p",
+                               "/System/Library/Keychains/SystemRootCertificates.keychain"],
+                              capture_output=True, check=True, timeout=10).stdout.decode("ascii")
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return ""
+
+
 def ssl_context(system_file: str = "/etc/ssl/cert.pem") -> ssl.SSLContext:
-    """Python's default certificate checking; a Python with an empty store (python.org on a Mac) borrows the system file."""
+    """Python's default certificate checking; a Python with an empty store (python.org on a Mac) borrows the system file
+    and the roots macOS ships: the file alone lacks roots that websites use."""
     context = ssl.create_default_context()
-    if context.cert_store_stats()["x509_ca"] == 0 and Path(system_file).is_file():
-        context.load_verify_locations(cafile=system_file)
+    if context.cert_store_stats()["x509_ca"] == 0:
+        if Path(system_file).is_file():
+            context.load_verify_locations(cafile=system_file)
+        chosen = os.environ.get("SSL_CERT_FILE") or os.environ.get("SSL_CERT_DIR")   # the person's own choice holds
+        if not chosen and (roots := _mac_roots()):
+            # shortcut: every root in the keychain counts, whatever use Apple limits it to; read the trust settings
+            # when that matters
+            with contextlib.suppress(ssl.SSLError):
+                context.load_verify_locations(cadata=roots)
     return context
 
 

@@ -11,8 +11,8 @@ import unicodedata
 from datetime import date
 from pathlib import Path
 
-from . import (__version__, calc, context, diff, fetch, join, lens_view, pack, parts, projects, recommend, setup_env,
-               store, verify)
+from . import (__version__, calc, claims, context, diff, fetch, join, lens_view, pack, parts, projects, recommend,
+               setup_env, store, verify)
 from .explain import explain
 from .gate import gate
 from .lenses import check_lenses
@@ -169,10 +169,16 @@ def _cmd_add_facts(args) -> int:
     return 1 if refused else 0
 
 
-def _cmd_join_proposals(args) -> int:
-    sources = args.sources.split(",")
+def _sources_of(text: str) -> list[str]:
+    """The source ids of `--sources`; a usage error unless each is `S` and digits, given once."""
+    sources = text.split(",")
     if not all(join.SOURCE_ID.fullmatch(source_id) for source_id in sources) or len(set(sources)) < len(sources):
         raise UsageError("--sources must be source ids such as S3,S4, each once, separated by commas")
+    return sources
+
+
+def _cmd_join_proposals(args) -> int:
+    sources = _sources_of(args.sources)
     merges = []
     if args.merges is not None:
         _require_file(Path(args.merges))
@@ -510,11 +516,10 @@ def _cmd_lens_advisor_input(args) -> int:
 
 def _cmd_lens_link_context(args) -> int:
     try:
-        packets = recommend.link_packets(Path(args.run), Path(args.lenses))
+        found = recommend.link_parts(Path(args.run), Path(args.lenses))
     except lens_view.LensFolderUnreadable as unreadable:
         raise UsageError(str(unreadable))
-    _emit({"packets": packets})
-    return 0
+    return _emit_part(found, args.part)
 
 
 def _cmd_record_link_check(args) -> int:
@@ -549,6 +554,33 @@ def _cmd_record_projects(args) -> int:
         return 1
     _emit({"recorded": True, **_problems_and_explanations([])})
     return 0
+
+
+def _cmd_claim_matcher_input(args) -> int:
+    try:
+        found = claims.matcher_parts(Path(args.run), _sources_of(args.sources))
+    except join.JoinRefused as refused:
+        _emit(_problems_and_explanations(refused.problems))
+        return 1
+    return _emit_part(found, args.part)
+
+
+def _cmd_record_claim_groups(args) -> int:
+    sources, what = _sources_of(args.sources), "the claim groups"
+    text = _stdin_text(f"there is no standard input to read {what} from",
+                       f"{what} are expected on standard input, and standard input is a terminal. Send them as "
+                       "plain lines on standard input.",
+                       f"{what} on standard input are not valid UTF-8 text. Send them as plain text.")
+    try:
+        groups = claims.parse_group_lines(text.splitlines())
+    except ValueError as malformed:
+        raise UsageError(str(malformed))
+    try:
+        problems = claims.record_groups(Path(args.run), sources, groups, args.by)
+    except join.JoinRefused as refused:   # a source without a saved answer; nothing was written
+        problems = refused.problems
+    _emit({"recorded": not problems, **_problems_and_explanations(problems)})
+    return 1 if problems else 0
 
 
 def _projects_file(file: str, what: str) -> list:
@@ -856,9 +888,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=_cmd_lens_advisor_input)
 
     p = sub.add_parser("lens-link-context", help="print what the link readers read: each suggested lens beside each "
-                                                 "of its facts, without the advisor's reasons; changes nothing")
+                                                 "of its facts, without the advisor's reasons, in parts; changes "
+                                                 "nothing")
     p.add_argument("--run", required=True)
     p.add_argument("--lenses", required=True, help="the folder of the lens files")
+    p.add_argument("--part", type=_part_number, default=1, help="the part to print, 1 when not given; part 1 says "
+                                                                 "how many parts there are")
     p.set_defaults(func=_cmd_lens_link_context)
 
     p = sub.add_parser("record-link-check", help="record a link reader's verdict on one lens and one of its facts")
@@ -893,6 +928,26 @@ def build_parser() -> argparse.ArgumentParser:
                             help="read the projects from standard input in plain lines, project: NAME and facts: F1, "
                                  "F2, a blank line between projects; give this or --file")
     p.set_defaults(func=_cmd_record_projects)
+
+    p = sub.add_parser("claim-matcher-input", help="print what the claim matcher reads: the question and every "
+                                                   "proposal of this round's saved answers, with its place and quote; "
+                                                   "in parts; changes nothing")
+    p.add_argument("--run", required=True)
+    p.add_argument("--sources", required=True, help="the source ids of this round, separated by commas, such as S3,S4")
+    p.add_argument("--part", type=_part_number, default=1, help="the part to print, 1 when not given; part 1 says "
+                                                                 "how many parts there are")
+    p.set_defaults(func=_cmd_claim_matcher_input)
+
+    p = sub.add_parser("record-claim-groups",
+                       help="check the claim matcher's groups of proposals that state the same claim and write them "
+                            "as proposals/merges.json; exit 1 if they are refused")
+    p.add_argument("--run", required=True)
+    p.add_argument("--sources", required=True, help="the source ids of this round, separated by commas, such as S3,S4")
+    p.add_argument("--by", required=True, help="who made the groups; only the claim matcher may record them")
+    p.add_argument("--list-stdin", action="store_true", required=True,
+                   help="read the groups from standard input in plain lines, keep: S6#1 and fold: S2#3, S9#1, a "
+                        "blank line between groups; no line means no groups")
+    p.set_defaults(func=_cmd_record_claim_groups)
 
     p = sub.add_parser("demo", help="build the invented demo run, all of it or up to a stage; the folder must not exist")
     p.add_argument("--root", required=True, help="the folder the demo run folder is made in")

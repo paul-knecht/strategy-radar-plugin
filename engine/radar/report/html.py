@@ -848,6 +848,8 @@ class _Page:
         disclaimer = self.t("disclaimer_private") if model["confidential"] else self.t("disclaimer")
         memo_kind = f'<p class="memo-kind">{self.t("screening_title")}</p>\n' if screening else ""
         memo_note = f'<p class="memo-note">{self.t("screening_note")}</p>\n' if screening else ""
+        unattended = "".join(f'<p class="unattended">{self.t("unattended_lenses" if name == "lenses" else "unattended_final")}</p>\n'
+                             for name in model.get("unattended", []))
         return (f'<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
                 f'<meta name="viewport" content="width=device-width, initial-scale=1">\n'
                 f'<meta name="color-scheme" content="light dark">\n<title>{esc(model["question"])}</title>\n'
@@ -856,6 +858,7 @@ class _Page:
                 f'<p class="status-line">{self.status_line()}</p>\n'
                 f'<p class="built-on">{self.fmt("built_on", date=model["built_on"])}</p>\n'
                 f'<p class="disclaimer">{disclaimer}</p>\n'
+                f'{unattended}'
                 f'<button class="print" type="button">{self.t("print")}</button>\n</header>\n'
                 f'<main>\n{top}<nav class="tabs">{tabs}</nav>\n{sections}\n</main>\n</body>\n</html>\n')
 

@@ -2,7 +2,7 @@ Send this as text now, before the step's first command: "Step 6 of 10: Your deci
 
 # Step 6: Your decision: lenses
 
-The person decides which lenses the analysis uses. You show what the run found, you propose, you ask, and you stop. A helper never answers this question, and neither do you.
+The person decides which lenses the analysis uses. You show what the run found, you propose, you ask, and you stop. A helper never answers this question, and neither do you, except as part 3 says for an unattended run.
 
 ## 1. Gather what you show
 
@@ -16,9 +16,7 @@ Then read the records. You only read them. A fact is `<run>/facts/<id>.json`, wi
 
 Then ask the program for the view, which changes nothing: `radar lens-view --run "<run>" --lenses "<lens folder>"`. Take the first of these that fits. When the program says a recommendation it shows is damaged, start no helper, also when it is out of date: it is kept as it is, with each damaged part flagged, because it is advice and a new list would throw it out. When the program gives no recommendation, or says it is out of date, start `strategy-radar:lens-advisor` and wait until it has answered: it records its list of the lenses that fit the question; then, when it recorded a list, start `strategy-radar:lens-link-reader` and `strategy-radar:lens-link-reader-quick` at the same time, and ask for the view again. When it recorded no list, start no reader. When the recommendation is current but a link of a usable lens is still not read by a reader, start only that reader, or both at the same time when both have links left, and ask for the view again. A lens the program shows as not usable is not proposed, and its links need no reader. Otherwise show the view as it is: you start no helper.
 
-Each of the three gets exactly this prompt, with the run folder and the lens folder as absolute paths, and not one word more: `Run folder: <absolute path>` on the first line and `Lens folder: <absolute path>` on the second. You never record the recommendation or a reader's verdict: only these helpers do, and the guard refuses it from you. When a command of the advisor is refused, or the advisor fails, say in one plain sentence what was refused or what failed, show the full grouped list without a recommendation, and go on to the question of part 3. When a command of a reader is refused, or a reader fails, the recommendation is still shown: that reader's links stay marked "not read by <reader>", and you say in one plain sentence that this reader could not read the links and why. Neither is a stop: this is the one exception to the rule of `SKILL.md` that you stop when a helper's command is refused.
-
-Each time this step is shown, you start each helper at most once. When the view is still out of date after the advisor was started again once, treat it as no recommendation and say that it no longer fits the facts. When the advisor fails, when its list is refused twice, or when the program gives no recommendation, show the full grouped list, say in one sentence that no recommendation was made and why, and go on: this never stops the run.
+Each of the three gets exactly this prompt, with the run folder and the lens folder as absolute paths, and not one word more: `Run folder: <absolute path>` on the first line and `Lens folder: <absolute path>` on the second. You never record the recommendation or a reader's verdict: only these helpers do, and the guard refuses it from you. When a command of the advisor is refused, or the advisor fails, say in one plain sentence what was refused or what failed, show the full grouped list without a recommendation, and go on to the question of part 3. When a command of a reader is refused, or a reader fails, the recommendation is still shown: that reader's links stay marked "not read by <reader>", and you say in one plain sentence that this reader could not read the links and why. Neither is a stop: this is the one exception to the rule of `SKILL.md` that you stop when a helper's command is refused, in a run that is not unattended; in an unattended run a refused command of a lens helper stops the run, as `SKILL.md` says. Each time this step is shown, you start each helper at most once. When the view is still out of date after the advisor was started again once, treat it as no recommendation and say that it no longer fits the facts. When the advisor fails, when its list is refused twice, or when the program gives no recommendation, show the full grouped list, say in one sentence that no recommendation was made and why, and go on: this never stops the run.
 
 ## 2. Show the view, in this order
 
@@ -49,6 +47,8 @@ Decision: 1
 
 Before the person has decided, the last two lines are `Chosen: not yet decided` and `Decision: none`. `Proposed` holds the `id` of every lens the advisor recorded, in its order, both those with facts and those with no facts found yet, except a lens the program shows as not usable and a lens with a flag of its own; it is `Proposed: none` when there is no recommendation, when it is damaged and out of date, or when it names no usable lens. The note is only a convenience for the next steps; what counts is the program's record of the decision.
 
+When `<run>/run.json` holds `unattended: true` and the view holds a usable recommendation, one that is neither damaged nor out of date and names at least one usable lens, and no command of a lens helper was refused while this step was shown, you ask nothing and do not stop: `<run>/inbox/checkpoint-lenses.json` gets `answered-by` `unattended` and the answer `The lens advisor's recommendation was taken: <ids>.`, where `<ids>` are the `Proposed` ids, as the note gives them. Record it with the command of part 4, write the note afresh as part 4 says, with `Chosen` the same as `Proposed`, and go on. Otherwise ask as follows.
+
 Then ask exactly this: "Which lenses should I use? You can confirm these, drop one, or pick others from the list."
 
 Stop here. End your turn after the question. Do not call any tool, and do not answer for the person. Only the person's next message can answer.
@@ -68,7 +68,7 @@ Take the first of these that fits. Nothing is recorded until the message is a de
 A decision is recorded in the person's own words. `<run>/inbox/checkpoint-lenses.json` holds `{"answered-by": "person", "answer": "Yes, use both of them."}`.
 
 - `answer` is the person's whole message, word for word. Do not shorten or improve it.
-- `answered-by` is `person`. It is `test` only when the message begins with the exact words `Recorded test answer:`. It is never `unattended`.
+- `answered-by` is `person`. It is `test` only when the message begins with the exact words `Recorded test answer:`.
 
 ```bash
 radar checkpoint --run "<run>" --name lenses --from-json "<run>/inbox/checkpoint-lenses.json"

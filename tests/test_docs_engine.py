@@ -46,7 +46,7 @@ from pathlib import Path
 
 import pytest
 
-from radar import fetch, lenses, projects, recommend, schema, setup_env, status, store
+from radar import claims, fetch, lenses, projects, recommend, schema, setup_env, status, store
 from radar.cli import build_parser, main
 from radar.demo import LENSES, build_demo_run
 
@@ -298,15 +298,24 @@ class World:
         path.write_text(content if isinstance(content, str) else json.dumps(content), encoding="utf-8")
         return path
 
-    def join(self, fold: str = "S1#2") -> tuple[int, dict]:
-        """join-proposals on the demo run `joined`, whose source S1 has a saved answer of two proposals; `fold` is
-        folded into the first."""
+    def joined(self) -> Path:
+        """The demo run `joined`, whose source S1 has a saved answer of two proposals."""
         run = self.demo("joined", stage="sources")
         (run / "proposals").mkdir(exist_ok=True)
         answer = {"proposals": [GOOD_PROPOSAL, GOOD_PROPOSAL], "notes": {}}
         (run / "proposals" / "S1.json").write_text(json.dumps(answer), encoding="utf-8")
+        return run
+
+    def join(self, fold: str = "S1#2") -> tuple[int, dict]:
+        """join-proposals on the demo run `joined`; `fold` is folded into the first proposal."""
+        run = self.joined()
         return radar("join-proposals", "--run", run, "--sources", "S1", "--out", run / "proposals" / "all.json",
                      "--merges", self.file("merges.json", [{"keep": "S1#1", "fold": [fold]}]))
+
+    def claim_groups(self, lines: str = "", by: str = claims.MATCHER) -> tuple[int, dict]:
+        """record-claim-groups on the demo run `joined`, as the claim matcher sends them on standard input."""
+        self.monkeypatch.setattr("sys.stdin", io.TextIOWrapper(io.BytesIO(lines.encode("utf-8")), encoding="utf-8"))
+        return radar("record-claim-groups", "--run", self.joined(), "--sources", "S1", "--by", by, "--list-stdin")
 
     def save_source(self, path: str = "/news") -> tuple[int, dict]:
         self.monkeypatch.setattr(fetch, "check_address", lambda host, resolve=None: fetch.PUBLIC)   # 127.0.0.1
@@ -440,6 +449,12 @@ def _cases(w: World) -> dict:
                                   "mixed.json", [GOOD_PROPOSAL, {**GOOD_PROPOSAL, "quote": "too short"}])))],
         ("join-proposals", None): [(0, lambda: w.join())],
         ("join-proposals", "exit 1, the answers or the merges break a rule"): [(1, lambda: w.join("S1#3"))],
+        ("claim-matcher-input", None): [(0, lambda: radar("claim-matcher-input", "--run", w.joined(),
+                                                          "--sources", "S1"))],
+        ("claim-matcher-input", "exit 1, a source has no saved answer or no such part"): [
+            (1, lambda: radar("claim-matcher-input", "--run", w.joined(), "--sources", "S1", "--part", "99")),
+            (1, lambda: radar("claim-matcher-input", "--run", w.joined(), "--sources", "S1,S2"))],
+        ("record-claim-groups", None): [(0, w.claim_groups), (1, lambda: w.claim_groups("keep: S1#1\nfold: S1#2\n"))],
         ("checkpoint", None): [(0, lambda: radar("checkpoint", "--run", checked(), "--name", "lenses",
                                                  "--answered-by", "test", "--answer", "Use both lenses."))],
         ("log-search", None): [(0, lambda: radar("log-search", "--run", checked(), "--place", "Company websites",
@@ -511,6 +526,8 @@ def _cases(w: World) -> dict:
         ("lens-advisor-input", "exit 1, no such part"): [(1, lambda: radar("lens-advisor-input", "--run", complete(),
                                                                            "--lenses", LENSES, "--part", "99"))],
         ("lens-link-context", None): [(0, w.link_context)],
+        ("lens-link-context", "exit 1, no such part"): [(1, lambda: radar("lens-link-context", "--run", complete(),
+                                                                          "--lenses", LENSES, "--part", "99"))],
         ("project-grouper-input", None): [(0, lambda: radar("project-grouper-input", "--run", complete()))],
         ("project-grouper-input", "exit 1, no such part"): [(1, lambda: radar("project-grouper-input", "--run",
                                                                               complete(), "--part", "99"))],
@@ -640,6 +657,8 @@ def _refusals(w: World, monkeypatch) -> dict:
              for command, extra in {
                  "add-fact": ["--file", PACK], "add-facts": ["--file", PACK], "check-quotes": [], "settle": [],
                  "join-proposals": ["--sources", "S1", "--out", w.root / "all.json"],
+                 "claim-matcher-input": ["--sources", "S1"],
+                 "record-claim-groups": ["--sources", "S1", "--by", claims.MATCHER, "--list-stdin"],
                  "check-data": [], "gate": [], "status": [], "quote-context": ["--open"],
                  "build-report": ["--lenses", LENSES], "calc": ["--operation", "count", "--facts", "F1"],
                  "record-support": ["--fact", "F1", "--passed", "true", "--by", "b", "--note", "n"],
@@ -673,6 +692,13 @@ def _refusals(w: World, monkeypatch) -> dict:
         "join-proposals": [(1, lambda: w.join("S1#1"), "exit 1, the answers or the merges break a rule"),
                            (2, lambda: radar("join-proposals", "--run", checked(), "--sources", "S1,S1",
                                              "--out", w.root / "all.json"), "error")],
+        "claim-matcher-input": [(1, lambda: radar("claim-matcher-input", "--run", w.joined(), "--sources", "S9"),
+                                 "exit 1, a source has no saved answer or no such part"),
+                                (2, lambda: radar("claim-matcher-input", "--run", w.joined(), "--sources", "S1,S1"),
+                                 "error")],
+        "record-claim-groups": [(1, lambda: w.claim_groups("keep: S1#1\nfold: S1#3\n"), None),
+                                (2, lambda: w.claim_groups(by="lead"), "error"),
+                                (2, lambda: w.claim_groups("keep S1#1\n"), "error")],
         "add-copy": [(2, lambda: radar("add-copy", "--run", w.demo("practice", private=True, stage="sources"),
                                        "--file", w.file("memo.txt", "An invented internal memo."),
                                        "--url", "internal://memo", "--data-class", "internal",

@@ -1271,6 +1271,7 @@ def verdict(first_line=VERDICT_LINE, *lines, end="RADAR_NOTE"):
 ACCEPTED = [
     'radar quote-context --run "/p/radar/runs/r1" --fact F3',
     "radar quote-context --run " + RUN + " --fact F3",
+    "radar quote-context --run S1,S2 --fact F3",                                    # a run named S1,S2 is only a folder name
     "radar quote-context --fact F12 --run " + RUN,                                  # the two options in any order
     "radar quote-context --run /p/radar/runs/r1 --fact F3",                         # a plain folder needs no quotes
     "radar quote-context --run runs/r-1_a.b:c=d --fact F3",
@@ -2305,6 +2306,8 @@ def reader_accepted(by):
         "radar lens-link-context --run /p/radar/runs/r1 --lenses /p/plugin/lenses",
         OWN_RADAR + " lens-link-context --run x --lenses y",
         LINK_CONTEXT + "\n",
+        LINK_CONTEXT + " --part 2",                                                       # a later part of the links
+        "radar lens-link-context --part 10 --lenses " + LENSES_AT + " --run " + RUN,
         link_check(by),
         link_check(by) + "\n",
         link_check(by, first_line=check_line(by, "bears")),
@@ -2431,8 +2434,8 @@ def reader_hostile(by, other):
     line = check_line(by)
     first = line
     return hostile_for_both_kinds(LINK_CONTEXT, link_check(by)) + [
-        # only the advisor's and the grouper's input come in parts
-        LINK_CONTEXT + " --part 2", link_check(by, first_line=line.replace("--note-stdin", "--part 2 --note-stdin")),
+        # only the links come in parts, never a verdict
+        link_check(by, first_line=line.replace("--note-stdin", "--part 2 --note-stdin")),
         # a reader records only under its own name: the readers stay independent
         link_check(by, first_line=line.replace("--by " + by, "--by " + other)),
         link_check(by, first_line=line.replace("--by " + by, "--by lens-advisor")),
@@ -2686,7 +2689,7 @@ def lens_blocks(name):
 @pytest.mark.parametrize("name", LENS_HELPERS)
 def test_the_commands_exactly_as_each_lens_helper_s_file_writes_them_are_allowed(name):
     blocks = lens_blocks(name)
-    assert len(blocks) == (3 if name == "lens-advisor" else 2)          # the advisor also reads a further part
+    assert len(blocks) == 3                                              # each also reads a further part
     assert all("<run folder>" in block for block in blocks) and "<lens folder>" in blocks[0]
     assert "=" not in "".join(block.splitlines()[0] for block in blocks)   # the file never writes --key=value
     for run, lenses in (("/p/radar/runs/r1", "/p/plugin/lenses"),
@@ -2699,7 +2702,7 @@ def test_the_commands_exactly_as_each_lens_helper_s_file_writes_them_are_allowed
             for other in LENS_HELPERS:
                 if other == name:
                     continue
-                both_read = index == 0 and name != "lens-advisor" and other != "lens-advisor"
+                both_read = index < 2 and name != "lens-advisor" and other != "lens-advisor"
                 expected = None if both_read else (ADVISOR_ONLY if other == "lens-advisor" else READER_ONLY)
                 assert guard.decide(event("Bash", other, command=command)) == expected, (other, command)
             assert guard.decide(event("Bash", CHECKER, command=command)) == HELPER
@@ -2724,7 +2727,7 @@ def test_an_allowed_lens_command_starts_the_program_once_and_nothing_else(tmp_pa
         assert calls.count("CALL\n") == 1 and left_behind == [], command
         words = re.findall(r"^WORD:(.*)$", calls, flags=re.M)
         text = calls.split("TEXT:", 1)[1][:-len("\nEND\n")]
-        if words[0] == "lens-advisor-input" and "--part" in words:
+        if words[0] in ("lens-advisor-input", "lens-link-context") and "--part" in words:
             assert len(words) == 7 and set(words[1::2]) == {"--run", "--lenses", "--part"} and text == "", command
             assert re.fullmatch(r"[1-9][0-9]*", words[words.index("--part") + 1]), command
         elif words[0] in ("lens-advisor-input", "lens-link-context"):
@@ -2903,7 +2906,8 @@ def test_the_grouper_has_its_own_two_sentences_and_a_table_of_its_own():
     assert guard.GROUPER_COMMANDS == {"project-grouper": {
         "project-grouper-input": (("--run",), None),
         "record-projects": (("--run", "--by", "--list-stdin"), (guard.LIST_OPENER, guard.LIST_END))}}
-    assert guard.OPTIONAL == {"lens-advisor-input": ("--part",), "project-grouper-input": ("--part",)}
+    assert guard.OPTIONAL == {"lens-advisor-input": ("--part",), "project-grouper-input": ("--part",),
+                              "claim-matcher-input": ("--part",), "lens-link-context": ("--part",)}
     assert "project-grouper" not in guard.LENS_COMMANDS and "project-grouper" not in guard.LENS_REASONS
     assert guard.PROJECTS_REASON in [reason for _, reason in guard.RECORD_WORDS]
     assert ("record-projects", guard.PROJECTS_REASON) in guard.RECORD_WORDS
@@ -2914,8 +2918,8 @@ def test_the_grouper_has_its_own_two_sentences_and_a_table_of_its_own():
 
 
 def test_eight_helpers_and_the_lens_table_is_unchanged():
-    assert set(LENS_HELPERS) <= set(guard.HELPERS) and len(set(guard.HELPERS)) == len(guard.HELPERS) == 8
-    assert "project-grouper" in guard.HELPERS
+    assert set(LENS_HELPERS) <= set(guard.HELPERS) and len(set(guard.HELPERS)) == len(guard.HELPERS) == 9
+    assert "project-grouper" in guard.HELPERS and "claim-matcher" in guard.HELPERS
     assert set(guard.LENS_COMMANDS) == set(LENS_HELPERS)
     assert set(guard.LENS_COMMANDS["lens-advisor"]) == {"lens-advisor-input", "record-lens-recommendation"}
     for reader in LENS_HELPERS[1:]:
@@ -3066,3 +3070,158 @@ def test_a_hostile_piece_put_anywhere_into_a_good_grouper_command_never_gets_mor
                     if "--by" in words:
                         assert words[words.index("--by") + 1] == "project-grouper", changed
     assert tried > 1000 and 0 < let_through < tried / 8
+
+
+# --- the claim matcher: two commands of its own, and nobody else records the claim groups ------------------------------
+# It fetches its input and records its list, in the form its file shows, and nothing else, and it records only under its
+# own name. It has a table of its own, as the grouper has.
+
+MATCHER = "strategy-radar:claim-matcher"
+MATCHER_ONLY = SENDER + "This helper may only run: radar claim-matcher-input and radar record-claim-groups."
+CLAIMS_ONLY = SENDER + ("Only the claim matcher records the claim groups. "
+                        "Ask the claim matcher to match the proposals.")
+MATCHER_INPUT = 'radar claim-matcher-input --run "/p/radar/runs/r1" --sources S1,S2'
+CLAIMS_LINE = ('radar record-claim-groups --run "/p/radar/runs/r1" --sources S1,S2 --by claim-matcher --list-stdin '
+               + LIST_OPEN)
+CLAIMS_BODY = ("keep: S1#1", "fold: S2#3, S9#1", "", "keep: S2#1", "fold: S3#2")
+
+
+def claims_call(first_line=CLAIMS_LINE, *lines, end="RADAR_LIST"):
+    return "\n".join([first_line, *(lines or CLAIMS_BODY), end])
+
+
+MATCHER_ACCEPTED = [
+    MATCHER_INPUT, MATCHER_INPUT + "\n", MATCHER_INPUT + " --part 2", MATCHER_INPUT.replace("S1,S2", "S7"),
+    "radar claim-matcher-input --sources S1,S12 --part 12 --run " + RUN,
+    OWN_RADAR + " claim-matcher-input --run x --sources S1",
+    claims_call(), claims_call() + "\n", claims_call(CLAIMS_LINE, "keep: S1#1", "fold: S2#3"),
+    claims_call("radar record-claim-groups --list-stdin --by claim-matcher --sources S1,S2 --run " + RUN + " " + LIST_OPEN),
+    claims_call('"' + OWN_RADAR + '" record-claim-groups --run x --sources S1 --by claim-matcher --list-stdin ' + LIST_OPEN),
+    CLAIMS_LINE + "\nRADAR_LIST",                              # an empty list: no groups
+]
+MATCHER_HOSTILE = [
+    "ls", "", "\n", "radar", "radar settle --run x", "radar claim-matcher-input", "radar record-claim-groups",
+    MATCHER_INPUT + "; ls", MATCHER_INPUT + " && ls", MATCHER_INPUT + " | sh", MATCHER_INPUT + " > /tmp/x",
+    MATCHER_INPUT + " `id`", MATCHER_INPUT + " $(id)", MATCHER_INPUT + "\nrm -rf ~", "X=1 " + MATCHER_INPUT,
+    MATCHER_INPUT.replace("radar ", "bin/radar ", 1), MATCHER_INPUT.replace("radar ", "/tmp/evil/bin/radar ", 1),
+    # the options: each exactly once, only these
+    MATCHER_INPUT + " --run y", MATCHER_INPUT + " --sources S3", MATCHER_INPUT + " --file x", MATCHER_INPUT + " extra",
+    MATCHER_INPUT + " --by claim-matcher", MATCHER_INPUT + " --list-stdin",
+    MATCHER_INPUT.replace(' --run "/p/radar/runs/r1"', ""), MATCHER_INPUT.replace(" --sources S1,S2", ""),
+    MATCHER_INPUT + " --run",
+    # --sources: source ids, plain, joined by commas
+    MATCHER_INPUT.replace("S1,S2", '"S1,S2"'), MATCHER_INPUT.replace("S1,S2", "S1, S2"),
+    MATCHER_INPUT.replace("S1,S2", "S1,"), MATCHER_INPUT.replace("S1,S2", ",S1"), MATCHER_INPUT.replace("S1,S2", "s1"),
+    MATCHER_INPUT.replace("S1,S2", "1,2"), MATCHER_INPUT.replace("S1,S2", "S"),
+    MATCHER_INPUT.replace("S1,S2", "S1;ls"), MATCHER_INPUT.replace("S1,S2", "S1,S2,$(id)"),
+    MATCHER_INPUT.replace("S1,S2", "-S1"), MATCHER_INPUT.replace("S1,S2", "F1"),
+    MATCHER_INPUT.replace("--sources S1,S2", "--sources"), MATCHER_INPUT.replace("--sources", "--source"),
+    MATCHER_INPUT.replace("--sources S1,S2", "--sources=S1"),
+    # --part: a positive whole number, plain, once
+    MATCHER_INPUT + " --part x", MATCHER_INPUT + " --part 0", MATCHER_INPUT + " --part -1", MATCHER_INPUT + " --part 02",
+    MATCHER_INPUT + ' --part "2"', MATCHER_INPUT + " --part", MATCHER_INPUT + " --part 2 --part 3",
+    MATCHER_INPUT + " --part=2", MATCHER_INPUT + " --part 2;ls",
+    # the record call: the list on standard input, never a file, and only under its own name
+    claims_call(CLAIMS_LINE.replace(" --list-stdin", "")),
+    claims_call(CLAIMS_LINE.replace("--list-stdin", "--file g.json")),
+    claims_call(CLAIMS_LINE.replace("--list-stdin", "--from-json -")),
+    claims_call(CLAIMS_LINE.replace("--list-stdin", "--note-stdin")),
+    claims_call(CLAIMS_LINE.replace(" --sources S1,S2", "")),
+    claims_call(CLAIMS_LINE.replace(' --run "/p/radar/runs/r1"', "")),
+    claims_call(CLAIMS_LINE.replace(" --by claim-matcher", "")),
+    claims_call(CLAIMS_LINE.replace("--by claim-matcher", "--by lead")),
+    claims_call(CLAIMS_LINE.replace("--by claim-matcher", "--by project-grouper")),
+    claims_call(CLAIMS_LINE.replace("--by claim-matcher", "--by strategy-radar:claim-matcher")),
+    claims_call(CLAIMS_LINE.replace("--by claim-matcher", '--by "claim-matcher"')),
+    claims_call(CLAIMS_LINE.replace("--by claim-matcher", "--by Claim-Matcher")),
+    claims_call(CLAIMS_LINE.replace("--by claim-matcher", "--by claim-matcher2")),
+    claims_call(CLAIMS_LINE.replace("--by claim-matcher", "--by claim-matcher --by claim-matcher")),
+    # a curly bracket anywhere is sent back to be corrected
+    claims_call(CLAIMS_LINE + ' {"merges": []}'), claims_call(CLAIMS_LINE.replace("S1,S2", "{S1}")),
+    claims_call(CLAIMS_LINE, '[{"keep": "S1#1"}]'), claims_call(CLAIMS_LINE, "keep: S1#1 {x}", "fold: S2#3"),
+    # its own here-document, its end mark in single quotes, last on the first line
+    claims_call(CLAIMS_LINE.replace(LIST_OPEN, OPEN), end="RADAR_NOTE"), claims_call(CLAIMS_LINE.replace(LIST_OPEN, OPEN)),
+    claims_call(CLAIMS_LINE.replace(LIST_OPEN, "<<RADAR_LIST")),
+    claims_call(CLAIMS_LINE.replace(LIST_OPEN, "<<-'RADAR_LIST'")),
+    claims_call(end="RADAR_LIST "), claims_call(end="radar_list"), claims_call() + "\n\n",
+    # a line equal to the end mark would end the list early, and what follows would run
+    claims_call(CLAIMS_LINE, "keep: S1#1", "RADAR_LIST", "rm -rf ~"), claims_call() + "\n" + claims_call(),
+    # the other helpers' commands are not the matcher's
+    GROUPER_INPUT, projects_call(), ADVISOR_INPUT, recommendation(), LINK_CONTEXT, link_check(), GOOD_VERDICT,
+    claims_call(MATCHER_INPUT + " " + LIST_OPEN),
+]
+
+
+def test_the_matcher_has_its_own_two_sentences_and_a_table_of_its_own():
+    assert guard.MATCHER_REASON == MATCHER_ONLY and guard.CLAIMS_REASON == CLAIMS_ONLY
+    assert guard.MATCHER_COMMANDS == {"claim-matcher": {
+        "claim-matcher-input": (("--run", "--sources"), None),
+        "record-claim-groups": (("--run", "--sources", "--by", "--list-stdin"),
+                                (guard.LIST_OPENER, guard.LIST_END))}}
+    assert guard.OPTIONAL["claim-matcher-input"] == ("--part",)
+    assert "claim-matcher" not in guard.LENS_COMMANDS and "claim-matcher" not in guard.GROUPER_COMMANDS
+    assert ("record-claim-groups", guard.CLAIMS_REASON) in guard.RECORD_WORDS
+    assert len({guard.MATCHER_REASON, guard.CLAIMS_REASON, guard.GROUPER_REASON, guard.PROJECTS_REASON}) == 4
+    assert guard._helper_name("strategy-radar:claim-matcher") == guard._helper_name("claim-matcher") == "claim-matcher"
+    assert guard._helper_name("other-plugin:claim-matcher") is None and guard._helper_name("claim-matcher2") is None
+
+
+@pytest.mark.parametrize("command", MATCHER_ACCEPTED)
+def test_the_matcher_may_run_exactly_its_two_commands(command):
+    assert guard.decide(event("Bash", MATCHER, command=command)) is None
+    assert guard.decide(event("Bash", "claim-matcher", command=command)) is None
+
+
+@pytest.mark.parametrize("command", MATCHER_HOSTILE)
+def test_anything_outside_the_matcher_s_two_shapes_is_refused(command):
+    assert guard.decide(event("Bash", MATCHER, command=command)) == MATCHER_ONLY
+    assert guard.decide(event("Bash", "claim-matcher", command=command)) == MATCHER_ONLY
+
+
+@pytest.mark.parametrize("command", [None, 7, ["radar", "record-claim-groups"]])
+def test_a_matcher_command_that_is_no_text_is_refused(command):
+    assert guard.decide(event("Bash", MATCHER, command=command)) == MATCHER_ONLY
+    assert guard.decide({"tool_name": "Bash", "agent_type": MATCHER}) == MATCHER_ONLY
+
+
+def test_the_lead_and_the_other_helpers_may_not_record_the_claim_groups():
+    for command in (claims_call(), CLAIMS_LINE, "radar record-claim-groups --run x --sources S1 --by lead",
+                    "sh -c 'radar record-claim-groups --run x'"):
+        for agent in (None, "", "general-purpose", "other-plugin:claim-matcher", "Claim-Matcher", "strategy-radar:run"):
+            assert guard.decide(lead_event(agent, command)) == CLAIMS_ONLY, (agent, command)
+        assert guard.decide(event("Bash", GROUPER, command=command)) == GROUPER_ONLY
+        assert guard.decide(event("Bash", "lens-advisor", command=command)) == guard.LENS_REASONS["lens-advisor"]
+        assert guard.decide(event("Bash", "support-checker", command=command)) == HELPER
+    assert guard.decide(lead_event(None, MATCHER_INPUT)) is None            # reading is open to the lead
+    for command in (MATCHER_INPUT, claims_call()):
+        assert guard.decide(event("Bash", "source-scout", command=command)) == NO_COMMANDS
+
+
+def test_an_error_of_the_guard_s_own_while_judging_the_matcher_refuses_it(monkeypatch):
+    def broken(*args):
+        raise RuntimeError("an error of the guard's own")
+    monkeypatch.setattr(guard, "_fits", broken)
+    assert guard.decide(event("Bash", MATCHER, command=MATCHER_INPUT)) == FAILED
+
+
+def test_the_commands_exactly_as_the_matcher_s_file_writes_them_are_allowed():
+    blocks = [block.strip("\n") for block in re.findall(r"```bash\n(.*?)```",
+                                                         body(ROOT / "agents" / "claim-matcher.md"), flags=re.S)]
+    assert len(blocks) == 3 and all("<run folder>" in block for block in blocks)   # part 1, a further part, the record
+    first = blocks[-1].splitlines()[0]
+    assert "--by claim-matcher " in first and first.count("--by") == 1 and first.endswith(guard.LIST_OPENER)
+    assert blocks[-1].splitlines()[-1] == "RADAR_LIST"
+    for run in ("/p/radar/runs/r1", "/home/a b/Documents (1)/radar/runs/r1", "/Users/x/it's & more; 100%/runs/r1"):
+        for block in blocks:
+            command = block.replace("<run folder>", run)
+            assert guard.decide(event("Bash", MATCHER, command=command)) is None, command
+            assert guard.decide(event("Bash", GROUPER, command=command)) == GROUPER_ONLY
+            assert guard.decide(event("Bash", CHECKER, command=command)) == HELPER
+
+
+def test_the_matcher_is_refused_through_the_real_guard_script():
+    for agent in ("claim-matcher", MATCHER):
+        result = run_guard(json.dumps(event("Bash", agent, command="ls")))
+        assert (result.returncode, result.stderr.decode("utf-8")) == (2, MATCHER_ONLY + "\n")
+        allowed = run_guard(json.dumps(event("Bash", agent, command=MATCHER_INPUT)))
+        assert (allowed.returncode, allowed.stdout, allowed.stderr) == (0, b"", b"")

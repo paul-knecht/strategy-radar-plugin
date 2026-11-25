@@ -1,9 +1,9 @@
 """A helper's input in parts, so that each part fits what its Bash tool can read in one go.
 
 A helper with only Bash reads what a command prints, and a printed line that is too long is cut short. So a command
-whose input can grow with the run (the project grouper's, the lens advisor's) prints it in parts: each part one line
-of at most `PART_LIMIT` characters, holding whole items only, in their order. The helper reads part 1, sees `parts`,
-and reads the rest one by one.
+whose input can grow with the run (the project grouper's, the lens advisor's, the link readers', the claim
+matcher's) prints it in parts: each part one line of at most `PART_LIMIT` characters, holding whole items only, in
+their order. The helper reads part 1, sees `parts`, and reads the rest one by one.
 """
 import json
 

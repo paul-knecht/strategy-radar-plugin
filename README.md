@@ -59,12 +59,12 @@ In a Claude Code session with the plugin on:
 | `/strategy-radar:start` | The guided start: checks the setup, then offers a practice tour or a run. One question at a time, nothing is written without your yes. |
 | `/strategy-radar:practice` | A short tour of a finished invented run, including the three planted errors the checks catch. Needs no internet. |
 | `/strategy-radar:run` | A run of ten steps with the two decisions that are yours. |
-| `/strategy-radar:new-pack` | Makes a pack file for a company you name. A run on a pack for a real company uses the eighty-three lenses that ship with the plugin; such a run has been tried on real websites in only a few runs so far. |
-| `/strategy-radar:screen` | Starts a screening run on one startup: a first-pass investment memo on its company, market, competition, team, traction and risks. You give its name and website; it proposes the competitors and pages to search from a web search, each with the page where it was found, and you confirm them; this search has run in two real screening sessions so far. Then it hands over to the run. The memo prepares a decision and does not make it. |
+| `/strategy-radar:new-pack` | Makes a pack file for a company you name. It takes three answers, one per message: the company (with its website, if you know it), whether it is real or invented for practice, and your question. For a real company it then searches the web and proposes the rest of the pack, each item with the page where it was found or the rule that set it, and you keep or strike them in one confirmation. An invented company is never searched: a few more questions fill in its pack, and they do the same when no web search is available or the search finds nothing. A run on a pack for a real company uses the eighty-three lenses that ship with the plugin; such a run has been tried on real websites in only a few runs so far. |
+| `/strategy-radar:screen` | Starts a screening run on one startup: a first-pass investment memo on its company, market, competition, team, traction and risks. It takes three answers, as `/strategy-radar:new-pack` does, with the startup's website expected and a default question; it proposes the competitors, the pages to search and the rest of the pack from a web search, each with the page where it was found, and you keep or strike them in one confirmation; the search for competitors and pages has run in three real screening sessions; the proposals for the rest of the pack have run in one. Then it hands over to the run. The memo prepares a decision and does not make it. |
 
 ## Screening a startup
 
-`/strategy-radar:screen` writes a first-pass investment memo on one startup from public sources only. You give the startup's name and website and confirm the competitors and pages to search; the run then has the same two stops as every run. The memo shows what the sources say about the company, market, competition, team, traction and risks, what would have to be true to invest, and the questions the sources leave open for the partner meeting. Every fact carries a checked quote, and the startup's own figures are shown as its claims. The memo holds no verdict ("invest" or "pass"), no score and no figure of its own, such as a market size or a runway.
+`/strategy-radar:screen` writes a first-pass investment memo on one startup from public sources only. You give the startup's name and website, say whether it is real, and give the question, then confirm the proposed competitors and pages to search; the run then goes on without stopping, unless the lens advisor has no usable recommendation, a check fails or a command is refused. The memo shows what the sources say about the company, market, competition, team, traction and risks, what would have to be true to invest, and the questions the sources leave open for the partner meeting. Every fact carries a checked quote, and the startup's own figures are shown as its claims. The memo holds no verdict ("invest" or "pass"), no score and no figure of its own, such as a market size or a runway.
 
 ## What to know before you install
 
@@ -79,7 +79,7 @@ In a Claude Code session with the plugin on:
 | Folder | Holds |
 |---|---|
 | `skills/` | The five skills (`start`, `run` with ten step files, `practice`, `new-pack`, `screen`). |
-| `agents/` | The eight helpers: source scout, fact extractor, support checker, bias auditor, lens advisor, the two link readers and the project grouper. |
+| `agents/` | The nine helpers: source scout, fact extractor, support checker, bias auditor, lens advisor, the two link readers, the project grouper and the claim matcher. |
 | `hooks/` | The guard. |
 | `engine/radar/`, `bin/radar` | The model-free program: saves sources, checks quotes, settles statuses, enforces the gate, builds the report. |
 | `references/` | Reference texts the lead and helpers read (evidence rules, analysis format, confidence wording). |
@@ -104,7 +104,9 @@ uv run pytest -m model tests/model -q
 
 ## Status
 
-Version 0.4.1. Built with a plan, a review after every task and a final review of the whole branch; the decisions and what was not verified are recorded in `docs/superpowers/plans/2026-11-12-strategy-radar-plugin-ledger.md`. Real runs on public websites have been tried in only a few runs so far, among them three screening runs on startups; the web search of `/strategy-radar:screen` proposed the competitors and pages in two of them. Not done yet: sample runs.
+Version 0.5.0. Built with a plan, a review after every task and a final review of the whole branch; the decisions and what was not verified are recorded in `docs/superpowers/plans/2026-11-12-strategy-radar-plugin-ledger.md`. Real runs on public websites have been tried in only a few runs so far, among them four screening runs on startups; the web search of `/strategy-radar:screen` proposed the competitors and pages in three of them. Not done yet: sample runs.
+
+**New in 0.5.0:** a screening run goes on without stopping for you when nothing is wrong, and its memo says that no person reviewed it; the setup takes three answers and proposes the rest of the pack from a search; a new helper, the claim matcher, finds the same claim in several sources; a Mac whose Python has no certificates of its own can read more websites. The one real run on these parts still asked for the lenses, because the link readers could not read their input; that is mended and was tried on that run's links, but no whole run has been made since.
 
 **New in 0.4.0, for older runs:** the money check now reads every text of the analysis, not only what could not be found. Checking an older finished run again may stop there: in each named text, name one of the listed facts that state an amount and say why its amount does not answer, or reword the text, then build again.
 

@@ -23,11 +23,19 @@ You get nothing else. You judge only from what the program gives you. You read n
 
 ## What you do
 
-1. Fetch the links. Run it once:
+1. Fetch the links. Run this first:
 
 ```bash
 radar lens-link-context --run "<run folder>" --lenses "<lens folder>"
 ```
+
+Its answer is part 1 of the links, and `parts` says how many parts there are. When `parts` is more than 1, run the same command for each further part, one after the other, with `--part 2`, then `--part 3`, and so on up to the number in `parts`:
+
+```bash
+radar lens-link-context --run "<run folder>" --lenses "<lens folder>" --part 2
+```
+
+The links are spread over the parts. You are done only after you have read every part and recorded every link in it, never after one part alone.
 
 2. Judge each packet by the rules below, in the order given.
 3. Record one call for each packet, with the lens and the fact exactly as the packet names them. Use `--verdict bears` or `--verdict doubt`. Your note goes on the lines before `RADAR_NOTE`:
@@ -38,11 +46,13 @@ The fact says where a plant stands, which none of the three questions asks about
 RADAR_NOTE
 ```
 
+Each call is a command of its own, for one link, however many links there are: never a script, a loop, a variable or two calls in one command, because the guard refuses them.
+
 When the packet list is empty, record nothing and report `no links to read`. Record nothing for a link you were not given. If a command ends with a `busy` answer, run the same command again, at most three times; when it is still busy, stop for that link, record nothing and report it as `no verdict recorded`. Any other refusal means the call was wrong: correct it, but a correction stays inside the two command shapes shown here. You never try another form: no other option, no file, no other command. If a command is still refused, stop for that link, record nothing and report it.
 
 ## The packet
 
-The answer of the first command is an object. Its `packets` list holds one packet for each link. A packet has these keys:
+Each part is an object. Its `packets` list holds one packet for each link. A packet has these keys:
 
 ```json packet-keys
 {"packet": ["lens", "lens_name", "idea", "suggests", "questions", "fact", "statement", "status"]}

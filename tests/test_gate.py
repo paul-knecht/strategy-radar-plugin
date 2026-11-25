@@ -1270,3 +1270,42 @@ def test_a_reasoning_text_that_says_the_price_is_missing_without_a_fact_is_still
 def test_a_not_found_that_no_financial_terms_were_disclosed_is_still_refused(tmp_path):
     run = _run_with_a_money_fact(tmp_path, ["No financial terms were disclosed."])
     assert gate(run) == [Problem("analysis.json", "not_found[0]", f"{REFUSED}: F1")]
+
+# --- 0.5: an unattended decision is accepted only in a run started unattended ----------------------------------------
+
+UNATTENDED_IN_ATTENDED_RUN = "a decision is recorded as unattended, but this run was not started unattended"
+
+
+def test_an_unattended_answer_in_an_unattended_run_passes(tmp_path):
+    run = passing_run(tmp_path, screening=True)
+    assert store.load_run(run)["unattended"] is True
+    store.record_checkpoint(run, "final_report", "unattended", "ok")
+    assert gate(run) == []
+
+
+def test_an_unattended_answer_in_an_attended_run_is_refused(tmp_path):
+    run = passing_run(tmp_path)
+    store.record_checkpoint(run, "final_report", "unattended", "ok")
+    assert gate(run) == [Problem("run.json", "checkpoints", UNATTENDED_IN_ATTENDED_RUN)]
+
+
+def test_an_older_screening_run_cannot_skip_its_stops(tmp_path):
+    run = passing_run(tmp_path, screening=True)
+    data = store.load_run(run); del data["unattended"]; store.save_run(run, data)   # a run from before 0.5
+    store.record_checkpoint(run, "final_report", "unattended", "ok")
+    assert gate(run) == [Problem("run.json", "checkpoints", UNATTENDED_IN_ATTENDED_RUN)]
+
+
+def test_a_person_answer_is_fine_in_any_run(tmp_path):
+    assert gate(passing_run(tmp_path)) == []
+    run = passing_run(tmp_path / "s", screening=True)
+    store.record_checkpoint(run, "final_report", "person", "ok")
+    assert gate(run) == []
+
+
+def test_a_later_person_decision_clears_an_unattended_one(tmp_path):
+    run = passing_run(tmp_path)
+    store.record_checkpoint(run, "lenses", "unattended", "ok")
+    assert gate(run) == [Problem("run.json", "checkpoints", UNATTENDED_IN_ATTENDED_RUN)]
+    store.record_checkpoint(run, "lenses", "person", "ok")
+    assert gate(run) == []

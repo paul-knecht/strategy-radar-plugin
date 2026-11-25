@@ -637,6 +637,7 @@ def render_markdown(model: dict) -> str:
         lines += [f"**{labels['illustrative']}**", ""]
     lines += [_status_line(model, labels), "", labels["built_on"].format(date=esc(model["built_on"])), "",
               labels["disclaimer_private"] if model["confidential"] else labels["disclaimer"], ""]
+    lines += [labels["unattended_lenses" if name == "lenses" else "unattended_final"] + "\n" for name in model.get("unattended", [])]
     for section in (_answer, _companies, _messages, _facts, _projects, _connections, _demand, _options, _judgement,
                     _predictions, _checks, _not_confirmed, _thinking, _sources, _how_made, _changes):
         lines += section(model, labels)

@@ -55,7 +55,8 @@ RECORDS_UNDER = {CHECKER: ("record-support", "support-checker"),
                  ROOT / "agents" / "lens-advisor.md": ("record-lens-recommendation", "lens-advisor"),
                  ROOT / "agents" / "lens-link-reader.md": ("record-link-check", "lens-link-reader"),
                  ROOT / "agents" / "lens-link-reader-quick.md": ("record-link-check", "lens-link-reader-quick"),
-                 ROOT / "agents" / "project-grouper.md": ("record-projects", "project-grouper")}
+                 ROOT / "agents" / "project-grouper.md": ("record-projects", "project-grouper"),
+                 ROOT / "agents" / "claim-matcher.md": ("record-claim-groups", "claim-matcher")}
 ANALYSIS_FORMAT = ROOT / "references" / "analysis-format.md"
 LABELS = ROOT / "engine" / "radar" / "report" / "labels_en.json"
 ASK_LENSES = "Which lenses should I use? You can confirm these, drop one, or pick others from the list."
@@ -287,7 +288,7 @@ def test_files_are_read_with_the_file_tool_and_found_by_a_plain_listing():
                    "when the listing is refused, say so to the person and stop, as the rule on helpers below says",
                    "Your shell commands are `radar`, this listing, and the `ls -t`"):
         assert needed in standing, needed
-    assert standing.index("as the rule on helpers below says") < standing.index("**Only the plugin's eight helpers.**")
+    assert standing.index("as the rule on helpers below says") < standing.index("**Only the plugin's nine helpers.**")
 
 
 def test_the_main_file_says_things_in_the_order_the_person_meets_them():
@@ -519,21 +520,33 @@ def test_the_extractor_s_answer_is_a_wrapper_and_only_its_list_can_be_added(stag
     assert "`proposals`" in text and "`notes`" in text and "bare list" in text
 
 
-def test_the_lead_names_the_merges_and_the_program_joins_the_answers():
-    """Task 4 of the fixes after the real runs: the lead copied about 250 proposals by hand; now the lead writes only
-    the merges, and join-proposals writes the list that add-facts takes."""
+def test_step_4_starts_the_claim_matcher_and_the_program_joins_the_answers():
+    """0.5 batch 2, task 3: the lead no longer names merges; the claim matcher does, and join-proposals follows."""
     four = " ".join(part(4, 4).split())
-    for needed in ("Write only the merges, as a list, to `<run>/proposals/merges.json`",
-                   '`[{"keep": "S6#1", "fold": ["S2#3"]}]`', "counted from 1 in that source's `proposals`",
-                   "Never copy a proposal or a quote yourself", "the program does the copying",
-                   "is never folded into another", "`written` and `folded`", "nothing is written",
+    for needed in ("Start one helper `strategy-radar:claim-matcher`, once", "the block `matcher-prompt` in "
+                   "`<plugin folder>/agents/claim-matcher.md`", "send it word for word",
                    "the sources still in `sources_to_read` that have a saved answer",
-                   "a source whose helper gave no usable answer is left out, and part 6 marks it",
+                   "the same sources you give `join-proposals` below",
+                   "The helper records its groups itself, as `<run>/proposals/merges.json`",
+                   "You do not name merges yourself", "You never record claim groups, and the guard refuses it from you",
+                   "write `<run>/proposals/merges.json` as `[]` with your file tool and go on: this never stops the run",
+                   "or answers `no groups recorded`, or the program refuses its list twice",
+                   "When the guard or a permission refuses a command of the matcher, the run stops, in every run, as "
+                   "`SKILL.md` says: the matcher is not one of its exceptions",
+                   "Its last line then starts with `command refused:`, where `no groups recorded` means the program "
+                   "refused its list",
+                   "When the problems of `join-proposals` name a merge, write `merges.json` as `[]` and join again",
+                   "`written` and `folded`", "nothing is written",
+                   "A source whose helper gave no usable answer is left out, and part 6 marks it",
                    "When a source has no saved answer, or its answer holds no list of proposals, leave that source "
                    "out of `--sources` and join again; part 6 marks it"):
         assert needed in four, needed
-    assert "Copy with care" not in four
-    assert four.index("radar join-proposals") < four.index("radar add-facts")
+    for gone in ("Write only the merges", "Copy with care", "by naming a merge"):
+        assert gone not in four, gone
+    assert four.index("claim-matcher") < four.index("radar join-proposals") < four.index("radar add-facts")
+    assert "record-claim-groups" not in four
+    assert "In an unattended run, a refused command of the matcher" not in four
+    assert len(read(step(4)).splitlines()) < 80
 
 
 def test_a_source_with_only_refused_proposals_is_marked_as_read(stages, tmp_path):
@@ -712,8 +725,9 @@ def test_every_call_the_skills_and_helpers_show_passes_the_guard_as_the_caller_s
                                  tmp_path)
         assert (done.returncode, done.stderr) == (0, b""), (block, done.stderr)
     for name, kinds in (("lens-advisor", ["lens-advisor-input", "lens-advisor-input", "record-lens-recommendation"]),
-                        ("lens-link-reader", ["lens-link-context", "record-link-check"]),
-                        ("lens-link-reader-quick", ["lens-link-context", "record-link-check"])):
+                        ("lens-link-reader", ["lens-link-context", "lens-link-context", "record-link-check"]),
+                        ("lens-link-reader-quick", ["lens-link-context", "lens-link-context",
+                                                    "record-link-check"])):
         blocks = [block for block in re.findall(r"```bash\n(.*?)```", read(ROOT / "agents" / (name + ".md")), re.S)
                   if block.startswith("radar ")]
         assert [block.split()[1] for block in blocks] == kinds, name
@@ -924,11 +938,11 @@ def test_the_merge_keeps_the_extractor_s_own_source_quotes_and_adds_only_other_s
     assert "took" not in four                          # DH1 follow-up: "took for" reads as "mistook for"
     for needed in ("quotes from its own source that the extractor added to state a detail the main quote does not "
                    "state",
-                   "Keep them as they are", "Only you add a quote from another source",
+                   "Keep them as they are", "The matcher names the groups",
                    "not its own supporting entries", "A quote from the fact's own source never counts as a second "
                    "source", "never from the number of quotes"):
         assert needed in four, needed
-    assert four.index("Keep them as they are") < four.index("Where two proposals from different sources")
+    assert four.index("Keep them as they are") < four.index("The matcher names the groups")
 
 
 def test_the_second_try_tells_a_missing_own_source_quote_from_a_missing_second_source():
@@ -1307,13 +1321,30 @@ def following(run, home):
     return radar_json("status", "--run", str(run), "--lenses", str(DEMO_LENSES), home=home)[1]["next"]
 
 
+UNATTENDED_LENSES = ("When `<run>/run.json` holds `unattended: true` and the view holds a usable recommendation, one that is neither damaged nor out of date and names at least one usable lens, and no command of a lens helper was refused while this step was shown, you ask nothing and do not stop: `<run>/inbox/checkpoint-lenses.json` gets `answered-by` `unattended` and the answer `The lens advisor's recommendation was taken: <ids>.`, where `<ids>` are the `Proposed` ids, as the note gives them.")
+UNATTENDED_FINAL = ("When `<run>/run.json` holds `unattended: true`, first run the check of the whole run below and correct `analysis.json` as it says, doing step 8 again after each change. Then, when `<run>/notes/audit.json` exists and is newer than `analysis.json`, and the check names no problem but the one whose message is `checkpoint final_report is not recorded`, you ask nothing and do not stop: `<run>/inbox/checkpoint-final_report.json` gets `answered-by` `unattended` and the answer `The checks passed and the report was built without a person's review.`")
+UNATTENDED_WITHDRAW = ("When `<run>/run.json` holds `unattended: true`, a fact sent twice is withdrawn without asking, with the reason `Withdrawn without a person: the support check could not be completed.`")
+REFUSAL_STOPS_ALWAYS = "A refused command stops the run whether or not the run is unattended."
+EXCEPTIONS_ATTENDED_ONLY = ("These exceptions hold only in a run that is not unattended: in an unattended run, a refused command of any helper stops the run, the lens helpers and the project grouper included.")
+
+
+def test_an_unattended_run_withdraws_an_unchecked_fact_and_a_refusal_still_stops():
+    twice = re.findall(r"^\d\. \*\*.*$", part(5, 5), re.M)[2]
+    assert UNATTENDED_WITHDRAW in twice and twice.index(UNATTENDED_WITHDRAW) < twice.index(STOP)
+    assert REFUSAL_STOPS_ALWAYS in body(MAIN) and EXCEPTIONS_ATTENDED_ONLY in body(MAIN)
+    assert body(MAIN).index("The one exception is a refused command") < body(MAIN).index(EXCEPTIONS_ATTENDED_ONLY)
+    assert "`withdraw-fact` command below without the person's word" in twice
+    assert "in an unattended run a refused command of the helper stops the run" in part(5, 8)
+
+
 @pytest.mark.parametrize("number, question", [(6, ASK_LENSES), (9, ASK_FINAL)])
 def test_each_decision_step_asks_its_question_and_then_stops(number, question):
     text = read(step(number))
     assert text.index(question) < text.index(STOP)
     assert "Recorded test answer:" in text and '"answered-by": "person"' in text
-    assert "unattended" not in text.replace("never `unattended`", "")
-    assert "never `unattended`" in text
+    assert "It is never `unattended`." not in text
+    unattended = UNATTENDED_LENSES if number == 6 else UNATTENDED_FINAL
+    assert text.index(unattended) < text.index(question) < text.index(STOP), "the unattended rule comes before the stop"
     for needed in ("word for word", "asked again", "Nothing is recorded until", "never read as a yes",
                    "begins with the exact words `Recorded test answer:`", "A helper never answers"):
         assert needed in text, (number, needed)
@@ -1505,7 +1536,8 @@ READER_REFUSED = ("When a command of a reader is refused, or a reader fails, the
                   "reader's links stay marked \"not read by <reader>\", and you say in one plain sentence that this "
                   "reader could not read the links and why.")
 NO_STOP = ("Neither is a stop: this is the one exception to the rule of `SKILL.md` that you stop when a helper's "
-           "command is refused.")
+           "command is refused, in a run that is not unattended; in an unattended run a refused command of a lens "
+           "helper stops the run, as `SKILL.md` says.")
 AS_IT_IS = "Otherwise show the view as it is: you start no helper."
 AT_MOST_ONCE = "Each time this step is shown, you start each helper at most once."
 
@@ -1619,7 +1651,7 @@ def test_the_readme_and_the_guide_name_eight_helpers_and_the_program_s_lens_list
     """Controller ruling on task 8: the two leftovers say what is now true. The project grouper is the eighth."""
     readme = next(line for line in (ROOT / "README.md").read_text(encoding="utf-8").splitlines()
                   if line.startswith("| `agents/` |"))
-    assert "The eight helpers" in readme and "four helpers" not in readme and "seven helpers" not in readme
+    assert "The nine helpers" in readme and "four helpers" not in readme and "seven helpers" not in readme
     for name in ("source scout", "fact extractor", "support checker", "bias auditor", "lens advisor",
                  "two link readers", "project grouper"):
         assert name in readme, name
@@ -2344,6 +2376,12 @@ def test_a_run_that_waits_for_the_person_is_shown_the_view_again_but_the_audit_c
     for needed in ("`waiting_for_person` is true", "step 6 or step 9", "show that step's view again",
                    "an earlier message in the conversation is not an answer", "step 8", "the audit comes first"):
         assert needed in line, needed
+    # an unattended run continued after a break decides by its own rule first, and asks only when that rule says so
+    assert ("When `<run>/run.json` holds `unattended: true`, the step's unattended rule comes first (step 6, part 3; "
+            "step 9, part 2), and the question is asked only when that rule sends the run to it.") in line
+    row = next(line for line in text.splitlines() if line.startswith("| `checkpoint_lenses` |"))
+    assert "`unattended: true`, the unattended rule of step 6, part 3, comes first" in row
+    assert read(step(10)).count("ask its question again, as step 9 says, including its unattended rule") == 2
     half = next(line for line in text.splitlines() if line.startswith("- **An analysis that may be half done.**"))
     assert "`notes/audit.json` is missing" in half and "radar check-data" in half and "step 7" in half
     # the check the rule names is the one step 7 shows, and it finds a half-written file
@@ -3485,13 +3523,89 @@ def test_the_report_opens_every_key_message_to_its_facts_and_the_tour_says_so(tm
 NEW_PACK = ROOT / "skills" / "new-pack" / "SKILL.md"
 NEW_PACK_BRIEF_DESCRIPTION = (
     "Walks a person through creating a Strategy Radar company pack for any company - the small settings file that "
-    "says which company, which competitors to look at as candidates, and where to search. Use when someone wants to "
-    "analyse a company that has no pack yet.")
+    "says which company, which competitors to look at as candidates, and where to search. It asks for the company, "
+    "whether it is real, and the question, and proposes the rest from a web search, each with the page it was found "
+    "on. Use when someone wants to analyse a company that has no pack yet.")
 NOT_KEYS_BUT_VALUES = {"user", "company", "candidate", "search", "true", "false"}
+# 0.5 batch 4: new-pack asks three things; a real company's other parts come from the shared propose step, and the
+# old questions stay, unchanged, as the fallback in references/pack-questions.md.
+PACK_QUESTIONS = ROOT / "references" / "pack-questions.md"
+NEW_PACK_ASKS = (
+    'Ask: "What is the company\'s name? If you know the address of its website, give it too."',
+    'Ask: "Is this a real company, or one invented for practice?"',
+    'Ask: "What is the strategic question? Give your own, or the company\'s own: the address of the page and the '
+    'sentence on it, 5 to 50 words."')
+OLD_ASKS = (
+    'Ask: "In your own words, what industry is it in?"',
+    'Ask: "Which companies compete with it, and which other companies should be watched? If a company, your own '
+    'included, is also known by another name, such as an older name or a group name, add that name after it. You can '
+    'leave this out."',
+    'Ask: "Where should a run look? Give each page by name and address: the company\'s and each competitor\'s press '
+    'and investor pages, regulators, trade press, places for permits and job postings."',
+    'Ask: "Which units and special words does the industry use, and in which languages do sources appear?"',
+    'Ask: "What do you think drives demand for this industry\'s products?"',
+    'Ask: "How far back should a run search? The usual choice is the last 36 months. Say a number of months from 1 '
+    'to 120, or keep 36."')
+FRAMED_BY_DEFAULT = ('Its `framed_by` is "the person running it", unless the person names themselves or a role for '
+                     'the question.')
+PROPOSE_POINTER = ("For a real company, read `${CLAUDE_PLUGIN_ROOT}/references/propose-pack.md` with your file tool "
+                   "and follow it")
+INVENTED_NEVER_SEARCHED = ("An invented company is never searched: it never reaches the propose step. For it, read "
+                           "`${CLAUDE_PLUGIN_ROOT}/references/pack-questions.md` with your file tool and ask its "
+                           "questions.")
+NO_WEB_TOOL = ("When no web search tool is available, or the search finds nothing, say so, and ask the questions of "
+               "`${CLAUDE_PLUGIN_ROOT}/references/pack-questions.md` instead, as the propose step says.")
+GIVEN_WEBSITE = ('When the person gives the website, it is the first entry of `places` in every path, kind '
+                 '`press_room`, named "<company> website": in the proposals it is shown as set, not numbered, and '
+                 'when the questions of `${CLAUDE_PLUGIN_ROOT}/references/pack-questions.md` are asked, the question '
+                 'about where to look asks only for further pages.')
+OLD_OPENING = ("never looks anything up", "Nine short questions follow", "Names from a search come in a later version",
+               "in a later version", "from the person's words alone")
 
 
 def new_pack_text():
     return body(NEW_PACK)
+
+
+def pack_questions_text():
+    return PACK_QUESTIONS.read_text(encoding="utf-8")
+
+
+def asks_of(text):
+    return [line for line in text.splitlines() if line.startswith("Ask:")]
+
+
+def test_new_pack_asks_three_things_and_hands_the_rest_to_the_propose_step_or_the_old_questions():
+    """0.5 batch 4: company (and website), real or invented, the question; then the propose step for a real company,
+    the old questions for an invented one (Review Focus 3) and when there is no web tool (Review Focus 4)."""
+    text = new_pack_text()
+    flat = " ".join(text.split())
+    questions = text[text.index("## The questions"):text.index("## After the last answer")]
+    assert [line for line in asks_of(questions)] == list(NEW_PACK_ASKS)
+    for needed in (FRAMED_BY_DEFAULT, PROPOSE_POINTER, INVENTED_NEVER_SEARCHED, NO_WEB_TOOL,
+                   "Three short questions follow; for an invented company, or when no search is possible, a few more.",
+                   "or from a rule the propose step names", GIVEN_WEBSITE):
+        assert needed in flat, needed
+    assert "The website is for the search only" not in flat
+    for gone in OLD_OPENING:
+        assert gone not in flat, gone
+    assert "with your name or role" not in flat, "framed_by is not asked"
+    # the invented company is sent to the old questions before the propose step is named for a real one
+    assert flat.index(NEW_PACK_ASKS[1]) < flat.index(INVENTED_NEVER_SEARCHED.split(":")[0])
+    assert (ROOT / "references" / "propose-pack.md").is_file()
+
+
+def test_the_old_questions_are_kept_unchanged_as_the_fallback():
+    text = pack_questions_text()
+    flat = " ".join(text.split())
+    assert asks_of(text) == list(OLD_ASKS)
+    for ask in asks_of(text):
+        assert text[text.index(ask) + len(ask):].lstrip().startswith(STOP[:30]), ask
+    assert text.count(STOP) == len(OLD_ASKS)
+    for needed in ("`suggested_by` is `user`", "never suggest one from your own knowledge", "leave `other_names` out",
+                   "36 months unless the person wants another", "not asked again"):
+        assert needed in flat, needed
+    assert len(text.splitlines()) < 80 and "bin/radar" not in text and unknown_calls(text) == []
 
 
 def new_pack_example():
@@ -3519,19 +3633,19 @@ def test_new_pack_front_matter_is_the_one_the_brief_gives():
     assert len(read(NEW_PACK).splitlines()) < 100
 
 
-def test_new_pack_enters_every_name_as_a_candidate_from_the_person_only():
+def test_new_pack_enters_every_name_as_a_candidate_from_the_person_or_an_opened_page():
     text = new_pack_text()
     for needed in ("`candidate`", "`suggested_by`", "`user`", "adds no name from its own knowledge",
                    "pointers, not facts", 'radar check-pack --file "radar/packs/<id>.json"',
-                   "in a later version"):
+                   "`search`", "`found_at`", "a page the propose step opened"):
         assert needed in text, needed
-    assert "`found_at`" not in text, "names from a search are not part of this version"
+    assert "in a later version" not in text, "names from a search are part of this version"
 
 
 def test_new_pack_says_where_the_question_comes_from():
     text = new_pack_text()
     assert "`framed_by`" in text and "`evidence`" in text and "`framing`" in text
-    assert f"{pack_module.DEFAULT_MONTHS} months" in text
+    assert f"{pack_module.DEFAULT_MONTHS} months" in pack_questions_text()
     assert "checks the quote against the page" in text and "never states a company's strategy from memory" in text
 
 
@@ -3539,16 +3653,17 @@ def test_new_pack_asks_one_thing_at_a_time_and_every_question_is_followed_by_the
     text = new_pack_text()
     asks = [line for line in text.splitlines() if line.startswith("Ask:")]
     assert "one per message" in text
-    assert len(asks) == 13 and text.count(STOP) == len(asks)      # M9: one more, whether the company is real
+    # 0.5 batch 4: three questions and the four of the id and the save; the other six are in pack-questions.md
+    assert len(asks) == 7 and text.count(STOP) == len(asks)
     for ask in asks:
         assert text[text.index(ask) + len(ask):].lstrip().startswith(STOP[:30]), ask
 
 
-def test_new_pack_names_no_helper_and_no_web_tool():
+def test_new_pack_names_no_helper_and_leaves_the_search_to_the_propose_step():
     text = new_pack_text()
-    assert not re.search(r"source-scout|fact-extractor|support-checker|bias-auditor|strategy-radar:|WebSearch|WebFetch"
-                         r"|web search|search the web", text, re.I)
-    assert "never looks anything up" in text
+    assert not re.search(r"source-scout|fact-extractor|support-checker|bias-auditor|strategy-radar:|WebSearch|WebFetch",
+                         text, re.I)
+    assert "never looks anything up" not in text and "search the web" not in text.lower()
 
 
 def test_new_pack_names_no_model_no_real_address_and_puts_nothing_but_the_file_on_a_command_line():
@@ -3566,14 +3681,17 @@ def test_the_example_pack_passes_the_real_check_with_no_problems(tmp_path):
     assert (code, printed["problems"], printed["explained"]) == (0, [], [])
     assert printed["pack"] == {"id": example["id"], "company": example["company"], "illustrative": False}
     assert printed["window"]["months"] == pack_module.DEFAULT_MONTHS
-    assert all(c["status"] == "candidate" and c["suggested_by"] == "user"
+    assert all(c["status"] == "candidate" and c["suggested_by"] in {"user", "search"}
                for c in example["competitors"] + example["watch"])
+    found = [c for c in example["competitors"] if c["suggested_by"] == "search"]   # final fix wave, deferred 3
+    assert len(found) == 1 and found[0]["found_at"].split("/")[2].endswith(".example")
+    assert all("found_at" not in c for c in example["competitors"] + example["watch"] if c["suggested_by"] == "user")
     assert {q["framing"] for q in example["strategic_questions"]} == set(store.FRAMING)
     assert "illustrative is false for a real company" in new_pack_text().replace("`", "")
 
 
 def test_every_key_the_skill_names_is_a_key_of_the_format_and_every_key_of_the_format_is_asked_for():
-    text = new_pack_text()
+    text = new_pack_text() + "\n" + pack_questions_text()
     example = new_pack_example()
     seen = set()
 
@@ -3586,11 +3704,11 @@ def test_every_key_the_skill_names_is_a_key_of_the_format_and_every_key_of_the_f
             for item in value:
                 walk(item)
     walk(example)
-    assert seen <= format_keys() and seen == format_keys() - {"found_at"}, sorted(seen ^ format_keys())
+    assert seen == format_keys(), sorted(seen ^ format_keys())
     allowed_values = NOT_KEYS_BUT_VALUES | {"what", "why", "do", "explained"} | set(pack_module.PLACE_KINDS) | set(pack_module.SUGGESTED_BY)
     spans = set(re.findall(r"`([a-z][a-z_]*)`", text))
     assert spans <= format_keys() | allowed_values, sorted(spans - format_keys() - allowed_values)
-    questions = text[text.index("## The questions"):text.index("## After the last answer")]
+    questions = text[text.index("## The questions"):text.index("## After the last answer")] + pack_questions_text()
     required = set(pack_module.KEYS) - {"vocabulary", "time_window_months"}
     for key in sorted(format_keys() - {"found_at"}):
         if key == "id":
@@ -3601,7 +3719,7 @@ def test_every_key_the_skill_names_is_a_key_of_the_format_and_every_key_of_the_f
 
 
 def test_the_allowed_values_the_skill_names_are_the_engines():
-    text = new_pack_text()
+    text = new_pack_text() + "\n" + pack_questions_text()
     for kind in pack_module.PLACE_KINDS:
         assert f"`{kind}`" in text, kind
     kinds_in_text = {s for s in re.findall(r"`([a-z]+_[a-z_]+|[a-z]+)`", text)
@@ -3657,7 +3775,7 @@ def test_the_skill_writes_to_a_folder_the_guard_lets_through(tmp_path):
 
 
 def test_the_time_window_sentence_is_the_engines_default():
-    text = new_pack_text()
+    text = pack_questions_text()
     assert f"{pack_module.DEFAULT_MONTHS} months unless the person wants another" in text
     assert pack_module.months_of({}) == pack_module.DEFAULT_MONTHS
 
@@ -3753,14 +3871,14 @@ def test_the_lead_starts_only_the_plugin_s_eight_helpers_and_hands_no_command_to
     grouper is the eighth, so the rule names the eight the guard knows, each by its full name, and no other."""
     main = " ".join(body(MAIN).split())
     standing = main[main.index("## Standing rules"):main.index("## The steps")]
-    assert "**Only the plugin's eight helpers.** Start no helper but" in standing and HELPER_RULE in standing
+    assert "**Only the plugin's nine helpers.** Start no helper but" in standing and HELPER_RULE in standing
     assert "four helpers." not in standing and "**Only the plugin's four helpers.**" not in standing
     assert "seven helpers" not in standing
-    bullet = next(line for line in body(MAIN).splitlines() if line.startswith("- **Only the plugin's eight helpers.**"))
+    bullet = next(line for line in body(MAIN).splitlines() if line.startswith("- **Only the plugin's nine helpers.**"))
     named = re.findall(r"`strategy-radar:([a-z-]+)`", bullet[:bullet.index("each by this full name")])
     assert named == list(guard.HELPERS), named
     assert set(named) == {"source-scout", "fact-extractor", "support-checker", "bias-auditor", "lens-advisor",
-                          "lens-link-reader", "lens-link-reader-quick", "project-grouper"}
+                          "lens-link-reader", "lens-link-reader-quick", "project-grouper", "claim-matcher"}
     for helper in named:
         assert (ROOT / "agents" / f"{helper}.md").is_file(), helper
     start = " ".join(start_text().split())
@@ -3976,9 +4094,9 @@ def test_step_six_shows_the_program_s_full_list_in_place_of_a_stale_or_damaged_r
 
 
 def test_new_pack_asks_for_other_names_as_optional_and_leaves_them_out_on_i_dont_know(tmp_path):
-    text = new_pack_text()
-    assert "also known by another name" in text and "You can leave this out" in text
-    assert "leave the key out" in text and "never suggest one from your own knowledge" in text
+    text, questions = new_pack_text(), pack_questions_text()
+    assert "also known by another name" in questions and "You can leave this out" in questions
+    assert "leave the key out" in text and "never suggest one from your own knowledge" in questions
     example = new_pack_example()
     assert example["other_names"] and example["competitors"][0]["other_names"]
     code, printed = check_pack_file(tmp_path, example)
@@ -4075,12 +4193,12 @@ def test_step_4_gives_the_extractor_the_other_names():
 
 def test_the_run_names_eight_helpers():
     main = flat(MAIN)
-    bullet = main[main.index("**Only the plugin's eight helpers.**"):main.index("**At most four helpers")]
-    assert f"`{GROUPER}`" in bullet and "and `strategy-radar:project-grouper`" in bullet
+    bullet = main[main.index("**Only the plugin's nine helpers.**"):main.index("**At most four helpers")]
+    assert f"`{GROUPER}`" in bullet and "and `strategy-radar:claim-matcher`" in bullet
     assert "a project grouping recorded by anyone but the project grouper" in bullet
     assert "seven" not in bullet
     guide = flat(ROOT / "docs" / "plugin.md")
-    assert "no helper but the plugin's eight is started" in guide and "plugin's seven" not in guide
+    assert "no helper but the plugin's nine is started" in guide and "plugin's seven" not in guide
     # each helper the rule names is a file, and the guard knows it
     for name in re.findall(r"`strategy-radar:([a-z-]+)`", bullet):
         assert name in guard.HELPERS and (ROOT / "agents" / f"{name}.md").is_file(), name

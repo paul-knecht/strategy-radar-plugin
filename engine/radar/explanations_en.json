@@ -119,6 +119,11 @@
     "why": "The run stops twice for your decision: before the lenses are chosen and before the final report.",
     "do": "Answer the open question for this run. The report is built after that."
   },
+  "a decision is recorded as unattended, but this run was not started unattended": {
+    "what": "A decision in this run is marked as taken without a person, but the run was not started that way.",
+    "why": "Only a run started unattended may skip its stops, so this decision cannot be trusted as a person's.",
+    "do": "Answer the decision again as a person, or start a new run that is unattended from the beginning."
+  },
   "a text that says an amount is missing names none of the confirmed facts that state an amount": {
     "what": "A text of the analysis says that no source gives a price, a cost or another amount, while confirmed facts of this run state amounts.",
     "why": "A reader would take the amount as missing, while the run holds amounts that may answer it.",
@@ -953,5 +958,30 @@
     "what": "A merge folds a proposal into itself.",
     "why": "A fold adds the quote of another proposal; a proposal cannot support itself.",
     "do": "Take it out of its own merge, and join again."
+  },
+  "two proposals of one source are in one group": {
+    "what": "A group of the claim matcher holds two proposals of the same source.",
+    "why": "A group joins what different sources say about one claim; one source cannot confirm itself.",
+    "do": "Keep one proposal of each source in the group, and send the groups again."
+  },
+  "an early signal is in a group": {
+    "what": "A group holds an early signal, as the proposal that stays or as one that folds.",
+    "why": "An early signal, such as a permit or a job posting, is never confirmed and never confirms another fact.",
+    "do": "Take the early signal out of the group, and send the groups again."
+  },
+  "capacity moves of different companies are in one group": {
+    "what": "A group holds capacity moves of different companies.",
+    "why": "Proposals of one group must state the same claim, and a move of one company is not a move of another.",
+    "do": "Group only moves of one company, and send the groups again."
+  },
+  "capacity moves in one group state a different": {
+    "what": "The capacity moves of a group state a different size, unit or announcement date.",
+    "why": "Proposals of one group must state the same claim, and moves that differ in what both state are not one move.",
+    "do": "Group only moves that agree where both state a value, and send the groups again."
+  },
+  "a capacity move in a group names no company": {
+    "what": "A group holds a capacity move that names no company.",
+    "why": "Without a company it cannot be told whether the moves of the group are one move.",
+    "do": "Take that move out of the group, and send the groups again."
   }
 }

@@ -291,7 +291,7 @@ def test_the_code_reading_helper_finds_the_known_messages():
 def test_every_fixed_message_in_the_code_is_explained():
     unexplained = []
     for module in ("schema.py", "schema_analysis.py", "gate.py", "calc.py", "pack.py", "lenses.py",
-                   "recommend.py", "projects.py"):
+                   "recommend.py", "projects.py", "claims.py"):
         for text in sorted(_messages_in(ENGINE / module)):
             if not explain(Problem("analysis.json", None, text))["known"]:
                 unexplained.append(f"{module}: {text}")

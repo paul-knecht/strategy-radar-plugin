@@ -1604,3 +1604,67 @@ def test_a_memo_with_a_capacity_move_shows_no_answer_bar_and_no_link_to_a_remove
     page = html_for(run)
     assert 'id="answer"' not in page
     assert 'href="#view-projects"' not in page and 'data-view="projects"' not in page
+
+
+LENS_LINE = "No person chose the lenses; the lens advisor's recommendation was taken."
+FINAL_LINE = "No person reviewed this report before it was built; the program's checks passed."
+
+
+UNATTENDED_ANSWERS = {"lenses": "The lens advisor's recommendation was taken: firm-boundaries.",
+                      "final_report": "The checks passed and the report was built without a person's review."}
+
+
+def _decided(tmp_path, *decisions):
+    run = ready_run(tmp_path)
+    for name, who in decisions:
+        store.record_checkpoint(run, name, who, UNATTENDED_ANSWERS[name] if who == "unattended" else "A person's answer.")
+    return run
+
+
+def _both(run):
+    model = build_model(run, LENSES)
+    return model, esc_free(html_for(run)), render_markdown(model)
+
+
+def esc_free(page):
+    return page.replace("&#x27;", "'").replace("&#39;", "'")
+
+
+def test_an_unattended_run_says_no_person_chose_or_reviewed(tmp_path):
+    model, page, markdown = _both(_decided(tmp_path, ("lenses", "unattended"), ("final_report", "unattended")))
+    assert model["unattended"] == ["lenses", "final_report"]
+    for text in (page, markdown):
+        assert LENS_LINE in text and FINAL_LINE in text
+
+
+def test_a_run_whose_lenses_a_person_chose_says_only_the_build_was_not_reviewed(tmp_path):
+    _, page, markdown = _both(_decided(tmp_path, ("lenses", "person"), ("final_report", "unattended")))
+    for text in (page, markdown):
+        assert FINAL_LINE in text and LENS_LINE not in text
+
+
+def test_a_later_person_decision_drops_the_line(tmp_path):
+    model, page, markdown = _both(_decided(tmp_path, ("final_report", "unattended"), ("final_report", "person")))
+    assert model["unattended"] == []
+    assert FINAL_LINE not in page and FINAL_LINE not in markdown
+
+
+def test_the_unattended_label_reads_decided_without_a_person(tmp_path):
+    _, page, markdown = _both(_decided(tmp_path, ("lenses", "unattended"), ("final_report", "unattended")))
+    for text in (page, markdown):
+        for answer in UNATTENDED_ANSWERS.values():
+            assert "Decided without a person: " + answer in text
+
+
+def test_a_run_with_no_unattended_decision_shows_no_line(tmp_path):
+    model, page, markdown = _both(_decided(tmp_path, ("lenses", "person"), ("final_report", "person")))
+    assert model["unattended"] == [] and "No person" not in page and "No person" not in markdown
+
+
+def test_a_fact_withdrawn_without_a_person_is_listed_with_its_reason(tmp_path):
+    run = ready_run(tmp_path)
+    reason = "Withdrawn without a person: the support check could not be completed."
+    verify.withdraw_fact(run, "F1", reason)
+    verify.settle(run)
+    model, page, markdown = _both(run)
+    assert reason in page and reason in markdown

@@ -17,7 +17,7 @@ Build only when all three are listed, in exactly this order: the decision mark `
 In every other case:
 
 - **`analysis.json` is listed before `notes/audit.json`, or the audit file is missing.** First do step 8 again.
-- **Then, and in every other order or with the decision mark missing,** show the view of step 9 and ask its question again; a new decision is recorded and its mark written as step 9 says, and you build nothing until then.
+- **Then, and in every other order or with the decision mark missing,** show the view of step 9 and ask its question again, as step 9 says, including its unattended rule; a new decision is recorded and its mark written as step 9 says, and you build nothing until then.
 
 Every doubt ends in asking again.
 
@@ -54,7 +54,7 @@ radar build-report --run "<run>" --lenses "<lens folder>"
 ```
 
 - **Exit code 0.** `built` lists the files the program wrote. Go on with part 5.
-- **Exit code 1.** The program refused, and nothing was built. Show the person each different entry of `explained` once: its `what`, `why` and `do`, word for word. Then follow each `do` by the means the steps allow: a comparison that is out of date is made again as in part 3; the analysis is changed as step 9 says; a fact is handled as step 5 and step 9 say, and the moves are grouped again, as part 8 of `steps/05-verify.md` says. When this changed `analysis.json` or a fact, the person's decision was about an earlier state: do step 8 again, show the view of step 9 and ask its question again, before you build. Then build again.
+- **Exit code 1.** The program refused, and nothing was built. Show the person each different entry of `explained` once: its `what`, `why` and `do`, word for word. Then follow each `do` by the means the steps allow: a comparison that is out of date is made again as in part 3; the analysis is changed as step 9 says; a fact is handled as step 5 and step 9 say, and the moves are grouped again, as part 8 of `steps/05-verify.md` says. When this changed `analysis.json` or a fact, the person's decision was about an earlier state: do step 8 again, show the view of step 9 and ask its question again, as step 9 says, including its unattended rule, before you build. Then build again.
 - **After three refusals, stop.** Tell the person plainly what is still open, entry by entry. Build nothing in any other way.
 
 ## 5. Tell the person what they have

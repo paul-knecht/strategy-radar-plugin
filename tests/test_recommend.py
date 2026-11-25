@@ -1278,14 +1278,31 @@ def test_the_context_command_prints_the_packets_and_changes_nothing(tmp_path, ca
     run = recorded_run(tmp_path)
     before = sorted((str(path), path.stat().st_mtime_ns) for path in run.rglob("*"))
     code, out = run_cli(capsys, "lens-link-context", "--run", run, "--lenses", LENSES)
-    assert code == 0 and list(out) == ["packets"]
+    assert code == 0 and list(out) == ["part", "parts", "packets"] and (out["part"], out["parts"]) == (1, 1)
     assert out["packets"] == json.loads(json.dumps(recommend.link_packets(run, LENSES))) and len(out["packets"]) == 2
     assert sorted((str(path), path.stat().st_mtime_ns) for path in run.rglob("*")) == before
 
 
 def test_the_context_command_prints_no_packet_without_a_recommendation(tmp_path, capsys):
     run = recommend_run(tmp_path)
-    assert run_cli(capsys, "lens-link-context", "--run", run, "--lenses", LENSES) == (0, {"packets": []})
+    assert run_cli(capsys, "lens-link-context", "--run", run, "--lenses", LENSES) == (
+        0, {"part": 1, "parts": 1, "packets": []})
+
+
+def test_the_context_command_prints_many_links_in_parts_that_fit(tmp_path, capsys):
+    run = many_moves_run(tmp_path)
+    facts = [f"F{number}" for number in range(1, 81)]
+    recommend.record_recommendation(run, LENSES, [entry(facts=facts)], None, recommend.ADVISOR, now=NOW)
+    command = ("lens-link-context", "--run", run, "--lenses", LENSES)
+    code, first = run_cli(capsys, *command)
+    assert code == 0 and first["parts"] >= 2 and first == run_cli(capsys, *command, "--part", 1)[1]
+    printed = [first] + [run_cli(capsys, *command, "--part", n)[1] for n in range(2, first["parts"] + 1)]
+    assert [packet["fact"] for given in printed for packet in given["packets"]] == facts
+    assert all(len(json.dumps(given)) < 20000 for given in printed)
+    code, out = run_cli(capsys, *command, "--part", 99)
+    assert code == 1 and list(out) == ["problems", "explained"]
+    assert f"{first['parts']} parts" in out["problems"][0]["message"] and out["explained"][0]["known"] is True
+    assert run_cli(capsys, *command, "--part", "x")[0] == 2
 
 
 def test_the_context_command_refuses_a_missing_lens_folder_and_a_folder_that_is_not_a_run(tmp_path, capsys):

@@ -6,5 +6,6 @@
   "lens-advisor": "claude-opus-5-5",
   "lens-link-reader": "claude-opus-5-5",
   "lens-link-reader-quick": "sonnet",
-  "project-grouper": "claude-opus-5-5"
+  "project-grouper": "claude-opus-5-5",
+  "claim-matcher": "claude-opus-5-5"
 }

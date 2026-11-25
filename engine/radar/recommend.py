@@ -686,6 +686,11 @@ def link_packets(run_dir: Path, lenses_dir: Path) -> list[dict]:
     return packets
 
 
+def link_parts(run_dir: Path, lenses_dir: Path) -> list[dict]:
+    """`link_packets` in parts that each print shorter than `parts.PART_LIMIT`. Changes nothing."""
+    return parts.split_input({"packets": link_packets(run_dir, lenses_dir)}, ("packets",))
+
+
 def record_link_check(run_dir: Path, lens: str, fact: str, verdict: str, by: str, note: str,
                       now: datetime | None = None) -> None:
     """Record one link reader's verdict on one link of the recorded recommendation. Holds the run lock.

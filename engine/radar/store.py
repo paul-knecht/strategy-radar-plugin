@@ -266,6 +266,7 @@ def init_run(root: Path, question: str, pack: str, run_id: str | None = None,
         record["companies"] = companies
     if screening:   # only a screening run has the key, so every earlier run reads as before
         record["screening"] = True
+        record["unattended"] = True   # a screening run is unattended; runs from before 0.5 lack the key and keep both stops
     save_run(run_dir, record)
     return run_dir
 

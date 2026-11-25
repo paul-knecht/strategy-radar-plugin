@@ -45,21 +45,52 @@ def test_the_extractor_reads_the_playbook_step_four_names_and_proposes_only_gene
     assert "In a screening run, propose only general facts; the capacity-move fields and in_question do not apply." in body
 
 
+SCREEN = ROOT / "skills" / "screen" / "SKILL.md"
+SEARCH_RULES = ('"suggested_by": "search"', "`found_at`", "Propose only pages you opened",
+                "never proposed, whatever you know", "name the numbers to strike", "company register")
+
+
 def test_the_screen_skill_makes_a_screening_pack_through_new_pack_and_hands_over_to_the_run():
-    body = text(ROOT / "skills" / "screen" / "SKILL.md")
-    for needed in ("skills/new-pack/SKILL.md", '"screening": true', '"time_window_months": 120', "/strategy-radar:run",
-                   "What would have to be true to invest in <startup>?"):
+    body = text(SCREEN)
+    for needed in ("skills/new-pack/SKILL.md", "references/propose-pack.md", '"screening": true',
+                   '"time_window_months": 120', "/strategy-radar:run", "What would have to be true to invest in <startup>?",
+                   "such as EUR, employees or customers", "how far back"):
         assert needed in body, needed
 
 
-def test_the_screen_skill_proposes_competitors_and_pages_from_a_search_never_from_memory():
-    """Paul, 2026-11-17: the person gives name and website; the AI finds the rest, each with the page it was found on."""
-    body = text(ROOT / "skills" / "screen" / "SKILL.md")
-    for needed in ('"suggested_by": "search"', "`found_at`", "Propose only pages you opened",
-                   "never proposed, whatever you know", "name the numbers to strike"):
-        assert needed in body, needed
-    assert "Every name and address still comes from the person's words" not in body
+def test_the_search_rules_live_only_in_the_shared_propose_step():
+    """Review Focus 5 (batch 4): one copy of the search rules, so that screen and new-pack cannot disagree."""
+    body, shared = text(SCREEN), text(REFS / "propose-pack.md")
+    for rule in SEARCH_RULES:
+        assert rule in shared, rule
+        assert rule not in body, rule
+    assert "## The search" not in body
+    for gone in ("never looks anything up", "names from a search come later", "Right after its name, ask for the address",
+                 "same two stops as every run"):
+        assert gone not in body, gone
+    assert "without stopping" in body
+    assert len(body.splitlines()) < 44, "screen is shorter than before batch 4"
 
+
+def test_the_screen_skill_keeps_the_given_website_in_every_path_and_the_window_fixed():
+    body = text(SCREEN)
+    for needed in ("new-pack's rule for a given website holds",
+                   "When the person gives no website, go on: the propose step searches by the name.",
+                   "as the opened pages or the person give them",
+                   "with the pack's strategic question, word for word, as the question, naming the new pack file",
+                   "The search for competitors and pages has run in three real screening sessions; the proposals for "
+                   "the rest of the pack have run in one.",
+                   "it stays even if the person strikes it", "must contain no non-public information",
+                   "proposes the rest of the pack from a web search", "after one confirmation"):
+        assert needed in body, needed
+
+
+def test_the_screen_skill_and_the_readme_say_when_an_unattended_screening_run_stops():
+    stops = ("It stops and asks you only when the advisor has no usable recommendation or a check fails, "
+             "and it stops when a command is refused.")
+    assert stops in text(SCREEN)
+    assert "unless the lens advisor has no usable recommendation, a check fails or a command is refused" in text(
+        ROOT / "README.md")
 
 def test_the_readme_lists_the_screen_command():
     assert "`/strategy-radar:screen`" in text(ROOT / "README.md")

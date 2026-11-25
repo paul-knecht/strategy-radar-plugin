@@ -19,6 +19,7 @@ COMPARISON_FOR_ANOTHER_RUN = "the comparison was made for another run"
 COMPARISON_FROM_EARLIER_VERSION = "the comparison was made by an earlier version of the program"
 REASONS_DO_NOT_FOLLOW = "the reasons for uncertain do not follow from the checks"
 PRIVATE_NOT_PUBLISHABLE = "a publishable report may not be built from a private run"
+UNATTENDED_IN_ATTENDED_RUN = "a decision is recorded as unattended, but this run was not started unattended"
 
 
 def _copy_text(run_dir: Path, source: dict | None) -> str | None:
@@ -76,6 +77,22 @@ def _missing_checkpoints(run_dir: Path) -> list[Problem]:
         if isinstance(checkpoints, list) else set()
     return [Problem("run.json", "checkpoints", f"checkpoint {name} is not recorded")
             for name in store.CHECKPOINTS if name not in recorded]
+
+
+def _unattended_answers_allowed(run_dir: Path) -> list[Problem]:
+    """An unattended decision stands only in a run whose record says `unattended: true` (older runs lack the key)."""
+    try:
+        run = store.load_run(run_dir)
+    except (ValueError, OSError, RecursionError):  # check_data names it
+        return []
+    if not isinstance(run, dict) or run.get("unattended") is True:
+        return []
+    checkpoints = run.get("checkpoints")
+    last = {item.get("name"): item.get("answered_by") for item in checkpoints
+            if isinstance(item, dict) and isinstance(item.get("name"), str)} if isinstance(checkpoints, list) else {}   # only the last decision per name counts
+    if "unattended" in last.values():
+        return [Problem("run.json", "checkpoints", UNATTENDED_IN_ATTENDED_RUN)]
+    return []
 
 
 def _checks_that_do_not_hold(run_dir: Path, facts: dict[str, dict], sources: dict[str, dict]) -> list[Problem]:
@@ -321,6 +338,7 @@ def gate(run_dir: Path, lenses_dir: Path | None = None, publishable: bool = Fals
                 if problem.file not in (recommend.RECORD, projects.RECORD)]   # advice and a help: never a stop
     problems += _missing_analysis(run_dir)
     problems += _missing_checkpoints(run_dir)
+    problems += _unattended_answers_allowed(run_dir)
     problems += _checks_that_do_not_hold(run_dir, facts, sources)
     problems += _facts_that_do_not_count(run_dir, facts)
     problems += _facts_named_in_texts(run_dir, facts)

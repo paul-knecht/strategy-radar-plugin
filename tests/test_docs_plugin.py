@@ -24,7 +24,7 @@ from test_shipped_lenses import LENSES, lens_level, load
 GUIDE = ROOT / "docs" / "plugin.md"
 SKILLS = ("start", "practice", "run", "new-pack", "screen")
 HELPERS = ("source-scout", "fact-extractor", "support-checker", "bias-auditor", "lens-advisor", "lens-link-reader",
-           "lens-link-reader-quick", "project-grouper")
+           "lens-link-reader-quick", "project-grouper", "claim-matcher")
 SPANS = re.compile(r"`([^`\n]+)`")
 FILE_ENDINGS = (".md", ".json", ".py", ".sh", ".txt", ".toml")
 # Paths in the guide that are not in this repository: they are in the person's own project or home folder, or inside a
@@ -125,7 +125,8 @@ def test_the_guide_has_the_two_sections_a_person_ticks_off_and_reads(guide):
     for word in ("Windows", "Linux", "second name", "shared platform", "stylesheet", "stand-in servers", "Claude Code only"):
         assert word in limits, word
     assert "The source scout has never searched the real web" not in limits   # the real runs have
-    assert "the one screening run used a pack whose competitors and pages the person named" in limits
+    assert "has run in three of the screening runs; in the first, the person named them" in limits
+    assert "Not tried yet: the web search of `/strategy-radar:screen`" not in limits
     assert "No README and no icon" not in limits   # plan 2b fix round 1: the README and the icon exist
 
 
@@ -385,7 +386,7 @@ def test_the_guide_says_the_run_groups_the_moves_into_projects_and_names_eight_h
     """Task 13 of the report redesign: the run's fifth step ends with the grouping, a failed grouping never stops the
     run, a step that changes a fact groups again, and the lead may start eight helpers."""
     flat = " ".join(guide.split())
-    for needed in ("no helper but the plugin's eight is started", "the project grouper gathers the capacity moves",
+    for needed in ("no helper but the plugin's nine is started", "the project grouper gathers the capacity moves",
                    "the plugin says so in one sentence and goes on",
                    "the report then shows each move on its own and says why",
                    "has the moves grouped again", "never stops a step",
@@ -393,3 +394,21 @@ def test_the_guide_says_the_run_groups_the_moves_into_projects_and_names_eight_h
                    "its projects are a model's judgement, which nobody has checked"):
         assert needed in flat, needed
     assert "plugin's seven" not in flat
+
+
+def test_the_guide_and_the_readme_say_what_setup_asks_now(guide):
+    """Batch 4: new-pack and screen take three answers, then one confirmation of the proposals from a search."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    rows = [line for line in readme.splitlines() if line.startswith(("| `/strategy-radar:new-pack`", "| `/strategy-radar:screen`"))]
+    paragraphs = [line for line in guide.splitlines() if line.startswith(("**`/strategy-radar:new-pack`**", "**`/strategy-radar:screen`**"))]
+    assert len(rows) == 2 and len(paragraphs) == 2
+    for text in rows + paragraphs:
+        assert "three answers" in text and "one confirmation" in text, text[:40]
+    assert "builds the pack from your answers alone" not in guide
+    assert "same two stops as every run" not in readme
+    # final fix wave M6 and M8
+    assert "when no web search is available or the search finds nothing" in rows[0]
+    for text in (rows[1], paragraphs[1]):
+        assert ("the search for competitors and pages has run in three real screening sessions; the proposals for the "
+                "rest of the pack have run in one") in text.lower(), text[:40]
+    assert "and the web search of the screen skill" not in guide

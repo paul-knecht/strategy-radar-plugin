@@ -452,6 +452,8 @@ def _other_options(tmp_path) -> dict[str, list]:
                               "--by", "lens-link-reader", "--note", ""],
         "project-grouper-input": [],
         "record-projects": ["--by", "project-grouper", "--file", grouping],
+        "claim-matcher-input": ["--sources", "S1"],
+        "record-claim-groups": ["--sources", "S1", "--by", "claim-matcher", "--list-stdin"],
     }
 
 
@@ -470,7 +472,7 @@ TAKES_RUN = ["add-fact", "add-facts", "join-proposals", "checkpoint", "log-searc
              "add-copy", "add-based-on", "check-data", "check-quotes", "settle", "gate", "status", "record-support",
              "withdraw-fact", "quote-context", "build-report", "calc", "record-lens-recommendation",
              "lens-advisor-input", "lens-link-context", "lens-view", "record-link-check", "project-grouper-input",
-             "record-projects"]
+             "record-projects", "claim-matcher-input", "record-claim-groups"]
 
 
 @pytest.mark.parametrize("command", TAKES_RUN)
@@ -910,3 +912,13 @@ def test_a_screening_pack_marks_the_run_and_a_company_pack_leaves_the_key_out(tm
     assert code == 0 and "screening" not in store.load_run(tmp_path / "c1")
     code, out = run_cli(capsys, "check-data", "--run", str(tmp_path / "s1"))
     assert code == 0 and out["problems"] == []
+
+
+def test_a_screening_pack_starts_an_unattended_run_and_a_company_pack_an_attended_one(tmp_path, capsys):
+    startup = ROOT / "tests" / "fixtures" / "startup-pack.json"
+    code, _ = run_cli(capsys, "init-run", "--root", str(tmp_path), "--question", "Q?", "--pack-file", str(startup),
+                      "--run-id", "s1")
+    assert code == 0 and store.load_run(tmp_path / "s1")["unattended"] is True
+    code, _ = run_cli(capsys, "init-run", "--root", str(tmp_path), "--question", "Q?",
+                      "--pack-file", str(ROOT / "packs" / "demo.json"), "--run-id", "c1")
+    assert code == 0 and "unattended" not in store.load_run(tmp_path / "c1")

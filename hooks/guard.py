@@ -10,13 +10,14 @@ A hand write is refused as well when the guard cannot follow the file name, part
 place where it lands, and when that place is one that each program sees for itself or that is named by
 numbers (SHORTCUT_FOLDERS), see _follow and _judge. A write into a file with another name as well is
 refused with its own reason, see _has_other_names.
-Rule 2, for the plugin's helpers: only the support checker, the lens advisor, the two link readers and the project
-grouper run commands, each only its own two, in the form its file shows, and a command that records names the helper
-itself (see _fits). The other three run none.
+Rule 2, for the plugin's helpers: only the support checker, the lens advisor, the two link readers, the project
+grouper and the claim matcher run commands, each only its own two, in the form its file shows, and a command that
+records names the helper itself (see _fits). The other three run none.
 Rule 3, for every other caller (the lead, any other agent): a command that holds the word record-support,
-record-link-check, record-lens-recommendation or record-projects is refused, because only the support checker records
-a verdict, only the two link readers record a link verdict, only the lens advisor records the recommendation and only
-the project grouper records the projects, see _decide.
+record-link-check, record-lens-recommendation, record-projects or record-claim-groups is refused, because only the
+support checker records a verdict, only the two link readers record a link verdict, only the lens advisor records the
+recommendation, only the project grouper records the projects and only the claim matcher records the claim groups, see
+_decide.
 
 An event the guard cannot read (not JSON, not an object, a value of another kind than expected,
 no file named) is let through: the guard must never break a session. But a helper is never unlimited:
@@ -54,9 +55,13 @@ GROUPER_REASON = SENDER + "This helper may only run: radar project-grouper-input
 PROJECTS_REASON = SENDER + ("Only the project grouper records the projects. "
                             "Ask the project grouper to group the moves.")
 
+MATCHER_REASON = SENDER + "This helper may only run: radar claim-matcher-input and radar record-claim-groups."
+CLAIMS_REASON = SENDER + ("Only the claim matcher records the claim groups. "
+                          "Ask the claim matcher to match the proposals.")
+
 PLUGIN = "strategy-radar"
 HELPERS = ("source-scout", "fact-extractor", "support-checker", "bias-auditor",
-           "lens-advisor", "lens-link-reader", "lens-link-reader-quick", "project-grouper")
+           "lens-advisor", "lens-link-reader", "lens-link-reader-quick", "project-grouper", "claim-matcher")
 CHECKER = "support-checker"
 
 WRITING_TOOLS = ("Write", "Edit", "NotebookEdit")
@@ -86,6 +91,8 @@ SWITCHES = ("--note-stdin", "--list-stdin")         # options that take no value
 OPTIONAL = {                                         # options a subcommand may also take, at most once
     "lens-advisor-input": ("--part",),               # the input comes in parts; the helper reads them one by one
     "project-grouper-input": ("--part",),
+    "claim-matcher-input": ("--part",),
+    "lens-link-context": ("--part",),
 }
 _PART = re.compile(r"[1-9][0-9]*")                   # a part is a positive whole number, written plainly
 CHECKER_COMMANDS = {                                 # each subcommand: its options and the here-document it takes
@@ -97,6 +104,7 @@ LIST_END = "RADAR_LIST"
 LINK_VERDICT_WORD = "record-link-check"              # the command that records a link verdict
 LIST_WORD = "record-lens-recommendation"             # the command that records the recommendation
 PROJECTS_WORD = "record-projects"                    # the command that records the projects
+CLAIMS_WORD = "record-claim-groups"                  # the command that records the claim groups
 _READER_COMMANDS = {
     "lens-link-context": (("--run", "--lenses"), None),
     "record-link-check": (("--run", "--lens", "--fact", "--verdict", "--by", "--note-stdin"),
@@ -118,10 +126,17 @@ GROUPER_COMMANDS = {                                 # the project grouper's own
         "record-projects": (("--run", "--by", "--list-stdin"), (LIST_OPENER, LIST_END)),
     },
 }
+MATCHER_COMMANDS = {                                 # the claim matcher's own table; its --by is its own name
+    "claim-matcher": {
+        "claim-matcher-input": (("--run", "--sources"), None),
+        "record-claim-groups": (("--run", "--sources", "--by", "--list-stdin"), (LIST_OPENER, LIST_END)),
+    },
+}
 RECORD_WORDS = ((VERDICT_WORD, VERDICT_REASON), (LINK_VERDICT_WORD, LINK_VERDICT_REASON), (LIST_WORD, LIST_REASON),
-                (PROJECTS_WORD, PROJECTS_REASON))
+                (PROJECTS_WORD, PROJECTS_REASON), (CLAIMS_WORD, CLAIMS_REASON))
 _BARE_WORD = re.compile(r"[A-Za-z0-9._/:-][A-Za-z0-9._/:=-]*")
 _FACT_ID = re.compile(r"F[0-9]+")
+_SOURCE_IDS = re.compile(r"S[0-9]+(,S[0-9]+)*")      # S1,S2: plain, no spaces
 _LENS_ID = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_-]*")  # a lens name, plain letters only; never an option
 _UNSEEN = ("Cc", "Cf", "Cs", "Zs", "Zl", "Zp")       # control, format, half a pair, spaces, line breaks
 
@@ -410,7 +425,7 @@ def _words(line, openers):
             stop = line.find(" ", position)
             stop = end if stop < 0 else stop
             word = line[position:stop]
-            if word not in openers and not _BARE_WORD.fullmatch(word):
+            if word not in openers and not _BARE_WORD.fullmatch(word) and not _SOURCE_IDS.fullmatch(word):
                 return None
             words.append((word, False))
             position = stop
@@ -430,6 +445,8 @@ def _value_fits(option, text, quoted, by):
         return _LENS_ID.fullmatch(text) is not None
     if option == "--verdict":
         return text in ("bears", "doubt")
+    if option == "--sources":
+        return _SOURCE_IDS.fullmatch(text) is not None
     if option == "--part":
         return _PART.fullmatch(text) is not None
     return option == "--by" and text == by
@@ -514,6 +531,15 @@ def _is_a_grouper_command(command):
     return _fits(command, GROUPER_COMMANDS["project-grouper"], "project-grouper")
 
 
+def _is_a_matcher_command(command):
+    """True only for the two commands of the claim matcher, written the way its file writes them: it records its list
+    as plain lines from a here-document (--list-stdin), never through a file, and only under its own name. A curly
+    bracket anywhere in the call is refused too, as for the grouper."""
+    if isinstance(command, str) and ("{" in command or "}" in command):
+        return False
+    return _fits(command, MATCHER_COMMANDS["claim-matcher"], "claim-matcher")
+
+
 # ---------------------------------------------------------------- the decision
 
 def _decide(event):
@@ -544,6 +570,8 @@ def _decide(event):
             return None if _is_a_lens_helper_command(helper, command) else LENS_REASONS[helper]
         if helper in GROUPER_COMMANDS:
             return None if _is_a_grouper_command(command) else GROUPER_REASON
+        if helper in MATCHER_COMMANDS:
+            return None if _is_a_matcher_command(command) else MATCHER_REASON
         return NO_COMMANDS_REASON
     return None
 
