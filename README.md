@@ -1,8 +1,9 @@
 # Strategy Radar
 
-A Claude Code plugin that researches a strategy question from public sources and builds a layered report in which **every fact carries an exact quote that a program has checked** against a saved copy of the source.
+A Claude Code plugin that writes **first-pass screening memos on startups** and **competitor analyses** from public sources. **Every fact carries an exact quote that a program has checked** against a saved copy of the source.
 
-Example question: *"Which competitors are adding filling capacity, and for whom?"*
+- **Screening a startup:** `/strategy-radar:screen` takes the startup's name and website and writes a memo on its company, market, competition, team, traction and risks, what would have to be true to invest, and the questions the sources leave open for the partner meeting. The memo holds no verdict, no score and no figure of its own. See "Screening a startup" below.
+- **A strategy question:** `/strategy-radar:run` answers a question such as *"Which competitors are adding filling capacity, and for whom?"* in a layered report.
 
 > **Read this first.** The one company pack that ships is for an **invented company** (Example Pharma), with invented sources: a run on it is practice, and its reports say so at the top. The plugin also ships eighty-three lenses for real use. No pack for a real company ships: you make one with `/strategy-radar:new-pack`, and a run on such a pack has **been tried on real websites in only a few runs so far**. **"Confirmed" does not mean "true"**: it means the party itself, or two independent sources, state the fact in a quote the program found word for word, and a model judged that the quote supports the fact. That model can be wrong. Nothing here is insight into any company's internals.
 
@@ -31,7 +32,7 @@ Not supported. The program and the guard start through shell scripts and use Mac
 ### The two commands
 
 ```
-claude plugin marketplace add paul-knecht/strategy-radar-plugin
+claude plugin marketplace add paul-knecht/screening-radar
 claude plugin install strategy-radar@strategy-radar
 ```
 
@@ -87,7 +88,6 @@ In a Claude Code session with the plugin on:
 | `lenses/` | The eighty-three lenses for real use, each with the works or slides it rests on and their level; `lenses/README.md` says what a lens holds. |
 | `docs/engine.md` | What every `radar` command takes and prints. |
 | `docs/plugin.md` | A guide for someone who does not program: what is enforced by the program, what rests on instructions, what to check by hand, known limits. |
-| `docs/superpowers/` | The design, the plans and the build records with every decision. |
 | `tests/`, `evals/` | The test suite and the test cases for which skill starts. |
 
 ## Tests
@@ -104,7 +104,7 @@ uv run pytest -m model tests/model -q
 
 ## Status
 
-Version 0.5.0. Built with a plan, a review after every task and a final review of the whole branch; the decisions and what was not verified are recorded in `docs/superpowers/plans/2026-11-12-strategy-radar-plugin-ledger.md`. Real runs on public websites have been tried in only a few runs so far, among them four screening runs on startups; the web search of `/strategy-radar:screen` proposed the competitors and pages in three of them. Not done yet: sample runs.
+Version 0.5.0. Built with a plan, a review after every task and a final review of the whole branch; what was not verified is listed in `docs/plugin.md`. Real runs on public websites have been tried in only a few runs so far, among them four screening runs on startups; the web search of `/strategy-radar:screen` proposed the competitors and pages in three of them. Not done yet: sample runs.
 
 **New in 0.5.0:** a screening run goes on without stopping for you when nothing is wrong, and its memo says that no person reviewed it; the setup takes three answers and proposes the rest of the pack from a search; a new helper, the claim matcher, finds the same claim in several sources; a Mac whose Python has no certificates of its own can read more websites. The one real run on these parts still asked for the lenses, because the link readers could not read their input; that is mended and was tried on that run's links, but no whole run has been made since.
 

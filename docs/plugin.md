@@ -23,7 +23,7 @@ claude --plugin-dir /full/path/to/strategy-radar
 To install it, add the repository as a marketplace (a list that Claude Code installs plugins from) and install from there. A folder on your computer works in place of the GitHub name. To remove it again, undo both steps:
 
 ```
-claude plugin marketplace add paul-knecht/strategy-radar-plugin
+claude plugin marketplace add paul-knecht/screening-radar
 claude plugin install strategy-radar@strategy-radar
 claude plugin uninstall strategy-radar@strategy-radar
 claude plugin marketplace remove strategy-radar
