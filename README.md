@@ -3,7 +3,7 @@
 A Claude Code plugin that writes **first-pass screening memos on startups** and **competitor analyses** from public sources. **Every fact carries an exact quote that a program has checked** against a saved copy of the source.
 
 - **Screening a startup:** `/strategy-radar:screen` takes the startup's name and website and writes a memo on its company, market, competition, team, traction and risks, what would have to be true to invest, and the questions the sources leave open for the partner meeting. The memo holds no verdict, no score and no figure of its own. See "Screening a startup" below.
-- **A strategy question:** `/strategy-radar:run` answers a question such as *"Which competitors are adding filling capacity, and for whom?"* in a layered report.
+- **A strategy question:** `/strategy-radar:run` answers a question about competitors or a market in a layered report.
 
 > **Read this first.** The one company pack that ships is for an **invented company** (Example Pharma), with invented sources: a run on it is practice, and its reports say so at the top. The plugin also ships eighty-three lenses for real use. No pack for a real company ships: you make one with `/strategy-radar:new-pack`, and a run on such a pack has **been tried on real websites in only a few runs so far**. **"Confirmed" does not mean "true"**: it means the party itself, or two independent sources, state the fact in a quote the program found word for word, and a model judged that the quote supports the fact. That model can be wrong. Nothing here is insight into any company's internals.
 
